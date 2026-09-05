@@ -34,21 +34,18 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // GSAP Hero Entrance Animations
-    gsap.from(".gsap-hero-title", {
-      opacity: 0,
-      y: 25,
-      duration: 1,
-      ease: "power3.out",
-    });
+    // GSAP Hero Entrance Animations with clearProps so elements never remain hidden!
+    gsap.fromTo(
+      ".gsap-hero-title",
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.8, ease: "power3.out", clearProps: "all" }
+    );
 
-    gsap.from(".gsap-hero-widget", {
-      opacity: 0,
-      y: 35,
-      duration: 1.2,
-      delay: 0.2,
-      ease: "power3.out",
-    });
+    gsap.fromTo(
+      ".gsap-hero-widget",
+      { opacity: 0, y: 25 },
+      { opacity: 1, y: 0, duration: 1, delay: 0.1, ease: "power3.out", clearProps: "all" }
+    );
 
     // Continuous GSAP Floating Animations for Orbit Nodes
     gsap.to(".gsap-orbit-float-1", {
@@ -157,47 +154,47 @@ export default function LandingPage() {
           <div className="text-center max-w-4xl mx-auto mb-12 relative gsap-hero-title">
             
             {/* Left Orbit Floating Metric 1 (87%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -left-28 top-2 gsap-orbit-float-1">
-              <div className="w-10 h-10 rounded-full border border-indigo-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-indigo-400 mb-2 shadow-lg backdrop-blur-md">
-                <FileText className="w-5 h-5" />
+            <div className="hidden lg:flex flex-col items-center absolute -left-20 -top-8 gsap-orbit-float-1">
+              <div className="w-9 h-9 rounded-full border border-indigo-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-indigo-400 mb-1.5 shadow-lg backdrop-blur-md">
+                <FileText className="w-4 h-4" />
               </div>
               <div className="w-14 h-14 rounded-full border border-purple-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.25)] backdrop-blur-md">
                 87%
               </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1.5">Similarity Score</span>
+              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
             </div>
 
             {/* Left Orbit Floating Metric 2 (62%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -left-36 bottom-0 gsap-orbit-float-2">
-              <div className="w-10 h-10 rounded-full border border-blue-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-blue-400 mb-2 shadow-lg backdrop-blur-md">
-                <Network className="w-5 h-5" />
+            <div className="hidden lg:flex flex-col items-center absolute -left-44 top-36 gsap-orbit-float-2">
+              <div className="w-9 h-9 rounded-full border border-blue-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-blue-400 mb-1.5 shadow-lg backdrop-blur-md">
+                <Network className="w-4 h-4" />
               </div>
               <div className="w-14 h-14 rounded-full border border-cyan-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.25)] backdrop-blur-md">
                 62%
               </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1.5">Similarity Score</span>
+              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
             </div>
 
             {/* Right Orbit Floating Metric 1 (91%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -right-28 top-8 gsap-orbit-float-2">
-              <div className="w-10 h-10 rounded-full border border-indigo-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-indigo-400 mb-2 shadow-lg backdrop-blur-md">
-                <Scale className="w-5 h-5" />
+            <div className="hidden lg:flex flex-col items-center absolute -right-20 -top-8 gsap-orbit-float-2">
+              <div className="w-9 h-9 rounded-full border border-indigo-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-indigo-400 mb-1.5 shadow-lg backdrop-blur-md">
+                <Scale className="w-4 h-4" />
               </div>
               <div className="w-14 h-14 rounded-full border border-indigo-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.25)] backdrop-blur-md">
                 91%
               </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1.5">Similarity Score</span>
+              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
             </div>
 
             {/* Right Orbit Floating Metric 2 (73%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -right-36 bottom-4 gsap-orbit-float-1">
-              <div className="w-10 h-10 rounded-full border border-blue-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-blue-400 mb-2 shadow-lg backdrop-blur-md">
-                <ShieldCheck className="w-5 h-5" />
+            <div className="hidden lg:flex flex-col items-center absolute -right-44 top-36 gsap-orbit-float-1">
+              <div className="w-9 h-9 rounded-full border border-blue-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-blue-400 mb-1.5 shadow-lg backdrop-blur-md">
+                <ShieldCheck className="w-4 h-4" />
               </div>
               <div className="w-14 h-14 rounded-full border border-blue-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-blue-300 shadow-[0_0_20px_rgba(59,130,246,0.25)] backdrop-blur-md">
                 73%
               </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1.5">Similarity Score</span>
+              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
             </div>
 
             <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import DriftWall, { DriftWallItem } from "@/components/DriftWall";
-import AnimatedList from "@/components/AnimatedList";
+import OptionWheel from "@/components/OptionWheel";
 import CountUp from "@/components/CountUp";
 import { gsap } from "gsap";
 import {
@@ -342,18 +342,28 @@ export default function LandingPage() {
                         </button>
 
                         {isDomainOpen && (
-                          <div className="absolute right-0 top-full mt-2 z-[100] p-1.5 rounded-xl bg-[#080b21] border border-indigo-500/60 shadow-[0_20px_50px_rgba(0,0,0,0.98),0_0_30px_rgba(99,102,241,0.5)] backdrop-blur-2xl animate-in fade-in duration-200">
-                            <AnimatedList
+                          <div className="absolute right-0 top-full mt-2 z-[100] p-2 rounded-2xl bg-[#080b21] border border-indigo-500/60 shadow-[0_20px_50px_rgba(0,0,0,0.98),0_0_30px_rgba(99,102,241,0.5)] backdrop-blur-2xl animate-in fade-in duration-200 w-[260px]">
+                            <div className="px-2 py-1 mb-1 border-b border-white/10 flex items-center justify-between">
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold">Select Domain</span>
+                              <span className="text-[9px] text-zinc-500 font-mono">React Bits Wheel</span>
+                            </div>
+                            <OptionWheel
                               items={DOMAIN_OPTIONS}
-                              onItemSelect={(item) => {
+                              defaultSelected={Math.max(0, DOMAIN_OPTIONS.indexOf(selectedDomain))}
+                              onChange={(index, item) => {
                                 setSelectedDomain(item);
-                                setIsDomainOpen(false);
                               }}
-                              initialSelectedIndex={DOMAIN_OPTIONS.indexOf(selectedDomain)}
-                              showGradients={true}
-                              enableArrowNavigation={true}
-                              displayScrollbar={true}
-                              className="w-[230px]"
+                              side="right"
+                              textColor="#71717a"
+                              activeColor="#818cf8"
+                              fontSize={1.05}
+                              spacing={1.3}
+                              curve={1.1}
+                              tilt={6}
+                              blur={1.5}
+                              fade={0.3}
+                              inset={20}
+                              draggable={true}
                             />
                           </div>
                         )}

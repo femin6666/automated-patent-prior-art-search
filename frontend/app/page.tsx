@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import DriftWall, { DriftWallItem } from "@/components/DriftWall";
 import OptionWheel from "@/components/OptionWheel";
+import AnimatedList from "@/components/AnimatedList";
 import CountUp from "@/components/CountUp";
 import { gsap } from "gsap";
 import {
@@ -356,10 +357,10 @@ export default function LandingPage() {
                   </form>
                 </div>
 
-                {/* OptionWheel rendered directly on the right side of the main search box without card framing */}
+                {/* AnimatedList rendered on the right side of the main search box */}
                 {isDomainOpen && (
                   <div
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 sm:top-1/2 sm:left-full sm:-translate-y-1/2 sm:translate-x-0 sm:mt-0 sm:ml-4 z-[100] w-64 h-[240px] pointer-events-auto flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 sm:top-1/2 sm:left-full sm:-translate-y-1/2 sm:translate-x-0 sm:mt-0 sm:ml-4 z-[100] w-72 pointer-events-auto flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
                     onMouseEnter={() => {
                       document.body.style.overflow = "hidden";
                     }}
@@ -367,29 +368,20 @@ export default function LandingPage() {
                       document.body.style.overflow = "";
                     }}
                     onWheel={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                     }}
                   >
-                    <OptionWheel
+                    <AnimatedList
                       items={DOMAIN_OPTIONS}
-                      defaultSelected={Math.max(0, DOMAIN_OPTIONS.indexOf(selectedDomain))}
-                      onChange={(index, item) => {
+                      initialSelectedIndex={Math.max(0, DOMAIN_OPTIONS.indexOf(selectedDomain))}
+                      onItemSelect={(item) => {
                         setSelectedDomain(item);
                         setIsDomainOpen(false);
                         document.body.style.overflow = "";
                       }}
-                      side="left"
-                      textColor="#818cf8"
-                      activeColor="#ffffff"
-                      fontSize={1.1}
-                      spacing={1.4}
-                      curve={1.2}
-                      tilt={8}
-                      blur={1.2}
-                      fade={0.25}
-                      inset={20}
-                      draggable={true}
+                      showGradients={true}
+                      enableArrowNavigation={true}
+                      displayScrollbar={true}
                     />
                   </div>
                 )}

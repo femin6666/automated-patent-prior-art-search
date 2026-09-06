@@ -4,21 +4,15 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, useInView } from 'framer-motion';
 import './AnimatedList.css';
 
-export interface AnimatedItemProps {
+interface AnimatedItemProps {
   children: React.ReactNode;
   delay?: number;
   index: number;
-  onMouseEnter: () => void;
-  onClick: () => void;
+  onMouseEnter?: () => void;
+  onClick?: () => void;
 }
 
-const AnimatedItem: React.FC<AnimatedItemProps> = ({
-  children,
-  delay = 0,
-  index,
-  onMouseEnter,
-  onClick
-}) => {
+const AnimatedItem: React.FC<AnimatedItemProps> = ({ children, delay = 0, index, onMouseEnter, onClick }) => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.5, once: false });
   return (
@@ -30,7 +24,7 @@ const AnimatedItem: React.FC<AnimatedItemProps> = ({
       initial={{ scale: 0.7, opacity: 0 }}
       animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
       transition={{ duration: 0.2, delay }}
-      style={{ cursor: 'pointer' }}
+      style={{ marginBottom: '0.6rem', cursor: 'pointer' }}
     >
       {children}
     </motion.div>
@@ -153,15 +147,11 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
 
   return (
     <div className={`scroll-list-container ${className}`}>
-      <div
-        ref={listRef}
-        className={`scroll-list ${!displayScrollbar ? 'no-scrollbar' : ''}`}
-        onScroll={handleScroll}
-      >
+      <div ref={listRef} className={`scroll-list ${!displayScrollbar ? 'no-scrollbar' : ''}`} onScroll={handleScroll}>
         {items.map((item, index) => (
           <AnimatedItem
             key={index}
-            delay={index * 0.04}
+            delay={0.05}
             index={index}
             onMouseEnter={() => handleItemMouseEnter(index)}
             onClick={() => handleItemClick(item, index)}

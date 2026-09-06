@@ -9,15 +9,20 @@ import {
   Sparkles,
   Search,
   Brain,
-  Database,
   Shield,
   FileText,
-  Network,
   ShieldCheck,
   Rocket,
   ArrowRight,
   Plus,
-  Scale
+  Lightbulb,
+  Cpu,
+  Lock,
+  Layers,
+  CheckCircle2,
+  HelpCircle,
+  Zap,
+  Globe
 } from "lucide-react";
 import { api } from "@/services/api";
 
@@ -34,34 +39,52 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // GSAP Hero Entrance Animations with clearProps so elements never remain hidden!
+    // GSAP Hero Entrance Animations with clearProps
     gsap.fromTo(
-      ".gsap-hero-title",
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.8, ease: "power3.out", clearProps: "all" }
+      ".gsap-hero-content",
+      { opacity: 0, x: -30 },
+      { opacity: 1, x: 0, duration: 0.9, ease: "power3.out", clearProps: "all" }
     );
 
     gsap.fromTo(
-      ".gsap-hero-widget",
-      { opacity: 0, y: 25 },
-      { opacity: 1, y: 0, duration: 1, delay: 0.1, ease: "power3.out", clearProps: "all" }
+      ".gsap-3d-visual",
+      { opacity: 0, scale: 0.92, y: 20 },
+      { opacity: 1, scale: 1, y: 0, duration: 1, delay: 0.2, ease: "power3.out", clearProps: "all" }
     );
 
-    // Continuous GSAP Floating Animations for Orbit Nodes
-    gsap.to(".gsap-orbit-float-1", {
-      y: -10,
-      duration: 2.5,
+    // Continuous GSAP Floating Animations for 3D Cards
+    gsap.to(".gsap-float-card-1", {
+      y: -12,
+      duration: 3,
       repeat: -1,
       yoyo: true,
       ease: "sine.inOut",
     });
 
-    gsap.to(".gsap-orbit-float-2", {
-      y: 10,
-      duration: 3,
+    gsap.to(".gsap-float-card-2", {
+      y: 12,
+      duration: 3.5,
       repeat: -1,
       yoyo: true,
       ease: "sine.inOut",
+    });
+
+    gsap.to(".gsap-float-card-3", {
+      y: -8,
+      duration: 2.8,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+    });
+
+    // Pulsing core animation
+    gsap.to(".gsap-pulse-core", {
+      scale: 1.08,
+      opacity: 0.9,
+      duration: 2,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
     });
   }, []);
 
@@ -96,330 +119,408 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05060c] text-zinc-100 font-sans selection:bg-indigo-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-[#070815] text-zinc-100 font-sans selection:bg-indigo-500 selection:text-white relative overflow-hidden">
       
-      {/* Background Constellation Network Graphics */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-40">
+      {/* Background Neon Aura & Wave Line SVG */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="hero-glow" cx="50%" cy="30%" r="60%">
-              <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.25" />
-              <stop offset="60%" stopColor="#05060c" stopOpacity="0" />
+            <radialGradient id="neon-glow" cx="30%" cy="25%" r="50%">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
+              <stop offset="50%" stopColor="#a855f7" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#070815" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="right-glow" cx="80%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.25" />
+              <stop offset="60%" stopColor="#070815" stopOpacity="0" />
             </radialGradient>
           </defs>
-          <rect width="100%" height="100%" fill="url(#hero-glow)" />
+          <rect width="100%" height="100%" fill="url(#neon-glow)" />
+          <rect width="100%" height="100%" fill="url(#right-glow)" />
           
-          {/* Left Side Constellation Nodes */}
-          <g stroke="rgba(99, 102, 241, 0.25)" strokeWidth="1" fill="none">
-            <line x1="5%" y1="12%" x2="15%" y2="22%" />
-            <line x1="15%" y1="22%" x2="10%" y2="45%" />
-            <line x1="10%" y1="45%" x2="22%" y2="55%" />
-            <line x1="22%" y1="55%" x2="5%" y2="70%" />
-            <line x1="15%" y1="22%" x2="25%" y2="30%" />
-            <line x1="25%" y1="30%" x2="22%" y2="55%" />
-
-            <circle cx="5%" cy="12%" r="3" fill="#6366f1" />
-            <circle cx="15%" cy="22%" r="4" fill="#818cf8" />
-            <circle cx="10%" cy="45%" r="3" fill="#38bdf8" />
-            <circle cx="22%" cy="55%" r="4" fill="#6366f1" />
-            <circle cx="5%" cy="70%" r="3" fill="#818cf8" />
-            <circle cx="25%" cy="30%" r="3" fill="#c084fc" />
-          </g>
-
-          {/* Right Side Constellation Nodes */}
-          <g stroke="rgba(56, 189, 248, 0.25)" strokeWidth="1" fill="none">
-            <line x1="95%" y1="15%" x2="82%" y2="28%" />
-            <line x1="82%" y1="28%" x2="88%" y2="48%" />
-            <line x1="88%" y1="48%" x2="78%" y2="60%" />
-            <line x1="78%" y1="60%" x2="92%" y2="75%" />
-            <line x1="82%" y1="28%" x2="75%" y2="35%" />
-
-            <circle cx="95%" cy="15%" r="3" fill="#38bdf8" />
-            <circle cx="82%" cy="28%" r="4" fill="#38bdf8" />
-            <circle cx="88%" cy="48%" r="4" fill="#818cf8" />
-            <circle cx="78%" cy="60%" r="3" fill="#c084fc" />
-            <circle cx="92%" cy="75%" r="3" fill="#6366f1" />
-            <circle cx="75%" cy="35%" r="3" fill="#38bdf8" />
-          </g>
+          {/* Wave Mesh Pattern Lines */}
+          <path
+            d="M -100 600 Q 200 450 500 650 T 1100 600 T 1800 700"
+            fill="none"
+            stroke="rgba(99, 102, 241, 0.15)"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M -100 650 Q 200 500 500 700 T 1100 650 T 1800 750"
+            fill="none"
+            stroke="rgba(168, 85, 247, 0.12)"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M -100 700 Q 200 550 500 750 T 1100 700 T 1800 800"
+            fill="none"
+            stroke="rgba(56, 189, 248, 0.1)"
+            strokeWidth="1"
+          />
         </svg>
       </div>
 
       <Navbar />
 
-      {/* Main Hero Section */}
-      <section className="relative pt-16 pb-24 overflow-hidden z-10">
+      {/* Main Hero Section: Split 2-Column Layout */}
+      <section className="relative pt-12 pb-20 overflow-hidden z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          
-          {/* Hero Headline & Subtitle */}
-          <div className="text-center max-w-4xl mx-auto mb-12 relative gsap-hero-title">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             
-            {/* Left Orbit Floating Metric 1 (87%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -left-20 -top-8 gsap-orbit-float-1">
-              <div className="w-9 h-9 rounded-full border border-indigo-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-indigo-400 mb-1.5 shadow-lg backdrop-blur-md">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="w-14 h-14 rounded-full border border-purple-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.25)] backdrop-blur-md">
-                87%
-              </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
-            </div>
-
-            {/* Left Orbit Floating Metric 2 (62%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -left-44 top-36 gsap-orbit-float-2">
-              <div className="w-9 h-9 rounded-full border border-blue-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-blue-400 mb-1.5 shadow-lg backdrop-blur-md">
-                <Network className="w-4 h-4" />
-              </div>
-              <div className="w-14 h-14 rounded-full border border-cyan-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.25)] backdrop-blur-md">
-                62%
-              </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
-            </div>
-
-            {/* Right Orbit Floating Metric 1 (91%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -right-20 -top-8 gsap-orbit-float-2">
-              <div className="w-9 h-9 rounded-full border border-indigo-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-indigo-400 mb-1.5 shadow-lg backdrop-blur-md">
-                <Scale className="w-4 h-4" />
-              </div>
-              <div className="w-14 h-14 rounded-full border border-indigo-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.25)] backdrop-blur-md">
-                91%
-              </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
-            </div>
-
-            {/* Right Orbit Floating Metric 2 (73%) */}
-            <div className="hidden lg:flex flex-col items-center absolute -right-44 top-36 gsap-orbit-float-1">
-              <div className="w-9 h-9 rounded-full border border-blue-500/40 bg-[#0c0e1c]/80 flex items-center justify-center text-blue-400 mb-1.5 shadow-lg backdrop-blur-md">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="w-14 h-14 rounded-full border border-blue-500/50 bg-[#0c0e1c]/90 flex items-center justify-center font-bold text-sm text-blue-300 shadow-[0_0_20px_rgba(59,130,246,0.25)] backdrop-blur-md">
-                73%
-              </div>
-              <span className="text-[11px] text-zinc-300 font-medium mt-1">Similarity Score</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
-              Your Next Idea <br />
-              Might Already{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300">
-                Exist.
-              </span>
-            </h1>
-
-            <p className="mt-5 text-base sm:text-lg text-zinc-300 max-w-2xl mx-auto leading-relaxed">
-              Discover hidden technological similarities before investing time, money, and resources into your innovation.
-            </p>
-          </div>
-
-          {/* Interactive Patent Intelligence Engine Search Box */}
-          <div className="max-w-3xl mx-auto rounded-2xl bg-[#090b16]/95 border border-indigo-500/40 p-6 sm:p-7 shadow-[0_0_40px_rgba(99,102,241,0.15)] backdrop-blur-2xl relative gsap-hero-widget">
-            
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-mono font-bold text-indigo-400 tracking-wider uppercase">
-                PATENT INTELLIGENCE ENGINE
-              </span>
-            </div>
-
-            <form onSubmit={handleAnalyze} className="space-y-4">
+            {/* Left Column: Headline, Subtitle, Search Widget & Badges */}
+            <div className="lg:col-span-6 space-y-7 gsap-hero-content">
               
-              {/* Textarea */}
-              <div className="relative">
-                <textarea
-                  rows={4}
-                  maxLength={2000}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your invention in detail..."
-                  className="w-full bg-[#05060f]/90 border border-white/10 rounded-xl p-4 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/60 transition-all leading-relaxed"
-                />
-                <div className="text-[11px] font-mono text-zinc-500 text-right mt-1">
-                  {description.length} / 2000
-                </div>
+              {/* Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#12142d]/80 border border-indigo-500/30 text-xs font-medium text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <span>Built for MSME Innovators</span>
               </div>
 
-              {/* Tags & Action Button Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+              {/* Main Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
+                From Idea to <br />
+                Innovation,{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">
+                  Safely.
+                </span>
+              </h1>
+
+              {/* Subtitle */}
+              <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-xl">
+                Automatically search and analyze prior art using semantic similarity — so MSME innovators can build with confidence, avoid duplication, and protect their ideas.
+              </p>
+
+              {/* Glassmorphic Patent Intelligence Search Box */}
+              <div className="rounded-2xl bg-[#0b0e22]/90 border border-indigo-500/30 p-4 sm:p-5 shadow-[0_0_40px_rgba(99,102,241,0.15)] backdrop-blur-xl space-y-4">
                 
-                {/* Keywords Chips */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedKeywords.map((kw) => (
-                    <span
-                      key={kw}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-medium text-zinc-200"
-                    >
-                      <Sparkles className="w-3 h-3 text-indigo-400" />
-                      <span>{kw}</span>
-                    </span>
-                  ))}
-
-                  {showKeywordInput ? (
-                    <div className="inline-flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={keywordInput}
-                        onChange={(e) => setKeywordInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddKeyword())}
-                        placeholder="Keyword..."
-                        className="w-24 bg-white/[0.08] border border-white/20 rounded-full px-3 py-1 text-xs text-white focus:outline-none"
-                        autoFocus
-                      />
+                <form onSubmit={handleAnalyze} className="space-y-3">
+                  
+                  {/* Search Input Box with Bulb Icon & Gradient Submit Circle */}
+                  <div className="relative flex items-center bg-[#060817]/90 border border-white/10 rounded-xl p-2.5 focus-within:border-indigo-500/60 transition-all shadow-inner">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 ml-1">
+                      <Lightbulb className="w-5 h-5 text-indigo-400" />
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowKeywordInput(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] text-xs font-medium text-zinc-400 transition-all"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Add Keyword</span>
-                    </button>
-                  )}
-                </div>
+                    
+                    <input
+                      type="text"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Describe your idea or enter keywords... e.g. 'solar water heater', 'biodegradable packaging', 'IoT farming device'"
+                      className="w-full bg-transparent px-3 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none"
+                    />
 
-                {/* Primary Action Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <span>{isSubmitting ? "Analyzing..." : "Analyze Invention"}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                    {/* Gradient Submit Arrow Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-blue-500 hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all shrink-0 disabled:opacity-50"
+                      title="Analyze Invention"
+                    >
+                      {isSubmitting ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <ArrowRight className="w-5 h-5 text-white" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Keywords & Domain Row */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 px-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedKeywords.map((kw) => (
+                        <span
+                          key={kw}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-medium text-zinc-300"
+                        >
+                          <Sparkles className="w-3 h-3 text-indigo-400" />
+                          <span>{kw}</span>
+                        </span>
+                      ))}
+
+                      {showKeywordInput ? (
+                        <input
+                          type="text"
+                          value={keywordInput}
+                          onChange={(e) => setKeywordInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddKeyword())}
+                          placeholder="Add keyword..."
+                          className="w-24 bg-white/[0.08] border border-white/20 rounded-full px-2.5 py-1 text-[11px] text-white focus:outline-none"
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowKeywordInput(true)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] text-[11px] text-zinc-400 transition-all"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Keyword</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <select
+                      value={selectedDomain}
+                      onChange={(e) => setSelectedDomain(e.target.value)}
+                      className="bg-[#080a1c] border border-white/10 rounded-lg px-2.5 py-1 text-[11px] text-indigo-300 focus:outline-none cursor-pointer"
+                    >
+                      <option value="Agriculture">Agriculture</option>
+                      <option value="Biotechnology">Biotechnology</option>
+                      <option value="Electronics & Software">Electronics & Software</option>
+                      <option value="Medical Devices">Medical Devices</option>
+                      <option value="Renewable Energy">Renewable Energy</option>
+                    </select>
+                  </div>
+
+                </form>
               </div>
 
-            </form>
-          </div>
+              {/* 4 Feature Badges Under Search Box */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0b0e20]/60 border border-white/5 backdrop-blur-md">
+                  <span className="text-cyan-400 text-xs">✦</span>
+                  <span className="text-[11px] font-semibold text-zinc-300">AI Powered Search</span>
+                </div>
 
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0b0e20]/60 border border-white/5 backdrop-blur-md">
+                  <span className="text-purple-400 text-xs">⚛</span>
+                  <span className="text-[11px] font-semibold text-zinc-300">Semantic Similarity</span>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0b0e20]/60 border border-white/5 backdrop-blur-md">
+                  <span className="text-indigo-400 text-xs">📑</span>
+                  <span className="text-[11px] font-semibold text-zinc-300">Comprehensive Results</span>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0b0e20]/60 border border-white/5 backdrop-blur-md">
+                  <span className="text-blue-400 text-xs">🛡</span>
+                  <span className="text-[11px] font-semibold text-zinc-300">MSME Focused</span>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Right Column: 3D Holographic AI Brain & Floating Glass Cards (Match User Image) */}
+            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[460px] gsap-3d-visual">
+              
+              {/* Background Glowing Aura Ring */}
+              <div className="absolute w-80 h-80 rounded-full bg-gradient-to-tr from-indigo-600/30 via-purple-600/20 to-cyan-500/30 blur-3xl pointer-events-none" />
+
+              {/* Central Isometric 3D Platform Core */}
+              <div className="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center">
+                
+                {/* 3D Platform Pedestal Base */}
+                <div className="absolute bottom-4 w-64 h-32 rounded-[40px] bg-gradient-to-tr from-indigo-900/60 via-purple-900/40 to-blue-900/60 border border-cyan-500/40 shadow-[0_0_50px_rgba(56,189,248,0.3)] transform rotate-x-60 -skew-x-12 backdrop-blur-xl" />
+                <div className="absolute bottom-1 w-56 h-24 rounded-[30px] bg-gradient-to-b from-cyan-500/20 to-purple-600/20 border border-indigo-400/30 blur-sm transform rotate-x-60 -skew-x-12" />
+
+                {/* Vertical Hologram Light Beam */}
+                <div className="absolute bottom-16 w-32 h-44 bg-gradient-to-t from-cyan-400/20 via-purple-500/10 to-transparent blur-md" />
+
+                {/* Glowing Holographic AI Brain Core Container */}
+                <div className="relative w-36 h-36 rounded-3xl bg-[#0a0d26]/80 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_35px_rgba(56,189,248,0.4)] backdrop-blur-2xl gsap-pulse-core">
+                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-indigo-600/40 via-purple-600/40 to-cyan-400/40 p-0.5 flex items-center justify-center">
+                    <div className="w-full h-full bg-[#080b21] rounded-[14px] flex items-center justify-center">
+                      <Brain className="w-14 h-14 text-cyan-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 1 (Top Left / Front): Patent Document with Similarity 87% Tag */}
+                <div className="absolute -top-4 -left-6 sm:-left-10 w-52 p-3.5 rounded-2xl bg-[#0c0f2b]/85 border border-indigo-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl gsap-float-card-1">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Patent Document</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="w-full h-1.5 rounded-full bg-white/10" />
+                    <div className="w-3/4 h-1.5 rounded-full bg-white/10" />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-bold text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                      Similarity 87%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 2 (Top Right): Relevant Patents List */}
+                <div className="absolute -top-6 -right-6 sm:-right-10 w-56 p-3.5 rounded-2xl bg-[#0c0f2b]/85 border border-purple-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl gsap-float-card-2">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <Layers className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-xs font-bold text-white">Relevant Patents</span>
+                  </div>
+                  
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.04]">
+                      <span className="font-bold text-emerald-400">87%</span>
+                      <span className="font-mono text-zinc-300">US 10,987,654 B2</span>
+                    </div>
+
+                    <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.04]">
+                      <span className="font-bold text-amber-400">76%</span>
+                      <span className="font-mono text-zinc-300">US 10,456,769 B1</span>
+                    </div>
+
+                    <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.04]">
+                      <span className="font-bold text-cyan-400">62%</span>
+                      <span className="font-mono text-zinc-300">US 9,876,543 B2</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 3 (Bottom Right): Your Idea Protected Badge */}
+                <div className="absolute bottom-2 -right-4 sm:-right-8 w-48 p-3 rounded-xl bg-[#0c0f2b]/85 border border-cyan-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl gsap-float-card-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white block">Your Idea</span>
+                      <span className="text-[10px] text-cyan-300 font-medium">Protected • Original • Safe</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
         </div>
       </section>
 
-      {/* How PatentLens AI Works Section */}
+      {/* How It Works Section (Direct Match with User Image) */}
       <section id="how-it-works" className="py-20 border-t border-white/[0.06] relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              How PatentLens AI Works
+          <div className="text-center max-w-2xl mx-auto mb-16 space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              How It Works
             </h2>
+            <p className="text-sm font-medium text-zinc-400 tracking-wide">
+              Advanced AI. Simple Steps.
+            </p>
           </div>
 
-          {/* 4 Process Cards Row with connected arrows */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start relative">
+          {/* 4 Connected Step Nodes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
             
-            {/* Step 1 */}
-            <div className="text-center space-y-3 p-4 relative">
-              <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto shadow-md shadow-indigo-500/10">
-                <FileText className="w-7 h-7 text-purple-400" />
+            {/* Step 01 */}
+            <div className="flex flex-col items-center text-center space-y-3 relative group">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-900/60 to-purple-900/40 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shadow-[0_0_25px_rgba(99,102,241,0.25)] group-hover:scale-110 transition-transform">
+                <FileText className="w-7 h-7 text-indigo-300" />
               </div>
-              <h3 className="text-sm font-bold text-white">1. Understand</h3>
-              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs mx-auto">
-                We analyze your invention and extract key concepts.
+              <span className="text-xs font-mono font-bold text-zinc-500">01</span>
+              <h3 className="text-base font-bold text-white">Enter Your Idea</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
+                Type your invention details or keywords in natural language.
               </p>
               
-              {/* Dotted Arrow 1 */}
-              <div className="hidden md:flex items-center absolute top-12 -right-4 w-12 text-indigo-500/40">
-                <div className="w-full border-t-2 border-dashed border-indigo-500/40"></div>
-                <div className="text-indigo-400 text-xs -ml-1">➔</div>
-              </div>
+              {/* Connector line for desktop */}
+              <div className="hidden lg:block absolute top-8 left-[65%] right-[-35%] h-[1px] bg-gradient-to-r from-indigo-500/50 to-purple-500/20" />
             </div>
 
-            {/* Step 2 */}
-            <div className="text-center space-y-3 p-4 relative">
-              <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto shadow-md shadow-blue-500/10">
-                <Brain className="w-7 h-7 text-blue-400" />
+            {/* Step 02 */}
+            <div className="flex flex-col items-center text-center space-y-3 relative group">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-900/60 to-pink-900/40 border border-purple-500/40 text-purple-400 flex items-center justify-center shadow-[0_0_25px_rgba(168,85,247,0.25)] group-hover:scale-110 transition-transform">
+                <Brain className="w-7 h-7 text-purple-300" />
               </div>
-              <h3 className="text-sm font-bold text-white">2. Semantic Embedding</h3>
-              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs mx-auto">
-                AI converts your description into a rich vector representation.
+              <span className="text-xs font-mono font-bold text-zinc-500">02</span>
+              <h3 className="text-base font-bold text-white">Semantic Analysis</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
+                Our AI understands the meaning and finds relevant concepts.
               </p>
 
-              {/* Dotted Arrow 2 */}
-              <div className="hidden md:flex items-center absolute top-12 -right-4 w-12 text-indigo-500/40">
-                <div className="w-full border-t-2 border-dashed border-indigo-500/40"></div>
-                <div className="text-indigo-400 text-xs -ml-1">➔</div>
-              </div>
+              {/* Connector line for desktop */}
+              <div className="hidden lg:block absolute top-8 left-[65%] right-[-35%] h-[1px] bg-gradient-to-r from-purple-500/50 to-cyan-500/20" />
             </div>
 
-            {/* Step 3 */}
-            <div className="text-center space-y-3 p-4 relative">
-              <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-400 flex items-center justify-center mx-auto shadow-md shadow-teal-500/10">
-                <Database className="w-7 h-7 text-teal-400" />
+            {/* Step 03 */}
+            <div className="flex flex-col items-center text-center space-y-3 relative group">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-900/60 to-blue-900/40 border border-cyan-500/40 text-cyan-400 flex items-center justify-center shadow-[0_0_25px_rgba(56,189,248,0.25)] group-hover:scale-110 transition-transform">
+                <Search className="w-7 h-7 text-cyan-300" />
               </div>
-              <h3 className="text-sm font-bold text-white">3. Search & Match</h3>
-              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs mx-auto">
-                We search our patent database using semantic similarity.
+              <span className="text-xs font-mono font-bold text-zinc-500">03</span>
+              <h3 className="text-base font-bold text-white">Search & Compare</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
+                Scans millions of patents and identifies similar inventions.
               </p>
 
-              {/* Dotted Arrow 3 */}
-              <div className="hidden md:flex items-center absolute top-12 -right-4 w-12 text-indigo-500/40">
-                <div className="w-full border-t-2 border-dashed border-indigo-500/40"></div>
-                <div className="text-indigo-400 text-xs -ml-1">➔</div>
-              </div>
+              {/* Connector line for desktop */}
+              <div className="hidden lg:block absolute top-8 left-[65%] right-[-35%] h-[1px] bg-gradient-to-r from-cyan-500/50 to-emerald-500/20" />
             </div>
 
-            {/* Step 4 */}
-            <div className="text-center space-y-3 p-4">
-              <div className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto shadow-md shadow-purple-500/10">
-                <Shield className="w-7 h-7 text-violet-400" />
+            {/* Step 04 */}
+            <div className="flex flex-col items-center text-center space-y-3 relative group">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-900/60 to-teal-900/40 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.25)] group-hover:scale-110 transition-transform">
+                <ShieldCheck className="w-7 h-7 text-emerald-300" />
               </div>
-              <h3 className="text-sm font-bold text-white">4. Prior-Art Insights</h3>
-              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs mx-auto">
-                Get ranked results with similarity scores and AI insights.
+              <span className="text-xs font-mono font-bold text-zinc-500">04</span>
+              <h3 className="text-base font-bold text-white">Get Insights</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
+                View relevant patents, similarity scores and risk analysis.
               </p>
             </div>
 
+          </div>
+
+          {/* Bottom Center Tagline Divider */}
+          <div className="mt-16 text-center">
+            <span className="text-xs font-mono tracking-[0.3em] uppercase text-zinc-500">
+              INNOVATE &nbsp;•&nbsp; SEARCH &nbsp;•&nbsp; PROTECT
+            </span>
           </div>
 
         </div>
       </section>
 
-      {/* Why Innovators Choose PatentLens AI Feature Cards */}
-      <section id="technology" className="py-20 border-t border-white/[0.06] bg-[#070812]/80 relative z-10">
+      {/* Key Features Section */}
+      <section id="features" className="py-20 border-t border-white/[0.06] bg-[#060714]/80 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Why Innovators Choose PatentLens AI
+              Why Innovators Choose PriorArtIQ
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Card 1 */}
-            <div className="p-6 rounded-2xl bg-[#090b16] border border-white/10 hover:border-indigo-500/40 transition-all flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20 flex-shrink-0">
+            <div className="p-6 rounded-2xl bg-[#090b1c] border border-white/10 hover:border-indigo-500/40 transition-all flex items-start gap-4 shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20 shrink-0">
                 <Brain className="w-6 h-6" />
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-white">Understand Meaning</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  We go beyond keywords to understand the meaning and technical context of your invention.
+                  We go beyond keywords to understand the deep technical meaning and context of your invention.
                 </p>
               </div>
             </div>
 
-            {/* Card 2 */}
-            <div className="p-6 rounded-2xl bg-[#090b16] border border-white/10 hover:border-indigo-500/40 transition-all flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 flex-shrink-0">
-                <Network className="w-6 h-6" />
+            <div className="p-6 rounded-2xl bg-[#090b1c] border border-white/10 hover:border-indigo-500/40 transition-all flex items-start gap-4 shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0">
+                <Zap className="w-6 h-6" />
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-white">Find Hidden Similarities</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Discover patents that are conceptually similar but may use different words or descriptions.
+                  Discover patents that are conceptually identical even if they use completely different terms.
                 </p>
               </div>
             </div>
 
-            {/* Card 3 */}
-            <div className="p-6 rounded-2xl bg-[#090b16] border border-white/10 hover:border-indigo-500/40 transition-all flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center border border-teal-500/20 flex-shrink-0">
+            <div className="p-6 rounded-2xl bg-[#090b1c] border border-white/10 hover:border-indigo-500/40 transition-all flex items-start gap-4 shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-white">Make Better Decisions</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Get AI-powered insights to evaluate risks, strengthen your idea, and innovate with confidence.
+                  Get actionable risk indicators and AI insights to protect your intellectual property before filing.
                 </p>
               </div>
             </div>
@@ -429,23 +530,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Bottom Call to Action Banner */}
+      {/* Call to Action Banner */}
       <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="p-8 sm:p-10 rounded-2xl bg-gradient-to-r from-[#090b16] via-[#101224] to-[#0a0c1a] border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-2xl">
+        <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#0b0e26] via-[#121536] to-[#0a0d24] border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
           
           <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
               <Rocket className="w-7 h-7 text-purple-400" />
             </div>
             <div>
               <h3 className="text-xl font-bold text-white">Have an idea worth protecting?</h3>
-              <p className="text-xs text-zinc-400 mt-1">Start your prior-art search in seconds.</p>
+              <p className="text-xs text-zinc-400 mt-1">Start your AI prior-art search in seconds.</p>
             </div>
           </div>
 
           <Link
-            href="/search"
-            className="px-6 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto"
+            href="/register"
+            className="px-7 py-3 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto"
           >
             <span>Start Exploring Now</span>
             <ArrowRight className="w-4 h-4" />
@@ -454,9 +555,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Legal Disclaimer & Footer */}
+      {/* Footer */}
       <footer className="py-10 border-t border-white/[0.06] text-center text-xs text-zinc-500 font-mono space-y-2 relative z-10">
-        <p>© 2026 PatentLens AI. Built for Innovators, MSMEs, Students & Researchers.</p>
+        <p>© 2026 PriorArtIQ. Built for MSME Innovators, Researchers & Founders.</p>
       </footer>
 
     </div>

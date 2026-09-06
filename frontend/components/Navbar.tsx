@@ -9,31 +9,40 @@ import PillNav from "./PillNav";
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
-  const [activeHref, setActiveHref] = useState("#technology");
+  const [activeHref, setActiveHref] = useState("#how-it-works");
 
   useEffect(() => {
     api.getMe().then(setUser).catch(() => setUser(null));
   }, []);
 
   const navItems = [
+    { label: "Home", href: "/" },
     { label: "How It Works", href: "#how-it-works" },
-    { label: "Technology", href: "#technology" },
+    { label: "Features", href: "#features" },
     { label: "About", href: "#about" },
     { label: "Pricing", href: "#pricing" },
+    { label: "FAQ", href: "#faq" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 py-3 bg-[#070814]/90 backdrop-blur-xl border-b border-white/10">
+    <header className="sticky top-0 z-50 py-3.5 bg-[#060713]/90 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         
         {/* Far Left Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/60 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform shadow-[0_0_15px_rgba(99,102,241,0.4)]">
-            <Search className="w-4 h-4 text-indigo-400" />
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-[0_0_20px_rgba(99,102,241,0.5)] group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-[#070817] rounded-[10px] flex items-center justify-center">
+              <span className="text-cyan-400 font-bold text-lg">✦</span>
+            </div>
           </div>
-          <span className="font-bold text-lg text-white tracking-tight">
-            PatentLens <span className="text-indigo-400">AI</span>
-          </span>
+          <div className="flex flex-col">
+            <span className="font-extrabold text-lg text-white tracking-tight leading-none flex items-center gap-1">
+              PriorArt<span className="text-indigo-400">IQ</span>
+            </span>
+            <span className="text-[10px] text-zinc-400 font-medium tracking-wide">
+              Patent Search, Smarter.
+            </span>
+          </div>
         </Link>
 
         {/* Centered Navigation Pills (React Bits PillNav) */}
@@ -41,9 +50,9 @@ export default function Navbar() {
           <PillNav
             items={navItems}
             activeHref={activeHref}
-            baseColor="#6366f1"
-            pillColor="transparent"
-            pillTextColor="#e2e8f0"
+            baseColor="#818cf8"
+            pillColor="rgba(255, 255, 255, 0.05)"
+            pillTextColor="#94a3b8"
             hoveredPillTextColor="#ffffff"
             ease="power3.easeOut"
             initialLoadAnimation={true}
@@ -57,7 +66,7 @@ export default function Navbar() {
           {user ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all"
+              className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-500/30 transition-all"
             >
               <UserCheck className="w-4 h-4" />
               <span>Dashboard</span>
@@ -66,15 +75,16 @@ export default function Navbar() {
             <div className="flex items-center gap-2.5">
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-lg bg-white/[0.06] border border-white/15 hover:bg-white/10 text-xs font-semibold text-white transition-all"
+                className="px-5 py-2 rounded-full bg-white/[0.04] border border-white/15 hover:bg-white/10 text-xs font-semibold text-zinc-200 transition-all"
               >
                 Login
               </Link>
               <Link
                 href="/register"
-                className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 transition-all"
+                className="px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-xs font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center gap-1.5"
               >
-                Get Started
+                <span>Get Started</span>
+                <span className="text-sm">→</span>
               </Link>
             </div>
           )}

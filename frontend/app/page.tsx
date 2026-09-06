@@ -258,109 +258,110 @@ export default function LandingPage() {
               </p>
 
               {/* Glassmorphic Patent Intelligence Search Box */}
-              <div className="relative z-30 rounded-2xl bg-[#0b0e22]/95 border border-indigo-500/30 hover:border-indigo-400/80 p-4 sm:p-5 shadow-[0_0_40px_rgba(99,102,241,0.15)] hover:shadow-[0_0_55px_rgba(99,102,241,0.4),0_0_25px_rgba(56,189,248,0.25)] transition-all duration-300 backdrop-blur-xl space-y-4 group/box">
+              <div className="relative z-30 p-[1.5px] rounded-2xl bg-indigo-500/30 hover:bg-gradient-to-r hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 transition-all duration-300 shadow-[0_0_40px_rgba(99,102,241,0.15)] hover:shadow-[0_0_50px_rgba(99,102,241,0.35),0_0_20px_rgba(56,189,248,0.25)] group/box">
                 
-                {/* Glowing Hover Edge Gradient Halo Ring */}
-                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 opacity-0 group-hover/box:opacity-100 transition-opacity duration-300 -z-10 blur-[1px]" />
-                
-                <form onSubmit={handleAnalyze} className="space-y-3">
-                  
-                  {/* Search Input Box with Bulb Icon & Gradient Submit Circle */}
-                  <div className="relative flex items-center bg-[#060817]/90 border border-white/10 rounded-xl p-2.5 focus-within:border-indigo-500/60 transition-all shadow-inner">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 ml-1">
-                      <Lightbulb className="w-5 h-5 text-indigo-400" />
-                    </div>
+                {/* Solid Dark Inner Content Container (Guarantees interior stays dark) */}
+                <div className="relative rounded-[15px] bg-[#0b0e22] p-4 sm:p-5 space-y-4">
+
+                  <form onSubmit={handleAnalyze} className="space-y-3">
                     
-                    <input
-                      type="text"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Describe your idea or enter keywords... e.g. 'solar water heater', 'biodegradable packaging', 'IoT farming device'"
-                      className="w-full bg-transparent px-3 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none"
-                    />
+                    {/* Search Input Box with Bulb Icon & Gradient Submit Circle */}
+                    <div className="relative flex items-center bg-[#060817] border border-white/10 rounded-xl p-2.5 focus-within:border-indigo-500/60 transition-all shadow-inner">
+                      <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 ml-1">
+                        <Lightbulb className="w-5 h-5 text-indigo-400" />
+                      </div>
+                      
+                      <input
+                        type="text"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Describe your idea or enter keywords... e.g. 'solar water heater', 'biodegradable packaging', 'IoT farming device'"
+                        className="w-full bg-transparent px-3 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none"
+                      />
 
-                    {/* Gradient Submit Arrow Button */}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-blue-500 hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all shrink-0 disabled:opacity-50"
-                      title="Analyze Invention"
-                    >
-                      {isSubmitting ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <ArrowRight className="w-5 h-5 text-white" />
-                      )}
-                    </button>
-                  </div>
+                      {/* Gradient Submit Arrow Button */}
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-blue-500 hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all shrink-0 disabled:opacity-50"
+                        title="Analyze Invention"
+                      >
+                        {isSubmitting ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <ArrowRight className="w-5 h-5 text-white" />
+                        )}
+                      </button>
+                    </div>
 
-                  {/* Keywords & Animated Domain Selection Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 px-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {selectedKeywords.map((kw) => (
-                        <span
-                          key={kw}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-medium text-zinc-300"
-                        >
-                          <Sparkles className="w-3 h-3 text-indigo-400" />
-                          <span>{kw}</span>
-                        </span>
-                      ))}
+                    {/* Keywords & Animated Domain Selection Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 px-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {selectedKeywords.map((kw) => (
+                          <span
+                            key={kw}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-medium text-zinc-300"
+                          >
+                            <Sparkles className="w-3 h-3 text-indigo-400" />
+                            <span>{kw}</span>
+                          </span>
+                        ))}
 
-                      {showKeywordInput ? (
-                        <input
-                          type="text"
-                          value={keywordInput}
-                          onChange={(e) => setKeywordInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddKeyword())}
-                          placeholder="Add keyword..."
-                          className="w-24 bg-white/[0.08] border border-white/20 rounded-full px-2.5 py-1 text-[11px] text-white focus:outline-none"
-                          autoFocus
-                        />
-                      ) : (
+                        {showKeywordInput ? (
+                          <input
+                            type="text"
+                            value={keywordInput}
+                            onChange={(e) => setKeywordInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddKeyword())}
+                            placeholder="Add keyword..."
+                            className="w-24 bg-white/[0.08] border border-white/20 rounded-full px-2.5 py-1 text-[11px] text-white focus:outline-none"
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowKeywordInput(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] text-[11px] text-zinc-400 transition-all"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Add Keyword</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Animated Domain Selection Dropdown with React Bits <AnimatedList /> */}
+                      <div className="relative z-50" ref={domainDropdownRef}>
                         <button
                           type="button"
-                          onClick={() => setShowKeywordInput(true)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] text-[11px] text-zinc-400 transition-all"
+                          onClick={() => setIsDomainOpen(!isDomainOpen)}
+                          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#090c24] border border-indigo-500/40 hover:border-indigo-500/70 text-xs font-semibold text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:scale-105 transition-all cursor-pointer"
                         >
-                          <Plus className="w-3 h-3" />
-                          <span>Add Keyword</span>
+                          <span>{selectedDomain}</span>
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDomainOpen ? "rotate-180 text-cyan-400" : "text-zinc-400"}`} />
                         </button>
-                      )}
+
+                        {isDomainOpen && (
+                          <div className="absolute right-0 top-full mt-2 z-[100] p-1.5 rounded-xl bg-[#080b21] border border-indigo-500/60 shadow-[0_20px_50px_rgba(0,0,0,0.98),0_0_30px_rgba(99,102,241,0.5)] backdrop-blur-2xl animate-in fade-in duration-200">
+                            <AnimatedList
+                              items={DOMAIN_OPTIONS}
+                              onItemSelect={(item) => {
+                                setSelectedDomain(item);
+                                setIsDomainOpen(false);
+                              }}
+                              initialSelectedIndex={DOMAIN_OPTIONS.indexOf(selectedDomain)}
+                              showGradients={true}
+                              enableArrowNavigation={true}
+                              displayScrollbar={true}
+                              className="w-[230px]"
+                            />
+                          </div>
+                        )}
+                      </div>
+
                     </div>
 
-                    {/* Animated Domain Selection Dropdown with React Bits <AnimatedList /> */}
-                    <div className="relative z-50" ref={domainDropdownRef}>
-                      <button
-                        type="button"
-                        onClick={() => setIsDomainOpen(!isDomainOpen)}
-                        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#090c24] border border-indigo-500/40 hover:border-indigo-500/70 text-xs font-semibold text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:scale-105 transition-all cursor-pointer"
-                      >
-                        <span>{selectedDomain}</span>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDomainOpen ? "rotate-180 text-cyan-400" : "text-zinc-400"}`} />
-                      </button>
-
-                      {isDomainOpen && (
-                        <div className="absolute right-0 top-full mt-2 z-[100] p-1.5 rounded-xl bg-[#080b21] border border-indigo-500/60 shadow-[0_20px_50px_rgba(0,0,0,0.98),0_0_30px_rgba(99,102,241,0.5)] backdrop-blur-2xl animate-in fade-in duration-200">
-                          <AnimatedList
-                            items={DOMAIN_OPTIONS}
-                            onItemSelect={(item) => {
-                              setSelectedDomain(item);
-                              setIsDomainOpen(false);
-                            }}
-                            initialSelectedIndex={DOMAIN_OPTIONS.indexOf(selectedDomain)}
-                            showGradients={true}
-                            enableArrowNavigation={true}
-                            displayScrollbar={true}
-                            className="w-[230px]"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-
-                </form>
+                  </form>
+                </div>
               </div>
 
               {/* 4 Feature Badges Under Search Box */}

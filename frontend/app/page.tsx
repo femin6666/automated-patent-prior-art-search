@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import DriftWall, { DriftWallItem } from "@/components/DriftWall";
 import AnimatedList from "@/components/AnimatedList";
+import CountUp from "@/components/CountUp";
 import { gsap } from "gsap";
 import {
   Sparkles,
@@ -430,12 +431,12 @@ export default function LandingPage() {
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-bold text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-                      Similarity 87%
+                      Similarity <CountUp from={0} to={87} duration={2} />%
                     </span>
                   </div>
                 </div>
 
-                {/* Card 2 (Top Right): Relevant Patents List */}
+                {/* Card 2 (Top Right): Relevant Patents List with Animated CountUp */}
                 <div className="absolute -top-6 -right-6 sm:-right-10 w-56 p-3.5 rounded-2xl bg-[#0c0f2b]/85 border border-purple-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl gsap-float-card-2">
                   <div className="flex items-center gap-2 mb-2.5">
                     <Layers className="w-3.5 h-3.5 text-purple-400" />
@@ -444,17 +445,23 @@ export default function LandingPage() {
                   
                   <div className="space-y-1.5 text-[11px]">
                     <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.04]">
-                      <span className="font-bold text-emerald-400">87%</span>
+                      <span className="font-bold text-emerald-400">
+                        <CountUp from={0} to={87} duration={2} />%
+                      </span>
                       <span className="font-mono text-zinc-300">US 10,987,654 B2</span>
                     </div>
 
                     <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.04]">
-                      <span className="font-bold text-amber-400">76%</span>
+                      <span className="font-bold text-amber-400">
+                        <CountUp from={0} to={76} duration={2} delay={0.2} />%
+                      </span>
                       <span className="font-mono text-zinc-300">US 10,456,769 B1</span>
                     </div>
 
                     <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.04]">
-                      <span className="font-bold text-cyan-400">62%</span>
+                      <span className="font-bold text-cyan-400">
+                        <CountUp from={0} to={62} duration={1.8} delay={0.4} />%
+                      </span>
                       <span className="font-mono text-zinc-300">US 9,876,543 B2</span>
                     </div>
                   </div>

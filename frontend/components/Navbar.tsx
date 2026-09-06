@@ -10,9 +10,21 @@ import PillNav from "./PillNav";
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [activeHref, setActiveHref] = useState("#how-it-works");
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     api.getMe().then(setUser).catch(() => setUser(null));
+
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const navItems = [
@@ -25,8 +37,14 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 py-3.5 bg-[#060713]/90 backdrop-blur-xl border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    <header className={`sticky z-50 transition-all duration-300 ${
+      isScrolled ? "top-3 px-4 sm:px-6 lg:px-8" : "top-0 w-full"
+    }`}>
+      <div className={`transition-all duration-300 flex items-center justify-between ${
+        isScrolled
+          ? "max-w-6xl mx-auto px-6 py-2 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/40 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_25px_rgba(99,102,241,0.25)]"
+          : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-[#060713]/90 backdrop-blur-xl border-b border-white/10"
+      }`}>
         
         {/* Far Left Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group">
@@ -51,7 +69,7 @@ export default function Navbar() {
             items={navItems}
             activeHref={activeHref}
             baseColor="#818cf8"
-            pillColor="rgba(255, 255, 255, 0.05)"
+            pillColor="rgba(255, 255, 255, 0.06)"
             pillTextColor="#94a3b8"
             hoveredPillTextColor="#ffffff"
             ease="power3.easeOut"
@@ -75,7 +93,7 @@ export default function Navbar() {
             <div className="flex items-center gap-2.5">
               <Link
                 href="/login"
-                className="px-5 py-2 rounded-full bg-white/[0.04] border border-white/15 hover:bg-white/10 text-xs font-semibold text-zinc-200 transition-all"
+                className="px-5 py-2 rounded-full bg-white/[0.05] border border-white/15 hover:bg-white/10 text-xs font-semibold text-zinc-200 transition-all"
               >
                 Login
               </Link>
@@ -93,7 +111,3 @@ export default function Navbar() {
     </header>
   );
 }
-
-
-
-

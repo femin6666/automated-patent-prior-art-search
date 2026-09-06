@@ -258,7 +258,10 @@ export default function LandingPage() {
               </p>
 
               {/* Glassmorphic Patent Intelligence Search Box */}
-              <div className="relative z-30 rounded-2xl bg-[#0b0e22]/95 border border-indigo-500/30 p-4 sm:p-5 shadow-[0_0_40px_rgba(99,102,241,0.15)] backdrop-blur-xl space-y-4">
+              <div className="relative z-30 rounded-2xl bg-[#0b0e22]/95 border border-indigo-500/30 hover:border-indigo-400/80 p-4 sm:p-5 shadow-[0_0_40px_rgba(99,102,241,0.15)] hover:shadow-[0_0_55px_rgba(99,102,241,0.4),0_0_25px_rgba(56,189,248,0.25)] transition-all duration-300 backdrop-blur-xl space-y-4 group/box">
+                
+                {/* Glowing Hover Edge Gradient Halo Ring */}
+                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 opacity-0 group-hover/box:opacity-100 transition-opacity duration-300 -z-10 blur-[1px]" />
                 
                 <form onSubmit={handleAnalyze} className="space-y-3">
                   

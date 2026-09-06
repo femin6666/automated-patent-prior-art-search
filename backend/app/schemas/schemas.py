@@ -22,11 +22,13 @@ class UserLoginRequest(BaseModel):
     password: str
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    user: "UserOut"
+class OTPVerifyRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6)
+
+
+class OTPResendRequest(BaseModel):
+    email: EmailStr
 
 
 class UserOut(BaseModel):
@@ -35,7 +37,18 @@ class UserOut(BaseModel):
     id: str
     name: str
     email: str
+    is_verified: bool = False
     created_at: datetime
+
+
+class TokenResponse(BaseModel):
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_type: str = "bearer"
+    require_otp: bool = False
+    otp_sent_to: Optional[str] = None
+    demo_otp: Optional[str] = None
+    user: Optional[UserOut] = None
 
 
 class UserUpdateRequest(BaseModel):
@@ -91,6 +104,12 @@ class FeatureComparisonItem(BaseModel):
     explanation: str
 
 
+class MatchedFeatureItem(BaseModel):
+    feature: str
+    match_level: str  # strong, partial, weak, none
+    evidence: str
+
+
 class SearchResultItem(BaseModel):
     patent: PatentOut
     semantic_score: float
@@ -103,6 +122,11 @@ class SearchResultItem(BaseModel):
     relevance_explanation: Optional[str] = None
     feature_comparison: List[FeatureComparisonItem] = Field(default_factory=list)
     patent_specific_insights: List[str] = Field(default_factory=list)
+    technical_features: List[str] = Field(default_factory=list)
+    distinctive_features: List[str] = Field(default_factory=list)
+    matched_features: List[MatchedFeatureItem] = Field(default_factory=list)
+    unmatched_features: List[str] = Field(default_factory=list)
+    overlap_summary: Optional[str] = None
 
 
 class SearchSummary(BaseModel):
@@ -141,7 +165,7 @@ class SearchHistoryItem(BaseModel):
     created_at: datetime
     highest_similarity: float
     risk_level: str
-    total_results: int = 10
+    total_results: int = 1110
 
 
 # --- Saved Patents Schemas ---

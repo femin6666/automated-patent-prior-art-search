@@ -36,7 +36,7 @@ export default function RiskBadge({ level, score, size = "md" }: RiskBadgeProps)
   }[size];
 
   return (
-    <span className={`inline-flex items-center gap-1.5 ${badgeStyle} ${sizeClasses}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${badgeStyle} ${sizeClasses}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
       <span>{level} RISK</span>
       {score !== undefined && <span className="opacity-80 font-mono">({score}%)</span>}

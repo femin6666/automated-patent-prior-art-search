@@ -2,7 +2,18 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  is_verified?: boolean;
   created_at: string;
+}
+
+export interface TokenResponse {
+  access_token?: string;
+  refresh_token?: string;
+  token_type?: string;
+  require_otp?: boolean;
+  otp_sent_to?: string;
+  demo_otp?: string;
+  user?: User;
 }
 
 export interface Patent {

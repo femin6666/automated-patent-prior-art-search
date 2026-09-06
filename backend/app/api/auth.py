@@ -1,3 +1,5 @@
+import random
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 
@@ -10,7 +12,8 @@ try:
     from backend.app.core.config import settings
     from backend.app.models.models import User
     from backend.app.schemas.schemas import (
-        UserRegisterRequest, UserLoginRequest, TokenResponse, UserOut
+        UserRegisterRequest, UserLoginRequest, TokenResponse, UserOut,
+        OTPVerifyRequest, OTPResendRequest
     )
 except ImportError:
     from ..core.database import get_db
@@ -21,51 +24,65 @@ except ImportError:
     from ..core.config import settings
     from ..models.models import User
     from ..schemas.schemas import (
-        UserRegisterRequest, UserLoginRequest, TokenResponse, UserOut
+        UserRegisterRequest, UserLoginRequest, TokenResponse, UserOut,
+        OTPVerifyRequest, OTPResendRequest
     )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+def generate_otp_code() -> str:
+    """Generate a 6-digit numeric OTP code."""
+    return f"{random.randint(100000, 999999)}"
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register_user(request: UserRegisterRequest, response: Response, db: Session = Depends(get_db)):
-    """Register a new user account."""
-    existing = db.query(User).filter(User.email == request.email.lower()).first()
+    """Register a new user account and initiate first-time OTP verification."""
+    existing = db.query(User).filter(User.email == request.email.lower().strip()).first()
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email address already exists."
+        if existing.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="An account with this email address already exists and is verified."
+            )
+        # Update unverified user with new password and fresh OTP
+        existing.name = request.name.strip()
+        existing.password_hash = hash_password(request.password)
+        existing.otp_code = generate_otp_code()
+        existing.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+        db.commit()
+        db.refresh(existing)
+        return TokenResponse(
+            require_otp=True,
+            otp_sent_to=existing.email,
+            demo_otp=existing.otp_code,
+            user=UserOut.model_validate(existing)
         )
+
+    otp = generate_otp_code()
+    expires = datetime.utcnow() + timedelta(minutes=10)
 
     user = User(
         name=request.name.strip(),
         email=request.email.lower().strip(),
-        password_hash=hash_password(request.password)
+        password_hash=hash_password(request.password),
+        is_verified=False,
+        otp_code=otp,
+        otp_expires_at=expires
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    access_token = create_access_token({"sub": user.id, "email": user.email})
-    refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
-
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
-        samesite="lax",
-        secure=False
-    )
-
     return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
+        require_otp=True,
+        otp_sent_to=user.email,
+        demo_otp=user.otp_code,
         user=UserOut.model_validate(user)
     )
 
 @router.post("/login", response_model=TokenResponse)
 def login_user(request: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
-    """Authenticate user credentials and issue JWT tokens."""
+    """Authenticate user credentials and issue JWT tokens (or request OTP if unverified)."""
     user = db.query(User).filter(User.email == request.email.lower().strip()).first()
     if not user or not verify_password(request.password, user.password_hash):
         raise HTTPException(
@@ -74,6 +91,18 @@ def login_user(request: UserLoginRequest, response: Response, db: Session = Depe
             headers={"WWW-Authenticate": "Bearer"}
         )
 
+    # Check if first-time verification is required
+    if not user.is_verified:
+        user.otp_code = generate_otp_code()
+        user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+        db.commit()
+        return TokenResponse(
+            require_otp=True,
+            otp_sent_to=user.email,
+            demo_otp=user.otp_code,
+            user=UserOut.model_validate(user)
+        )
+
     access_token = create_access_token({"sub": user.id, "email": user.email})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
 
@@ -89,6 +118,75 @@ def login_user(request: UserLoginRequest, response: Response, db: Session = Depe
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
+        require_otp=False,
+        user=UserOut.model_validate(user)
+    )
+
+@router.post("/verify-otp", response_model=TokenResponse)
+def verify_otp(request: OTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
+    """Verify 6-digit OTP for first-time user email verification."""
+    user = db.query(User).filter(User.email == request.email.lower().strip()).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
+
+    if user.is_verified:
+        # Already verified, proceed to generate tokens
+        pass
+    else:
+        is_valid_otp = (
+            request.otp == "123456" or  # Universal demo fallback
+            (user.otp_code and user.otp_code == request.otp and user.otp_expires_at and user.otp_expires_at > datetime.utcnow())
+        )
+
+        if not is_valid_otp:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired OTP code. Please check your email or request a new code."
+            )
+
+        user.is_verified = True
+        user.otp_code = None
+        user.otp_expires_at = None
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token({"sub": user.id, "email": user.email})
+    refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
+        samesite="lax",
+        secure=False
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        require_otp=False,
+        user=UserOut.model_validate(user)
+    )
+
+@router.post("/resend-otp", response_model=TokenResponse)
+def resend_otp(request: OTPResendRequest, db: Session = Depends(get_db)):
+    """Resend a fresh 6-digit OTP code to user's email."""
+    user = db.query(User).filter(User.email == request.email.lower().strip()).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
+
+    if user.is_verified:
+        return TokenResponse(require_otp=False, user=UserOut.model_validate(user))
+
+    user.otp_code = generate_otp_code()
+    user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+    db.commit()
+
+    return TokenResponse(
+        require_otp=True,
+        otp_sent_to=user.email,
+        demo_otp=user.otp_code,
         user=UserOut.model_validate(user)
     )
 

@@ -48,18 +48,7 @@ export default function RegisterPage() {
   };
 
   const handleSocialClick = (provider: string) => {
-    setError(null);
-    setLoading(true);
-    setTimeout(() => {
-      setEmail("inventor@startup.com");
-      setPassword("password123");
-      api.login({ email: "inventor@startup.com", password: "password123" })
-        .then(() => router.push("/dashboard"))
-        .catch((err) => {
-          setLoading(false);
-          setError("Social auth demo: " + err.message);
-        });
-    }, 600);
+    router.push("/login");
   };
 
   return (

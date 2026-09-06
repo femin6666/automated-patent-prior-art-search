@@ -49,11 +49,15 @@ def perform_prior_art_search(
     6. Classify risk level (LOW, MODERATE, HIGH, VERY HIGH)
     7. Persist search and search results in database
     """
+    import logging
+    logger = logging.getLogger("patentlens.search")
+
     val_res = validate_invention_input(request.title, request.description)
     if not val_res["valid"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=val_res["error"])
 
-    user_concepts = extract_technical_concepts(f"{request.title} {request.problem_statement} {request.description}")
+    target_full_text = f"{request.title} {request.problem_statement} {request.description}"
+    user_concepts = extract_technical_concepts(target_full_text)
     
     combined_text = prepare_combined_text(
         title=request.title,
@@ -69,6 +73,12 @@ def perform_prior_art_search(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Patent database is empty. Please run seed script first."
         )
+
+    logger.info("[DEBUG SEARCH] ==================== PRIOR ART SEARCH INITIATED ====================")
+    logger.info("[DEBUG SEARCH] Target Query Title: '%s'", request.title)
+    logger.info("[DEBUG SEARCH] Target Text Length: %d chars | Embedding Dim: %d", len(combined_text), len(user_embedding))
+    logger.info("[DEBUG SEARCH] Extracted Technical Concepts: %s", user_concepts)
+    logger.info("[DEBUG SEARCH] Number of raw candidate patents scanned: %d", len(all_patents))
 
     scored_items = []
     for patent in all_patents:
@@ -90,7 +100,8 @@ def perform_prior_art_search(
             user_keywords=request.keywords,
             user_concepts=user_concepts,
             user_domain=request.domain,
-            patent=patent_dict
+            patent=patent_dict,
+            target_text_for_concepts=target_full_text
         )
 
         scored_items.append({
@@ -100,6 +111,18 @@ def perform_prior_art_search(
 
     scored_items.sort(key=lambda x: x["scores"]["final_score"], reverse=True)
     top_10 = scored_items[:10]
+
+    logger.info("[DEBUG SEARCH] ==================== TOP RANKED PRIOR ART RESULTS ====================")
+    for idx, item in enumerate(top_10, start=1):
+        pat = item["patent"]
+        sc = item["scores"]
+        logger.info(
+            "[DEBUG SEARCH] Rank %d: [%s] '%s' | Final: %.1f%% | SBERT Sem: %.1f%% | Feature: %.1f%% | Dom: %.1f%% | CoreMatch: %s | TextLens: Title=%d, Abs=%d, Desc=%d",
+            idx, pat.patent_number, pat.title[:50], sc["final_score"], sc["semantic_score"],
+            sc["keyword_score"], sc["domain_score"], sc.get("has_core_match", False),
+            len(pat.title or ""), len(pat.abstract or ""), len(pat.description or "")
+        )
+    logger.info("[DEBUG SEARCH] ========================================================================")
 
     highest_similarity = top_10[0]["scores"]["final_score"] if top_10 else 0.0
     risk_info = classify_prior_art_risk(highest_similarity)
@@ -124,6 +147,18 @@ def perform_prior_art_search(
     low_count = 0
     vhigh_count = 0
 
+    # Calculate similarity metrics across ALL scanned patents in the database dataset
+    for item in scored_items:
+        f_score = item["scores"]["final_score"]
+        if f_score > 85:
+            vhigh_count += 1
+        elif f_score > 70:
+            high_count += 1
+        elif f_score > 40:
+            mod_count += 1
+        else:
+            low_count += 1
+
     from backend.app.services.groq_service import groq_service
     from backend.ml.risk_classifier import get_similarity_level_label
 
@@ -144,14 +179,6 @@ def perform_prior_art_search(
         db.add(sr)
 
         f_score = sc["final_score"]
-        if f_score > 85:
-            vhigh_count += 1
-        elif f_score > 70:
-            high_count += 1
-        elif f_score > 40:
-            mod_count += 1
-        else:
-            low_count += 1
 
         # Generate grounded patent pair feature comparison and relevance insights
         pair_analysis = groq_service.analyze_patent_pair(
@@ -177,14 +204,19 @@ def perform_prior_art_search(
                 semantic_similarity_label=get_similarity_level_label(sc["semantic_score"]),
                 relevance_explanation=pair_analysis.get("relevance_explanation"),
                 feature_comparison=pair_analysis.get("feature_comparison", []),
-                patent_specific_insights=pair_analysis.get("patent_specific_insights", [])
+                patent_specific_insights=pair_analysis.get("patent_specific_insights", []),
+                technical_features=pair_analysis.get("technical_features", []),
+                distinctive_features=pair_analysis.get("distinctive_features", []),
+                matched_features=pair_analysis.get("matched_features", []),
+                unmatched_features=pair_analysis.get("unmatched_features", []),
+                overlap_summary=pair_analysis.get("overlap_summary")
             )
         )
 
     db.commit()
 
     summary = SearchSummary(
-        total_results=len(result_items_response),
+        total_results=len(scored_items),
         high_similarity=high_count,
         moderate_similarity=mod_count,
         low_similarity=low_count,
@@ -303,14 +335,21 @@ def get_search_details(
                 semantic_similarity_label=get_similarity_level_label(r.semantic_score),
                 relevance_explanation=pair_analysis.get("relevance_explanation"),
                 feature_comparison=pair_analysis.get("feature_comparison", []),
-                patent_specific_insights=pair_analysis.get("patent_specific_insights", [])
+                patent_specific_insights=pair_analysis.get("patent_specific_insights", []),
+                technical_features=pair_analysis.get("technical_features", []),
+                distinctive_features=pair_analysis.get("distinctive_features", []),
+                matched_features=pair_analysis.get("matched_features", []),
+                unmatched_features=pair_analysis.get("unmatched_features", []),
+                overlap_summary=pair_analysis.get("overlap_summary")
             )
         )
 
     risk_info = classify_prior_art_risk(search.highest_similarity)
 
+    total_patents_in_db = db.query(Patent).count()
+
     summary = SearchSummary(
-        total_results=len(result_items),
+        total_results=max(total_patents_in_db, len(result_items)),
         high_similarity=high_count,
         moderate_similarity=mod_count,
         low_similarity=low_count,

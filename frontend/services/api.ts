@@ -5,7 +5,8 @@ import {
   SavedPatent,
   Report,
   Patent,
-  SearchFormData
+  SearchFormData,
+  TokenResponse
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -72,13 +73,29 @@ export const api = {
     return data;
   },
 
-  login: async (payload: any) => {
-    const data = await request<any>("/auth/login", {
+  login: async (payload: any): Promise<TokenResponse> => {
+    const data = await request<TokenResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify(payload),
     });
     if (data.access_token) setStoredToken(data.access_token);
     return data;
+  },
+
+  verifyOTP: async (payload: { email: string; otp: string }): Promise<TokenResponse> => {
+    const data = await request<TokenResponse>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (data.access_token) setStoredToken(data.access_token);
+    return data;
+  },
+
+  resendOTP: async (payload: { email: string }): Promise<TokenResponse> => {
+    return request<TokenResponse>("/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   logout: async () => {

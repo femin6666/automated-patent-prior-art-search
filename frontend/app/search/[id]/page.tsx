@@ -189,7 +189,7 @@ export default function SearchResultsPage() {
                   <span className="text-xs font-semibold text-zinc-300 font-mono">{data.risk_label}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-zinc-100">
-                  Highest AI Semantic Similarity: <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
+                  Highest AI Prior-Art Match: <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
                 </h2>
                 <p className="text-xs text-zinc-300 leading-relaxed">
                   The preliminary relevance indicator is computed based on SBERT semantic vector embeddings, technical feature matching, keyword concept overlap, and technology domain alignment.

@@ -16,11 +16,12 @@ def test_health_check():
         assert data["service"] == "PatentLens AI"
 
 def test_user_registration_and_login():
+    import uuid
     with TestClient(app) as client:
-        email = "test.inventor@patentlens.ai"
+        email = f"test.inventor.{uuid.uuid4().hex[:6]}@patentlens.ai"
         password = "SecurePassword123!"
 
-        # 1. Register
+        # 1. Register (Returns require_otp: True)
         reg_payload = {
             "name": "Test Inventor",
             "email": email,
@@ -28,15 +29,19 @@ def test_user_registration_and_login():
             "confirm_password": password
         }
         res_reg = client.post("/api/auth/register", json=reg_payload)
-        if res_reg.status_code == 400:
-            pass
-        else:
-            assert res_reg.status_code == 201
-            data_reg = res_reg.json()
-            assert "access_token" in data_reg
-            assert data_reg["user"]["email"] == email
+        assert res_reg.status_code == 201
+        data_reg = res_reg.json()
+        assert data_reg["require_otp"] is True
+        demo_otp = data_reg["demo_otp"]
 
-        # 2. Login
+        # 2. Verify OTP for First-Time User
+        res_verify = client.post("/api/auth/verify-otp", json={"email": email, "otp": demo_otp})
+        assert res_verify.status_code == 200
+        data_verify = res_verify.json()
+        assert "access_token" in data_verify
+        assert data_verify["user"]["is_verified"] is True
+
+        # 3. Direct Login (Subsequent login bypasses OTP)
         login_payload = {
             "email": email,
             "password": password
@@ -45,9 +50,10 @@ def test_user_registration_and_login():
         assert res_login.status_code == 200
         data_login = res_login.json()
         assert "access_token" in data_login
+        assert data_login["require_otp"] is False
         token = data_login["access_token"]
 
-        # 3. Get Current User Profile
+        # 4. Get Current User Profile
         headers = {"Authorization": f"Bearer {token}"}
         res_me = client.get("/api/auth/me", headers=headers)
         assert res_me.status_code == 200

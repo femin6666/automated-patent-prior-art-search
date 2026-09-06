@@ -49,17 +49,6 @@ export default function Sidebar() {
           </Link>
         </div>
 
-        {/* Demo Badge */}
-        <div className="mx-4 my-4 px-3.5 py-2 rounded-lg bg-zinc-900/80 border border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
-          <span className="font-medium flex items-center gap-1.5 text-zinc-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            Demo Dataset
-          </span>
-          <span className="text-[10px] font-mono font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-            100 Records
-          </span>
-        </div>
-
         {/* Navigation Items */}
         <nav className="px-2 space-y-1">
           {NAV_ITEMS.map((item) => {

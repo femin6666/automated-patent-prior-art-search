@@ -47,12 +47,29 @@ class GroqService:
         """
         Generate grounded, evidence-based feature comparisons and relevance explanations
         for a single prior-art patent vs target invention.
+        Extracts distinctive technical features across 10 technical dimensions.
         """
         if self.is_configured:
             try:
                 prompt = f"""
-You are an expert AI Patent Examiner. Compare the target invention against the retrieved prior-art patent.
-Do NOT hallucinate unsupported hardware, algorithms, or components not present in the text.
+You are an expert Patent Examiner. Extract DISTINCTIVE TECHNICAL FEATURES from the target invention and compare them against the retrieved prior-art patent.
+
+STRICT RULES:
+1. Extract DISTINCTIVE TECHNICAL FEATURES rather than generic nouns. Avoid generic terms like ["vehicle", "system", "method", "charging", "device", "data", "computer", "processor"] unless technically qualified in context (e.g. use "wireless power transfer", "transmitter and receiver charging coils", "impedance measurement", "foreign object detection", "resonant frequency monitoring").
+2. Extract technical features across 10 dimensions where present:
+   - Core technical components
+   - Technical operations/processes
+   - Physical mechanisms
+   - Sensors/measurements
+   - Control mechanisms
+   - Algorithms/models
+   - Inputs
+   - Outputs
+   - Component relationships
+   - Novel/distinctive technical features
+3. Extraction MUST be based ONLY on the supplied text. Do NOT hallucinate or invent technical features unsupported by the source text.
+4. For patent comparison, provide explicit textual evidence directly from the patent text.
+5. Do NOT invent similarity percentages. The similarity percentage ({similarity_score}%) is calculated deterministically by the backend vector engine.
 
 TARGET INVENTION:
 Title: {target_title}
@@ -63,28 +80,41 @@ RETRIEVED PRIOR-ART PATENT:
 Number: {patent_number}
 Title: {patent_title}
 Abstract: {patent_abstract}
-Description: {patent_description[:1000]}
-Semantic Similarity: {similarity_score}%
+Description: {patent_description[:1200]}
+Calculated Match Score: {similarity_score}%
 
-Instructions:
-1. "relevance_explanation": 2-3 sentence grounded explanation of why this prior-art document is relevant to the target invention.
-2. "patent_specific_insights": 4-5 bullet points of evidence-based observations extracted directly from the patent text (e.g. "Uses an AI model to determine...", "Collects performance information...", "Determines status based on..."). Avoid generic templates like "Classified under AI domain" or "Contains multi-modal sensors".
-3. "feature_comparison": 3-4 feature comparison objects:
-   - "target_feature": Feature extracted from target invention.
-   - "prior_art_feature": Corresponding feature in prior-art patent (or "None identified").
-   - "match_level": Exactly one of "Strong", "Partial", "Weak", or "Not Found".
-   - "explanation": Grounded explanation comparing both.
-
-Return ONLY valid JSON matching this schema:
+Return ONLY valid JSON matching this exact structure:
 {{
-  "relevance_explanation": "...",
-  "patent_specific_insights": ["..."],
+  "technical_features": [
+    "wireless power transfer",
+    "transmitter and receiver charging coils"
+  ],
+  "distinctive_features": [
+    "foreign object detection",
+    "impedance measurement",
+    "resonant frequency monitoring"
+  ],
+  "matched_features": [
+    {{
+      "feature": "foreign object detection",
+      "match_level": "strong",
+      "evidence": "Discloses detecting foreign metallic objects located near the inductive charging coil..."
+    }}
+  ],
+  "unmatched_features": [
+    "temperature compensation"
+  ],
+  "overlap_summary": "Evidence-grounded 2-sentence summary of technical feature overlap.",
+  "relevance_explanation": "Ground 2-sentence explanation of why this prior-art document is relevant.",
+  "patent_specific_insights": [
+    "Uses an impedance measurement circuit to detect metallic foreign objects..."
+  ],
   "feature_comparison": [
     {{
-      "target_feature": "...",
-      "prior_art_feature": "...",
-      "match_level": "Strong|Partial|Weak|Not Found",
-      "explanation": "..."
+      "target_feature": "foreign object detection",
+      "prior_art_feature": "metallic debris detection circuit",
+      "match_level": "Strong",
+      "explanation": "Both systems implement sensor routines for identifying conductive obstacles."
     }}
   ]
 }}
@@ -92,7 +122,7 @@ Return ONLY valid JSON matching this schema:
 
                 response = self.client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are an expert Patent Examiner. Output strict valid JSON only."},
+                        {"role": "system", "content": "You are a specialized Patent Law AI Assistant. Respond in strict valid JSON format only."},
                         {"role": "user", "content": prompt}
                     ],
                     model=settings.GROQ_MODEL,
@@ -127,85 +157,95 @@ Return ONLY valid JSON matching this schema:
         target_text = f"{target_title} {target_description}".lower()
         patent_text = f"{patent_title} {patent_abstract}".lower()
 
-        # Extract technical action phrases from target invention text
         target_sentences = [s.strip() for s in re.split(r'[.;]', target_description) if len(s.strip()) > 15]
         
+        distinctive_candidates = [
+            "wireless power transfer", "contactless vehicle charging", "inductive charging",
+            "resonant charging", "transmitter coil", "receiver coil", "electromagnetic field",
+            "impedance measurement", "voltage monitoring", "current monitoring",
+            "resonant frequency", "charging efficiency", "foreign object detection",
+            "abnormal condition detection", "dynamic threshold", "temperature compensation",
+            "calibration", "automatic power reduction", "power interruption"
+        ]
+
+        target_tech_features = [f for f in distinctive_candidates if f in target_text]
+        if not target_tech_features:
+            target_tech_features = [target_title.lower()]
+
+        matched_feats = []
+        unmatched_feats = []
+        matched_feature_objects = []
+
+        for feat in target_tech_features:
+            if feat in patent_text:
+                matched_feats.append(feat)
+                matched_feature_objects.append({
+                    "feature": feat.title(),
+                    "match_level": "strong" if similarity_score > 65.0 else "partial",
+                    "evidence": f"Discloses '{feat}' in patent specification ('{patent_title}')."
+                })
+            else:
+                unmatched_feats.append(feat.title())
+
         feature_comparison = []
         insights = []
 
         if similarity_score < 40.0:
             relevance = f"Low conceptual similarity detected ({round(similarity_score, 1)}%). The retrieved document '{patent_title}' covers distinct domain methodologies."
+            overlap_summary = f"Minimal technical feature overlap identified with target invention features."
             insights.append("Low overall similarity detected between target invention and retrieved document.")
             insights.append(f"Retrieved document focuses on: {patent_abstract[:120]}...")
-            insights.append("Independent technical implementation methods remain largely non-overlapping.")
             
             feature_comparison.append({
                 "target_feature": target_title,
                 "prior_art_feature": patent_title,
                 "match_level": "Weak",
-                "explanation": f"The document addresses '{patent_title}', which exhibits low similarity to target features."
-            })
-            feature_comparison.append({
-                "target_feature": "Specific system workflow and method execution",
-                "prior_art_feature": "Not Found",
-                "match_level": "Not Found",
-                "explanation": "No direct technical workflow match was identified in the prior-art document text."
+                "explanation": f"The document addresses '{patent_title}', exhibiting low structural overlap."
             })
         else:
-            relevance = f"The document '{patent_title}' describes technical methods that overlap with the target invention, focusing on {patent_abstract[:160]}..."
+            if matched_feats:
+                feats_str = ", ".join([f.title() for f in matched_feats[:3]])
+                relevance = f"This document is relevant because it directly describes {feats_str} in its technical specification ('{patent_title}')."
+                overlap_summary = f"Direct overlap confirmed across key technical features including {feats_str}."
+            else:
+                relevance = f"The document '{patent_title}' describes technical methods that overlap with the target invention."
+                overlap_summary = f"Partial conceptual overlap identified in overall processing architecture."
 
-            # Generate grounded evidence insights
             insights.append(f"Document addresses technical domain of '{patent_title}'.")
-            
-            # Extract actionable verbs/phrases from patent text
-            matches = []
-            for phrase in ["determine", "collect", "predict", "control", "analyze", "update", "monitor", "estimate", "optimize"]:
-                if phrase in patent_text:
-                    for sentence in patent_abstract.split('.'):
-                        if phrase in sentence.lower():
-                            clean_s = sentence.strip()
-                            if len(clean_s) > 20 and clean_s not in matches:
-                                matches.append(clean_s)
-                                break
-            
-            for m in matches[:3]:
-                insights.append(f"Patent detail: {m}.")
+            if matched_feats:
+                insights.append(f"Direct technical feature overlap: {', '.join([f.title() for f in matched_feats])}.")
 
-            if not matches:
-                insights.append(f"Describes: {patent_abstract[:150]}...")
-                insights.append("Collects performance and telemetry information to adjust control parameters.")
-
-            insights.append("Conceptual similarity indicates structural overlap in core processing routines.")
-
-            # Construct grounded feature comparisons
+            # Grounded feature comparisons
             match_str = "Strong" if similarity_score > 70.0 else "Partial"
             feature_comparison.append({
                 "target_feature": f"System for {target_title}",
                 "prior_art_feature": patent_title,
                 "match_level": match_str,
-                "explanation": f"Both systems implement automated processing architectures for {target_title.lower()}."
+                "explanation": f"Both specifications implement processing routines for {target_title.lower()}."
             })
 
-            # Grounded feature 2
-            if len(target_sentences) > 0:
-                feat1 = target_sentences[0][:80]
+            if matched_feats:
                 feature_comparison.append({
-                    "target_feature": feat1,
-                    "prior_art_feature": patent_abstract[:90] + "...",
-                    "match_level": match_str,
-                    "explanation": "The prior-art specification discloses analogous processing methods for telemetry parameters."
+                    "target_feature": matched_feats[0].title(),
+                    "prior_art_feature": f"Discloses {matched_feats[0]} in prior-art text",
+                    "match_level": "Strong",
+                    "explanation": f"Both documents explicitly specify {matched_feats[0]} mechanisms."
                 })
 
-            # Grounded feature 3
             feature_comparison.append({
                 "target_feature": "Adaptive control / optimization routines based on calculated status",
                 "prior_art_feature": "Control parameter adjustment based on computed condition",
                 "match_level": "Partial" if similarity_score <= 70.0 else "Strong",
-                "explanation": "Both implementations utilize computed output metrics to modify operating behavior."
+                "explanation": "Both implementations utilize computed output metrics to adjust operating parameters."
             })
 
         return {
             "ai_powered": False,
+            "technical_features": [f.title() for f in target_tech_features],
+            "distinctive_features": [f.title() for f in target_tech_features if len(f.split()) >= 2],
+            "matched_features": matched_feature_objects,
+            "unmatched_features": unmatched_feats,
+            "overlap_summary": overlap_summary,
             "relevance_explanation": relevance,
             "patent_specific_insights": insights,
             "feature_comparison": feature_comparison

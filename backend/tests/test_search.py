@@ -21,11 +21,18 @@ def test_prior_art_search_workflow():
             "confirm_password": password
         }
         res_reg = client.post("/api/auth/register", json=reg_payload)
-        if res_reg.status_code == 201:
-            token = res_reg.json()["access_token"]
+        if res_reg.status_code == 201 and res_reg.json().get("require_otp"):
+            demo_otp = res_reg.json().get("demo_otp")
+            res_ver = client.post("/api/auth/verify-otp", json={"email": email, "otp": demo_otp})
+            token = res_ver.json()["access_token"]
         else:
             res_login = client.post("/api/auth/login", json={"email": email, "password": password})
-            token = res_login.json()["access_token"]
+            if res_login.json().get("require_otp"):
+                demo_otp = res_login.json().get("demo_otp")
+                res_ver = client.post("/api/auth/verify-otp", json={"email": email, "otp": demo_otp})
+                token = res_ver.json()["access_token"]
+            else:
+                token = res_login.json()["access_token"]
 
         auth_headers = {"Authorization": f"Bearer {token}"}
 

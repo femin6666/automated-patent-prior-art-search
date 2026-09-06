@@ -314,10 +314,6 @@ export default function NewSearchPage() {
                 );
               })}
             </div>
-
-            <div className="text-[10px] text-amber-400 font-mono font-medium">
-              Running against local Demo Dataset
-            </div>
           </div>
         </div>
       )}

@@ -119,29 +119,29 @@ export default function SearchHistoryPage() {
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-400 font-mono text-[10px] uppercase tracking-wider bg-zinc-950/60">
                       <th className="p-3.5">Invention Title</th>
-                      <th className="p-3.5">Domain</th>
-                      <th className="p-3.5">Search Date</th>
-                      <th className="p-3.5 text-center">Results</th>
-                      <th className="p-3.5 text-right">Highest Sim</th>
-                      <th className="p-3.5 text-center">Risk Level</th>
-                      <th className="p-3.5 text-right">Actions</th>
+                      <th className="p-3.5 whitespace-nowrap">Domain</th>
+                      <th className="p-3.5 whitespace-nowrap">Search Date</th>
+                      <th className="p-3.5 text-center whitespace-nowrap">Results</th>
+                      <th className="p-3.5 text-right whitespace-nowrap">Highest Sim</th>
+                      <th className="p-3.5 text-center whitespace-nowrap">Risk Level</th>
+                      <th className="p-3.5 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
                     {filteredHistory.map((item) => (
                       <tr key={item.id} className="hover:bg-zinc-900/60 transition-colors">
-                        <td className="p-3.5 font-bold text-zinc-100 max-w-xs truncate">
+                        <td className="p-3.5 font-bold text-zinc-100 max-w-xs truncate" title={item.invention_title}>
                           <Link href={`/search/${item.id}`} className="hover:text-indigo-400 transition-colors">
                             {item.invention_title}
                           </Link>
                         </td>
-                        <td className="p-3.5 text-zinc-300 font-medium">{item.domain}</td>
-                        <td className="p-3.5 text-zinc-400 font-mono text-[11px]">{formatDate(item.created_at)}</td>
-                        <td className="p-3.5 text-center font-mono text-zinc-400">10</td>
-                        <td className="p-3.5 text-right font-mono font-bold text-indigo-400">
+                        <td className="p-3.5 text-zinc-300 font-medium whitespace-nowrap">{item.domain}</td>
+                        <td className="p-3.5 text-zinc-400 font-mono text-[11px] whitespace-nowrap">{formatDate(item.created_at)}</td>
+                        <td className="p-3.5 text-center font-mono text-zinc-400 whitespace-nowrap">10</td>
+                        <td className="p-3.5 text-right font-mono font-bold text-indigo-400 whitespace-nowrap">
                           {item.highest_similarity}%
                         </td>
-                        <td className="p-3.5 text-center">
+                        <td className="p-3.5 text-center whitespace-nowrap">
                           <RiskBadge level={item.risk_level} size="sm" />
                         </td>
                         <td className="p-3.5 text-right">

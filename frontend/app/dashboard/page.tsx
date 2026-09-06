@@ -180,27 +180,27 @@ export default function DashboardPage() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-zinc-800 text-zinc-400 font-mono text-[10px] uppercase tracking-wider">
-                        <th className="pb-2.5">Invention Title</th>
-                        <th className="pb-2.5">Domain</th>
-                        <th className="pb-2.5">Date</th>
-                        <th className="pb-2.5 text-right">Highest Sim</th>
-                        <th className="pb-2.5 text-right">Risk Level</th>
+                        <th className="pb-2.5 pr-4">Invention Title</th>
+                        <th className="pb-2.5 pr-4">Domain</th>
+                        <th className="pb-2.5 pr-4">Date</th>
+                        <th className="pb-2.5 pr-4 text-right">Highest Sim</th>
+                        <th className="pb-2.5 text-right whitespace-nowrap">Risk Level</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/60">
                       {history.slice(0, 5).map((item) => (
                         <tr key={item.id} className="hover:bg-zinc-900/60 transition-colors">
-                          <td className="py-3 font-semibold text-zinc-100">
+                          <td className="py-3 font-semibold text-zinc-100 max-w-[200px] sm:max-w-xs truncate pr-4" title={item.invention_title}>
                             <Link href={`/search/${item.id}`} className="hover:text-indigo-400 transition-colors">
                               {item.invention_title}
                             </Link>
                           </td>
-                          <td className="py-3 text-zinc-300 font-medium">{item.domain}</td>
-                          <td className="py-3 text-zinc-400 font-mono text-[11px]">{formatDate(item.created_at)}</td>
-                          <td className="py-3 text-right font-mono font-bold text-indigo-400">
+                          <td className="py-3 text-zinc-300 font-medium whitespace-nowrap pr-4">{item.domain}</td>
+                          <td className="py-3 text-zinc-400 font-mono text-[11px] whitespace-nowrap pr-4">{formatDate(item.created_at)}</td>
+                          <td className="py-3 text-right font-mono font-bold text-indigo-400 whitespace-nowrap pr-4">
                             {item.highest_similarity}%
                           </td>
-                          <td className="py-3 text-right">
+                          <td className="py-3 text-right whitespace-nowrap">
                             <RiskBadge level={item.risk_level} size="sm" />
                           </td>
                         </tr>

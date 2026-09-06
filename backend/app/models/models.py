@@ -2,11 +2,11 @@ import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, Float, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-from backend.app.core.database import Base, IS_POSTGRES
+from backend.app.core.database import Base, IS_POSTGRES, HAS_PGVECTOR
 
-# Optional pgvector Vector type import if available and running PostgreSQL
+# Optional pgvector Vector type import if available and running PostgreSQL with pgvector
 try:
-    if IS_POSTGRES:
+    if HAS_PGVECTOR:
         from pgvector.sqlalchemy import Vector
         VECTOR_TYPE = Vector(384)
     else:

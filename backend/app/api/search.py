@@ -170,6 +170,26 @@ def perform_prior_art_search(
         very_high_similarity=vhigh_count
     )
 
+    try:
+        from backend.app.services.groq_service import groq_service
+        ai_analysis = groq_service.generate_novelty_analysis(
+            invention_title=request.title,
+            problem_statement=request.problem_statement,
+            description=request.description,
+            matched_patents=[
+                {
+                    "patent_number": item["patent"].patent_number,
+                    "title": item["patent"].title,
+                    "abstract": item["patent"].abstract,
+                    "final_score": item["scores"]["final_score"]
+                }
+                for item in top_10
+            ],
+            risk_level=risk_info["risk_level"]
+        )
+    except Exception:
+        ai_analysis = None
+
     return PriorArtSearchResponse(
         search_id=search_record.id,
         invention_title=search_record.invention_title,
@@ -180,6 +200,7 @@ def perform_prior_art_search(
         highest_similarity=highest_similarity,
         summary=summary,
         results=result_items_response,
+        ai_analysis=ai_analysis,
         is_demo_dataset=True
     )
 

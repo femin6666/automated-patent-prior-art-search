@@ -7,6 +7,7 @@ import RiskBadge from "./RiskBadge";
 import ConceptOverlap from "./ConceptOverlap";
 import { Bookmark, ExternalLink, ArrowUpRight, Building2, Calendar, Check, Sparkles } from "lucide-react";
 import { api } from "@/services/api";
+import { getOfficialPatentUrl } from "@/lib/utils";
 
 interface PatentCardProps {
   item: SearchResultItem;
@@ -110,17 +111,15 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
             <span>{saved ? "Saved" : "Save Patent"}</span>
           </button>
 
-          {patent.source_url && (
-            <a
-              href={patent.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition-all"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Source</span>
-            </a>
-          )}
+          <a
+            href={getOfficialPatentUrl(patent)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition-all"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Source</span>
+          </a>
         </div>
 
         <Link

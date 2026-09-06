@@ -8,6 +8,10 @@ patentlens.db
 .vscode/
 .env
 .env.local
+backend/.env
+frontend/.env
+backend/generated_reports/
+*.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

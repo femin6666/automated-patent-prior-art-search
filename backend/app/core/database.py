@@ -8,6 +8,7 @@ logger = logging.getLogger("patentlens.database")
 Base = declarative_base()
 
 IS_POSTGRES = settings.DATABASE_URL.startswith("postgresql")
+HAS_PGVECTOR = False
 
 if IS_POSTGRES:
     try:
@@ -19,9 +20,13 @@ if IS_POSTGRES:
         )
         # Test connection & attempt vector extension creation
         with engine.connect() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-            conn.commit()
-            logger.info("Connected to PostgreSQL and verified pgvector extension.")
+            try:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+                conn.commit()
+                HAS_PGVECTOR = True
+                logger.info("Connected to PostgreSQL and verified pgvector extension.")
+            except Exception as ve:
+                logger.info(f"Connected to PostgreSQL successfully! (pgvector extension not installed in Postgres: {ve})")
     except Exception as e:
         logger.warning(f"Could not connect to PostgreSQL ({e}). Falling back to SQLite local database.")
         IS_POSTGRES = False

@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
+        extra="ignore"
     )
 
     PROJECT_NAME: str = "PatentLens AI"
@@ -27,8 +28,10 @@ class Settings(BaseSettings):
     # CORS & Frontend
     FRONTEND_URL: str = "http://localhost:3000"
 
-    # Machine Learning
+    # Machine Learning & AI Services
     MODEL_NAME: str = "all-MiniLM-L6-v2"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
 
 settings = Settings()

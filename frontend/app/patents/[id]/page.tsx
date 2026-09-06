@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import ConceptOverlap from "@/components/ConceptOverlap";
 import { Patent } from "@/types";
 import { api } from "@/services/api";
+import { getOfficialPatentUrl } from "@/lib/utils";
 import {
   Building2,
   Calendar,
@@ -112,17 +112,15 @@ export default function PatentDetailPage() {
                 <span>{isSaved ? "Saved to Favorites" : "Save Patent"}</span>
               </button>
 
-              {patent.source_url && (
-                <a
-                  href={patent.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-sm shadow-indigo-500/20 transition-all"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open Official Source</span>
-                </a>
-              )}
+              <a
+                href={getOfficialPatentUrl(patent)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-sm shadow-indigo-500/20 transition-all"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open Official Source</span>
+              </a>
             </div>
           </div>
 

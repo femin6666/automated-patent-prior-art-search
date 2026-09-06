@@ -65,6 +65,15 @@ class PatentOut(BaseModel):
     source_url: Optional[str] = None
 
 
+class CreateCustomPatentRequest(BaseModel):
+    title: str = Field(..., min_length=3, max_length=500)
+    abstract: str = Field(..., min_length=10, max_length=2000)
+    description: str = Field(..., min_length=20, max_length=10000)
+    domain: str = Field(..., min_length=2, max_length=100)
+    inventors: Optional[str] = "User Inventor"
+    assignee: Optional[str] = "Independent Assignee"
+
+
 # --- Prior-Art Search Schemas ---
 
 class PriorArtSearchRequest(BaseModel):
@@ -103,6 +112,7 @@ class PriorArtSearchResponse(BaseModel):
     highest_similarity: float
     summary: SearchSummary
     results: List[SearchResultItem]
+    ai_analysis: Optional[Dict[str, Any]] = None
     is_demo_dataset: bool = True
     disclaimer: str = (
         "PatentLens AI provides AI-assisted preliminary prior-art search results "

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
-import { Search, UserCheck } from "lucide-react";
+import { UserCheck, Home, Search, Layers, User, Zap, Sparkles } from "lucide-react";
 import { api } from "@/services/api";
-import PillNav from "./PillNav";
+import AnimatedDockNav, { DockNavItem } from "./AnimatedDockNav";
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
-  const [activeHref, setActiveHref] = useState("#how-it-works");
+  const [activeTab, setActiveTab] = useState("home");
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -23,20 +23,17 @@ export default function Navbar() {
       }
     };
 
-    // Check initial scroll state
     handleScroll();
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navItems = [
-    { label: "Home", href: "/" },
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "Features", href: "#features" },
-    { label: "About", href: "#about" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "FAQ", href: "#faq" },
+  const dockNavItems: DockNavItem[] = [
+    { id: "home", label: "Home", href: "/", icon: Home },
+    { id: "how-it-works", label: "How It Works", href: "#how-it-works", icon: Layers },
+    { id: "search", label: "Search", href: "#search", icon: Search },
+    { id: "features", label: "Features", href: "#features", icon: Zap },
+    { id: "profile", label: user ? "Dashboard" : "Login", href: user ? "/dashboard" : "/login", icon: User },
   ];
 
   return (
@@ -45,7 +42,7 @@ export default function Navbar() {
     }`}>
       <div className={`transition-all duration-300 flex items-center justify-between ${
         isScrolled
-          ? "max-w-6xl mx-auto px-6 py-2.5 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/50 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.35)]"
+          ? "max-w-6xl mx-auto px-6 py-2 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/50 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.35)]"
           : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-[#060713]/90 backdrop-blur-xl border-b border-white/10"
       }`}>
         
@@ -66,17 +63,12 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Centered Navigation Pills (React Bits PillNav) */}
-        <div className="hidden md:flex items-center justify-center">
-          <PillNav
-            items={navItems}
-            activeHref={activeHref}
-            baseColor="#818cf8"
-            pillColor="rgba(255, 255, 255, 0.06)"
-            pillTextColor="#94a3b8"
-            hoveredPillTextColor="#ffffff"
-            ease="power3.easeOut"
-            initialLoadAnimation={true}
+        {/* Centered Animated Dock Navigation Bar (Matches User Image Specs) */}
+        <div className="flex items-center justify-center">
+          <AnimatedDockNav
+            items={dockNavItems}
+            activeId={activeTab}
+            onSelect={setActiveTab}
           />
         </div>
 
@@ -87,13 +79,13 @@ export default function Navbar() {
           {user ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-500/30 transition-all"
+              className="hidden sm:flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-500/30 transition-all"
             >
               <UserCheck className="w-4 h-4" />
               <span>Dashboard</span>
             </Link>
           ) : (
-            <div className="flex items-center gap-2.5">
+            <div className="hidden sm:flex items-center gap-2.5">
               <Link
                 href="/login"
                 className="px-5 py-2 rounded-full bg-white/[0.05] border border-white/15 hover:bg-white/10 text-xs font-semibold text-zinc-200 transition-all"

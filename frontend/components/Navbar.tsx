@@ -16,14 +16,17 @@ export default function Navbar() {
     api.getMe().then(setUser).catch(() => setUser(null));
 
     const handleScroll = () => {
-      if (window.scrollY > 20) {
+      if (window.scrollY > 15) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    // Check initial scroll state
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -37,12 +40,12 @@ export default function Navbar() {
   ];
 
   return (
-    <header className={`sticky z-50 transition-all duration-300 ${
+    <header className={`fixed left-0 right-0 z-50 transition-all duration-300 ${
       isScrolled ? "top-3 px-4 sm:px-6 lg:px-8" : "top-0 w-full"
     }`}>
       <div className={`transition-all duration-300 flex items-center justify-between ${
         isScrolled
-          ? "max-w-6xl mx-auto px-6 py-2 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/40 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_25px_rgba(99,102,241,0.25)]"
+          ? "max-w-6xl mx-auto px-6 py-2.5 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/50 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.35)]"
           : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-[#060713]/90 backdrop-blur-xl border-b border-white/10"
       }`}>
         

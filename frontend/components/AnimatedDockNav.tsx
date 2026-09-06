@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Home, Search, Layers, User, Zap, Sparkles } from "lucide-react";
+import { Home, Search, Layers, User, Zap } from "lucide-react";
 
 export interface DockNavItem {
   id: string;
@@ -20,16 +20,16 @@ export interface AnimatedDockNavProps {
 }
 
 const DEFAULT_DOCK_ITEMS: DockNavItem[] = [
-  { id: "profile", label: "Profile", href: "/profile", icon: User },
-  { id: "features", label: "Features", href: "#features", icon: Zap },
-  { id: "search", label: "Search", href: "#search", icon: Search },
-  { id: "how-it-works", label: "How It Works", href: "#how-it-works", icon: Layers },
   { id: "home", label: "Home", href: "/", icon: Home },
+  { id: "how-it-works", label: "How It Works", href: "#how-it-works", icon: Layers },
+  { id: "search", label: "Search", href: "#search", icon: Search },
+  { id: "features", label: "Features", href: "#features", icon: Zap },
+  { id: "profile", label: "Account", href: "/login", icon: User },
 ];
 
 const AnimatedDockNav: React.FC<AnimatedDockNavProps> = ({
   items = DEFAULT_DOCK_ITEMS,
-  activeId = "profile",
+  activeId = "home",
   onSelect,
   className = "",
 }) => {
@@ -44,8 +44,26 @@ const AnimatedDockNav: React.FC<AnimatedDockNavProps> = ({
 
   return (
     <div
-      className={`relative inline-flex items-center gap-1.5 sm:gap-4 px-4 sm:px-6 py-2.5 rounded-2xl sm:rounded-full bg-[#121214]/95 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-2xl ${className}`}
+      className={`relative inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 rounded-full bg-[#121214]/95 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(0,0,0,0.5)] backdrop-blur-2xl ${className}`}
     >
+      {/* Patent ART Pro Logo Segment */}
+      <Link href="/" className="flex items-center gap-2.5 pr-3 border-r border-white/15 group shrink-0">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-[0_0_15px_rgba(99,102,241,0.5)] group-hover:scale-105 transition-transform">
+          <div className="w-full h-full bg-[#070817] rounded-full flex items-center justify-center">
+            <span className="text-cyan-400 font-bold text-sm">✦</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-extrabold text-xs sm:text-sm text-white tracking-tight leading-none whitespace-nowrap">
+            Patent <span className="text-indigo-400">ART</span>
+          </span>
+          <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-[9px] font-black uppercase text-black shadow-[0_0_10px_rgba(249,115,22,0.6)] tracking-wider">
+            Pro
+          </span>
+        </div>
+      </Link>
+
+      {/* Dock Nav Items */}
       {items.map((item) => {
         const isActive = selectedTab === item.id;
         const Icon = item.icon;
@@ -55,9 +73,9 @@ const AnimatedDockNav: React.FC<AnimatedDockNavProps> = ({
             key={item.id}
             href={item.href}
             onClick={() => handleSelect(item.id)}
-            className="relative flex flex-col items-center justify-center px-3 py-1.5 transition-colors cursor-pointer select-none group min-w-[54px]"
+            className="relative flex flex-col items-center justify-center px-2.5 sm:px-3 py-1 transition-colors cursor-pointer select-none group min-w-[50px]"
           >
-            {/* Active Orange/Amber Spotlight Backlight Glow (Matches User Image) */}
+            {/* Active Orange/Amber Spotlight Backlight Glow */}
             {isActive && (
               <motion.div
                 layoutId="dockGlow"
@@ -69,14 +87,14 @@ const AnimatedDockNav: React.FC<AnimatedDockNavProps> = ({
             {/* Nav Icon */}
             <motion.div
               animate={{
-                scale: isActive ? 1.25 : 1,
-                y: isActive ? -2 : 0,
+                scale: isActive ? 1.2 : 1,
+                y: isActive ? -1 : 0,
               }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className="flex items-center justify-center"
             >
               <Icon
-                className={`w-5 h-5 transition-colors duration-200 ${
+                className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200 ${
                   isActive
                     ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                     : "text-zinc-400 group-hover:text-zinc-200"
@@ -84,24 +102,24 @@ const AnimatedDockNav: React.FC<AnimatedDockNavProps> = ({
               />
             </motion.div>
 
-            {/* Active Label Underneath Icon (Matches User Image) */}
+            {/* Active Label Underneath Icon */}
             {isActive && (
               <motion.span
-                initial={{ opacity: 0, y: 4, scale: 0.8 }}
+                initial={{ opacity: 0, y: 3, scale: 0.8 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.8 }}
+                exit={{ opacity: 0, y: 3, scale: 0.8 }}
                 transition={{ duration: 0.2 }}
-                className="text-[11px] font-semibold text-amber-200 tracking-wide mt-1 leading-none shadow-sm"
+                className="text-[10px] font-semibold text-amber-200 tracking-wide mt-1 leading-none shadow-sm"
               >
                 {item.label}
               </motion.span>
             )}
 
-            {/* Active Bottom Orange Indicator Pill Tag (Matches User Image) */}
+            {/* Active Bottom Orange Indicator Pill Tag */}
             {isActive && (
               <motion.div
                 layoutId="dockPill"
-                className="absolute -bottom-2.5 w-7 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 rounded-full shadow-[0_0_12px_#f97316]"
+                className="absolute -bottom-2.5 w-6 sm:w-7 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 rounded-full shadow-[0_0_12px_#f97316]"
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}

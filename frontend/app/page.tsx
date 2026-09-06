@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import DriftWall, { DriftWallItem } from "@/components/DriftWall";
+import AnimatedList from "@/components/AnimatedList";
 import { gsap } from "gsap";
 import {
   Sparkles,
@@ -23,7 +24,8 @@ import {
   CheckCircle2,
   HelpCircle,
   Zap,
-  Globe
+  Globe,
+  ChevronDown
 } from "lucide-react";
 import { api } from "@/services/api";
 
@@ -42,17 +44,43 @@ const DRIFT_WALL_ITEMS: DriftWallItem[] = [
   { image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80', title: 'Smart Energy' },
 ];
 
+const DOMAIN_OPTIONS = [
+  "Renewable Energy",
+  "Agriculture & AgTech",
+  "Biotechnology & Health",
+  "Electronics & Software",
+  "Medical Devices & MedTech",
+  "Artificial Intelligence & ML",
+  "CleanTech & Environment",
+  "IoT & Embedded Systems",
+  "Nanotechnology & Materials",
+  "Automotive & Mobility"
+];
+
 export default function LandingPage() {
   const router = useRouter();
 
   const [description, setDescription] = useState(
     "An AI-powered system that analyzes soil conditions and automatically controls irrigation using predictive models."
   );
-  const [selectedDomain, setSelectedDomain] = useState("Agriculture");
+  const [selectedDomain, setSelectedDomain] = useState("Renewable Energy");
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>(["AI & ML", "Agriculture", "IoT"]);
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywordInput, setShowKeywordInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDomainOpen, setIsDomainOpen] = useState(false);
+  const domainDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Close domain dropdown when clicking outside
+    const handleClickOutside = (e: MouseEvent) => {
+      if (domainDropdownRef.current && !domainDropdownRef.current.contains(e.target as Node)) {
+        setIsDomainOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     // GSAP Hero Entrance Animations with clearProps
@@ -263,7 +291,7 @@ export default function LandingPage() {
                     </button>
                   </div>
 
-                  {/* Keywords & Domain Row */}
+                  {/* Keywords & Animated Domain Selection Row */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1 px-1">
                     <div className="flex flex-wrap items-center gap-2">
                       {selectedKeywords.map((kw) => (
@@ -298,17 +326,39 @@ export default function LandingPage() {
                       )}
                     </div>
 
-                    <select
-                      value={selectedDomain}
-                      onChange={(e) => setSelectedDomain(e.target.value)}
-                      className="bg-[#080a1c] border border-white/10 rounded-lg px-2.5 py-1 text-[11px] text-indigo-300 focus:outline-none cursor-pointer"
-                    >
-                      <option value="Agriculture">Agriculture</option>
-                      <option value="Biotechnology">Biotechnology</option>
-                      <option value="Electronics & Software">Electronics & Software</option>
-                      <option value="Medical Devices">Medical Devices</option>
-                      <option value="Renewable Energy">Renewable Energy</option>
-                    </select>
+                    {/* Animated Domain Selection Dropdown with React Bits <AnimatedList /> */}
+                    <div className="relative" ref={domainDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setIsDomainOpen(!isDomainOpen)}
+                        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#090c24] border border-indigo-500/40 hover:border-indigo-500/70 text-xs font-semibold text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:scale-105 transition-all cursor-pointer"
+                      >
+                        <span>{selectedDomain}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDomainOpen ? "rotate-180 text-cyan-400" : "text-zinc-400"}`} />
+                      </button>
+
+                      {isDomainOpen && (
+                        <div className="absolute right-0 top-full mt-2 z-50 p-2 rounded-2xl bg-[#080a22]/95 border border-indigo-500/40 shadow-[0_15px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.3)] backdrop-blur-2xl animate-in fade-in duration-200">
+                          <div className="px-3 py-1.5 mb-1 border-b border-white/10 flex items-center justify-between">
+                            <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-400 font-bold">Select Domain</span>
+                            <span className="text-[10px] text-zinc-500 font-mono">React Bits List</span>
+                          </div>
+                          <AnimatedList
+                            items={DOMAIN_OPTIONS}
+                            onItemSelect={(item) => {
+                              setSelectedDomain(item);
+                              setIsDomainOpen(false);
+                            }}
+                            initialSelectedIndex={DOMAIN_OPTIONS.indexOf(selectedDomain)}
+                            showGradients={true}
+                            enableArrowNavigation={true}
+                            displayScrollbar={true}
+                            className="w-[280px]"
+                          />
+                        </div>
+                      )}
+                    </div>
+
                   </div>
 
                 </form>

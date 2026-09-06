@@ -84,6 +84,13 @@ class PriorArtSearchRequest(BaseModel):
     keywords: List[str] = Field(default_factory=list, max_length=20)
 
 
+class FeatureComparisonItem(BaseModel):
+    target_feature: str
+    prior_art_feature: str
+    match_level: str  # Strong, Partial, Weak, Not Found
+    explanation: str
+
+
 class SearchResultItem(BaseModel):
     patent: PatentOut
     semantic_score: float
@@ -92,6 +99,10 @@ class SearchResultItem(BaseModel):
     final_score: float
     matched_concepts: List[str]
     rank: int
+    semantic_similarity_label: Optional[str] = "Moderate"
+    relevance_explanation: Optional[str] = None
+    feature_comparison: List[FeatureComparisonItem] = Field(default_factory=list)
+    patent_specific_insights: List[str] = Field(default_factory=list)
 
 
 class SearchSummary(BaseModel):

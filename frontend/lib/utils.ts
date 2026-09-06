@@ -6,11 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateString: string) {
+  if (!dateString) return "";
   try {
-    const d = new Date(dateString);
+    let s = dateString.trim();
+    // Handle YYYYMMDD format e.g. 20250102
+    if (/^\d{8}$/.test(s)) {
+      s = `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
+    }
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return dateString;
     return d.toLocaleDateString("en-US", {
       year: "numeric",
-      month: "short",
+      month: "long",
       day: "numeric",
     });
   } catch {

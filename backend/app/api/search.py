@@ -14,7 +14,8 @@ try:
     from backend.ml.keyword_extractor import extract_technical_concepts
     from backend.ml.embedding_service import embedding_service
     from backend.ml.similarity_engine import compute_hybrid_score, calculate_cosine_similarity
-    from backend.ml.risk_classifier import classify_prior_art_risk
+    from backend.ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
+    from backend.app.services.groq_service import groq_service
 except ImportError:
     from ..core.database import get_db, IS_POSTGRES
     from ..core.security import get_current_user
@@ -27,7 +28,8 @@ except ImportError:
     from ...ml.keyword_extractor import extract_technical_concepts
     from ...ml.embedding_service import embedding_service
     from ...ml.similarity_engine import compute_hybrid_score, calculate_cosine_similarity
-    from ...ml.risk_classifier import classify_prior_art_risk
+    from ...ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
+    from ..services.groq_service import groq_service
 
 router = APIRouter(prefix="/search", tags=["Prior-Art Search"])
 
@@ -122,6 +124,9 @@ def perform_prior_art_search(
     low_count = 0
     vhigh_count = 0
 
+    from backend.app.services.groq_service import groq_service
+    from backend.ml.risk_classifier import get_similarity_level_label
+
     for idx, item in enumerate(top_10, start=1):
         pat = item["patent"]
         sc = item["scores"]
@@ -139,14 +144,26 @@ def perform_prior_art_search(
         db.add(sr)
 
         f_score = sc["final_score"]
-        if f_score > 80:
+        if f_score > 85:
             vhigh_count += 1
-        elif f_score > 65:
+        elif f_score > 70:
             high_count += 1
         elif f_score > 40:
             mod_count += 1
         else:
             low_count += 1
+
+        # Generate grounded patent pair feature comparison and relevance insights
+        pair_analysis = groq_service.analyze_patent_pair(
+            target_title=request.title,
+            target_problem=request.problem_statement,
+            target_description=request.description,
+            patent_number=pat.patent_number,
+            patent_title=pat.title,
+            patent_abstract=pat.abstract,
+            patent_description=pat.description,
+            similarity_score=f_score
+        )
 
         result_items_response.append(
             SearchResultItem(
@@ -156,7 +173,11 @@ def perform_prior_art_search(
                 domain_score=sc["domain_score"],
                 final_score=sc["final_score"],
                 matched_concepts=sc["matched_concepts"],
-                rank=idx
+                rank=idx,
+                semantic_similarity_label=get_similarity_level_label(sc["semantic_score"]),
+                relevance_explanation=pair_analysis.get("relevance_explanation"),
+                feature_comparison=pair_analysis.get("feature_comparison", []),
+                patent_specific_insights=pair_analysis.get("patent_specific_insights", [])
             )
         )
 
@@ -250,14 +271,25 @@ def get_search_details(
 
     for r in results_db:
         f_score = r.final_score
-        if f_score > 80:
+        if f_score > 85:
             vhigh_count += 1
-        elif f_score > 65:
+        elif f_score > 70:
             high_count += 1
         elif f_score > 40:
             mod_count += 1
         else:
             low_count += 1
+
+        pair_analysis = groq_service.analyze_patent_pair(
+            target_title=search.invention_title,
+            target_problem=search.problem_statement,
+            target_description=search.description,
+            patent_number=r.patent.patent_number,
+            patent_title=r.patent.title,
+            patent_abstract=r.patent.abstract,
+            patent_description=r.patent.description,
+            similarity_score=f_score
+        )
 
         result_items.append(
             SearchResultItem(
@@ -267,7 +299,11 @@ def get_search_details(
                 domain_score=r.domain_score,
                 final_score=r.final_score,
                 matched_concepts=r.matched_concepts or [],
-                rank=r.rank
+                rank=r.rank,
+                semantic_similarity_label=get_similarity_level_label(r.semantic_score),
+                relevance_explanation=pair_analysis.get("relevance_explanation"),
+                feature_comparison=pair_analysis.get("feature_comparison", []),
+                patent_specific_insights=pair_analysis.get("patent_specific_insights", [])
             )
         )
 

@@ -179,26 +179,27 @@ export default function SearchResultsPage() {
             </div>
           </div>
 
-          {/* Prior-Art Risk Indicator Card */}
+          {/* Prior-Art Relevance Indicator Card */}
           <div className="p-7 rounded-xl tech-card space-y-3 relative overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-2.5 max-w-2xl">
                 <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-mono font-semibold text-zinc-400">AI Prior-Art Relevance:</span>
                   <RiskBadge level={data.risk_level} size="md" />
                   <span className="text-xs font-semibold text-zinc-300 font-mono">{data.risk_label}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-zinc-100">
-                  Highest Hybrid Similarity: <span className="text-indigo-400 font-mono">{data.highest_similarity}%</span>
+                  Highest AI Semantic Similarity: <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
                 </h2>
                 <p className="text-xs text-zinc-300 leading-relaxed">
-                  The risk level is computed based on SBERT semantic vector similarity, keyword concept overlap, and technology domain alignment between your invention description and documents in the dataset.
+                  The preliminary relevance indicator is computed based on SBERT semantic vector embeddings, technical feature matching, keyword concept overlap, and technology domain alignment.
                 </p>
               </div>
 
               <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 max-w-xs text-xs space-y-1.5">
                 <div className="flex items-center gap-1.5 text-amber-400 font-mono text-[11px] font-semibold">
                   <Scale className="w-3.5 h-3.5" />
-                  <span>Research Disclaimer</span>
+                  <span>Preliminary AI Disclaimer</span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed italic">
                   {data.disclaimer}

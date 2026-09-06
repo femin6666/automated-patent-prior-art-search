@@ -33,5 +33,11 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
+    # Configurable Similarity Thresholds (0-40% Low, 40-70% Moderate, 70-85% High, 85-100% Very High)
+    SIMILARITY_THRESHOLD_LOW: float = 40.0
+    SIMILARITY_THRESHOLD_MODERATE: float = 70.0
+    SIMILARITY_THRESHOLD_HIGH: float = 85.0
+    SIMILARITY_THRESHOLD_VERY_HIGH: float = 100.0
+
 
 settings = Settings()

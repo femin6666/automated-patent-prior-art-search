@@ -5,9 +5,9 @@ import Link from "next/link";
 import { SearchResultItem } from "@/types";
 import RiskBadge from "./RiskBadge";
 import ConceptOverlap from "./ConceptOverlap";
-import { Bookmark, ExternalLink, ArrowUpRight, Building2, Calendar, Check, Sparkles } from "lucide-react";
+import { Bookmark, ExternalLink, ArrowUpRight, Building2, Calendar, Check } from "lucide-react";
 import { api } from "@/services/api";
-import { getOfficialPatentUrl } from "@/lib/utils";
+import { getOfficialPatentUrl, formatDate } from "@/lib/utils";
 
 interface PatentCardProps {
   item: SearchResultItem;
@@ -15,7 +15,7 @@ interface PatentCardProps {
 }
 
 export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
-  const { patent, final_score, matched_concepts, rank } = item;
+  const { patent, semantic_score, final_score, matched_concepts, rank, semantic_similarity_label, relevance_explanation } = item;
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -36,6 +36,9 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
       setIsSaving(false);
     }
   };
+
+  // Derive relevance tag
+  const simLevel = semantic_similarity_label || (final_score > 85 ? "Very High" : final_score > 70 ? "High" : final_score > 40 ? "Moderate" : "Low");
 
   return (
     <div className="group relative rounded-xl tech-card tech-card-hover p-6 space-y-4">
@@ -60,34 +63,47 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
                 {patent.assignee}
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1 font-medium text-zinc-400">
+              <span className="flex items-center gap-1 font-medium text-zinc-400 font-mono text-[11px]">
                 <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-                {patent.publication_date}
+                {formatDate(patent.publication_date)}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 self-end sm:self-auto">
+        <div className="flex items-center gap-3 self-end sm:self-auto">
           <div className="text-right">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500">Hybrid Score</div>
-            <div className="text-2xl font-bold font-mono text-indigo-400">
-              {final_score}%
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400">
+              AI Semantic Similarity
+            </div>
+            <div className="text-xl font-bold font-mono text-indigo-400">
+              {Math.round(semantic_score || final_score)}% <span className="text-xs font-normal text-zinc-400">({simLevel})</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Domain & Abstract */}
+      {/* Domain & Relevance Explanation */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-zinc-900 text-zinc-300 border border-zinc-800">
             {patent.domain}
           </span>
+          <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+            AI Prior-Art Relevance: {simLevel.toUpperCase()}
+          </span>
         </div>
-        <p className="text-xs text-zinc-300 leading-relaxed font-normal line-clamp-3">
-          {patent.abstract}
-        </p>
+
+        {relevance_explanation ? (
+          <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 leading-relaxed">
+            <span className="font-semibold text-indigo-400">Why Relevant: </span>
+            {relevance_explanation}
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-300 leading-relaxed font-normal line-clamp-3">
+            {patent.abstract}
+          </p>
+        )}
       </div>
 
       {/* AI Concept Overlap Chips */}
@@ -118,7 +134,7 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition-all"
           >
             <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Source</span>
+            <span>View Original Patent</span>
           </a>
         </div>
 
@@ -126,7 +142,7 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
           href={`/patents/${patent.id}`}
           className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-sm shadow-indigo-500/20 transition-all"
         >
-          <span>View Details & Matrix</span>
+          <span>View Full Feature Comparison</span>
           <ArrowUpRight className="w-3.5 h-3.5" />
         </Link>
       </div>

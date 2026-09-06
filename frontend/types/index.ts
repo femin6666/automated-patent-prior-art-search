@@ -18,6 +18,13 @@ export interface Patent {
   source_url?: string;
 }
 
+export interface FeatureComparisonItem {
+  target_feature: string;
+  prior_art_feature: string;
+  match_level: 'Strong' | 'Partial' | 'Weak' | 'Not Found';
+  explanation: string;
+}
+
 export interface SearchResultItem {
   patent: Patent;
   semantic_score: number;
@@ -26,6 +33,10 @@ export interface SearchResultItem {
   final_score: number;
   matched_concepts: string[];
   rank: number;
+  semantic_similarity_label?: string;
+  relevance_explanation?: string;
+  feature_comparison?: FeatureComparisonItem[];
+  patent_specific_insights?: string[];
 }
 
 export interface SearchSummary {

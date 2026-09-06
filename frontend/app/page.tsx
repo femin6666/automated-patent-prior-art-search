@@ -258,7 +258,7 @@ export default function LandingPage() {
               </p>
 
               {/* Glassmorphic Patent Intelligence Search Box */}
-              <div className="rounded-2xl bg-[#0b0e22]/90 border border-indigo-500/30 p-4 sm:p-5 shadow-[0_0_40px_rgba(99,102,241,0.15)] backdrop-blur-xl space-y-4">
+              <div className="relative z-30 rounded-2xl bg-[#0b0e22]/95 border border-indigo-500/30 p-4 sm:p-5 shadow-[0_0_40px_rgba(99,102,241,0.15)] backdrop-blur-xl space-y-4">
                 
                 <form onSubmit={handleAnalyze} className="space-y-3">
                   
@@ -327,7 +327,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Animated Domain Selection Dropdown with React Bits <AnimatedList /> */}
-                    <div className="relative" ref={domainDropdownRef}>
+                    <div className="relative z-50" ref={domainDropdownRef}>
                       <button
                         type="button"
                         onClick={() => setIsDomainOpen(!isDomainOpen)}
@@ -338,7 +338,7 @@ export default function LandingPage() {
                       </button>
 
                       {isDomainOpen && (
-                        <div className="absolute right-0 top-full mt-2 z-[100] p-1.5 rounded-xl bg-[#090c24]/95 border border-indigo-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.95),0_0_25px_rgba(99,102,241,0.4)] backdrop-blur-2xl animate-in fade-in duration-200">
+                        <div className="absolute right-0 top-full mt-2 z-[100] p-1.5 rounded-xl bg-[#080b21] border border-indigo-500/60 shadow-[0_20px_50px_rgba(0,0,0,0.98),0_0_30px_rgba(99,102,241,0.5)] backdrop-blur-2xl animate-in fade-in duration-200">
                           <AnimatedList
                             items={DOMAIN_OPTIONS}
                             onItemSelect={(item) => {
@@ -361,7 +361,7 @@ export default function LandingPage() {
               </div>
 
               {/* 4 Feature Badges Under Search Box */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 relative z-10">
                 
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0b0e20]/60 border border-white/5 backdrop-blur-md">
                   <span className="text-cyan-400 text-xs">✦</span>

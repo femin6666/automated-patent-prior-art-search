@@ -84,6 +84,15 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    if (!isDomainOpen) {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isDomainOpen]);
+
+  useEffect(() => {
     // GSAP Hero Entrance Animations with clearProps
     gsap.fromTo(
       ".gsap-hero-content",
@@ -259,7 +268,7 @@ export default function LandingPage() {
               </p>
 
               {/* Glassmorphic Patent Intelligence Search Box */}
-              <div className="relative z-30 p-[1.5px] rounded-2xl bg-indigo-500/30 hover:bg-gradient-to-r hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 transition-all duration-300 shadow-[0_0_40px_rgba(99,102,241,0.15)] hover:shadow-[0_0_50px_rgba(99,102,241,0.35),0_0_20px_rgba(56,189,248,0.25)] group/box">
+              <div className="relative z-30 p-[1.5px] rounded-2xl bg-indigo-500/30 hover:bg-gradient-to-r hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 transition-all duration-300 shadow-[0_0_40px_rgba(99,102,241,0.15)] hover:shadow-[0_0_50px_rgba(99,102,241,0.35),0_0_20px_rgba(56,189,248,0.25)] group/box" ref={domainDropdownRef}>
                 
                 {/* Solid Dark Inner Content Container (Guarantees interior stays dark) */}
                 <div className="relative rounded-[15px] bg-[#0b0e22] p-4 sm:p-5 space-y-4">
@@ -330,8 +339,8 @@ export default function LandingPage() {
                         )}
                       </div>
 
-                      {/* Animated Domain Selection Dropdown with React Bits <AnimatedList /> */}
-                      <div className="relative z-50" ref={domainDropdownRef}>
+                      {/* Domain Selection Toggle Button */}
+                      <div>
                         <button
                           type="button"
                           onClick={() => setIsDomainOpen(!isDomainOpen)}
@@ -340,39 +349,50 @@ export default function LandingPage() {
                           <span>{selectedDomain}</span>
                           <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDomainOpen ? "rotate-180 text-cyan-400" : "text-zinc-400"}`} />
                         </button>
-
-                        {isDomainOpen && (
-                          <div className="absolute right-0 top-full mt-2 z-[100] p-2 rounded-2xl bg-[#080b21] border border-indigo-500/60 shadow-[0_20px_50px_rgba(0,0,0,0.98),0_0_30px_rgba(99,102,241,0.5)] backdrop-blur-2xl animate-in fade-in duration-200 w-[260px]">
-                            <div className="px-2 py-1 mb-1 border-b border-white/10 flex items-center justify-between">
-                              <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold">Select Domain</span>
-                              <span className="text-[9px] text-zinc-500 font-mono">React Bits Wheel</span>
-                            </div>
-                            <OptionWheel
-                              items={DOMAIN_OPTIONS}
-                              defaultSelected={Math.max(0, DOMAIN_OPTIONS.indexOf(selectedDomain))}
-                              onChange={(index, item) => {
-                                setSelectedDomain(item);
-                              }}
-                              side="right"
-                              textColor="#71717a"
-                              activeColor="#818cf8"
-                              fontSize={1.05}
-                              spacing={1.3}
-                              curve={1.1}
-                              tilt={6}
-                              blur={1.5}
-                              fade={0.3}
-                              inset={20}
-                              draggable={true}
-                            />
-                          </div>
-                        )}
                       </div>
 
                     </div>
 
                   </form>
                 </div>
+
+                {/* OptionWheel rendered directly on the right side of the main search box without card framing */}
+                {isDomainOpen && (
+                  <div
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 sm:top-1/2 sm:left-full sm:-translate-y-1/2 sm:translate-x-0 sm:mt-0 sm:ml-4 z-[100] w-64 h-[240px] pointer-events-auto flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
+                    onMouseEnter={() => {
+                      document.body.style.overflow = "hidden";
+                    }}
+                    onMouseLeave={() => {
+                      document.body.style.overflow = "";
+                    }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <OptionWheel
+                      items={DOMAIN_OPTIONS}
+                      defaultSelected={Math.max(0, DOMAIN_OPTIONS.indexOf(selectedDomain))}
+                      onChange={(index, item) => {
+                        setSelectedDomain(item);
+                        setIsDomainOpen(false);
+                        document.body.style.overflow = "";
+                      }}
+                      side="left"
+                      textColor="#818cf8"
+                      activeColor="#ffffff"
+                      fontSize={1.1}
+                      spacing={1.4}
+                      curve={1.2}
+                      tilt={8}
+                      blur={1.2}
+                      fade={0.25}
+                      inset={20}
+                      draggable={true}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* 4 Feature Badges Under Search Box */}

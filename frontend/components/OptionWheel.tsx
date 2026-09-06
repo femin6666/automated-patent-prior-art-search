@@ -196,6 +196,7 @@ const OptionWheel: React.FC<OptionWheelProps> = ({
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       const cfg = cfgRef.current;
       const delta = e.deltaMode === 1 ? e.deltaY * 24 : e.deltaY;
       const step = Math.max(-1, Math.min(1, delta / cfg.rowH));

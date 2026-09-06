@@ -31,6 +31,25 @@ def seed_patents_if_needed(db: Session = None):
 
     try:
         Base.metadata.create_all(bind=engine)
+
+        # Seed Demo User if missing
+        try:
+            from backend.app.models.models import User
+            from backend.app.core.security import hash_password
+        except ImportError:
+            from app.models.models import User
+            from app.core.security import hash_password
+
+        demo_user = db.query(User).filter(User.email == "inventor@startup.com").first()
+        if not demo_user:
+            demo_user = User(
+                name="Demo Inventor",
+                email="inventor@startup.com",
+                password_hash=hash_password("password123")
+            )
+            db.add(demo_user)
+            db.commit()
+            logger.info("Demo user 'inventor@startup.com' created successfully.")
         
         existing_count = db.query(Patent).count()
         if existing_count >= 100:

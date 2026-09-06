@@ -381,7 +381,7 @@ export default function LandingPage() {
                       }}
                       showGradients={true}
                       enableArrowNavigation={true}
-                      displayScrollbar={true}
+                      displayScrollbar={false}
                     />
                   </div>
                 )}

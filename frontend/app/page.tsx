@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import DriftWall, { DriftWallItem } from "@/components/DriftWall";
 import { gsap } from "gsap";
 import {
   Sparkles,
@@ -25,6 +26,21 @@ import {
   Globe
 } from "lucide-react";
 import { api } from "@/services/api";
+
+const DRIFT_WALL_ITEMS: DriftWallItem[] = [
+  { image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80', title: 'Neural Network' },
+  { image: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=600&q=80', title: 'Quantum Core' },
+  { image: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=600&q=80', title: 'Robotics' },
+  { image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80', title: 'Circuit Design' },
+  { image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80', title: 'Cyber Security' },
+  { image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80', title: 'Global Data' },
+  { image: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=600&q=80', title: 'Microchip' },
+  { image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80', title: 'Data Center' },
+  { image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80', title: 'AI Engineering' },
+  { image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=600&q=80', title: 'Mathematics' },
+  { image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=600&q=80', title: 'Biotechnology' },
+  { image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80', title: 'Smart Energy' },
+];
 
 export default function LandingPage() {
   const router = useRouter();
@@ -121,6 +137,29 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#070815] text-zinc-100 font-sans selection:bg-indigo-500 selection:text-white relative overflow-hidden">
       
+      {/* Background React Bits <DriftWall /> Layer */}
+      <div className="absolute inset-0 pointer-events-auto z-0 opacity-30 overflow-hidden min-h-[700px]">
+        <DriftWall
+          items={DRIFT_WALL_ITEMS}
+          columns={6}
+          tileWidth={220}
+          tileHeight={140}
+          gap={20}
+          tilt={16}
+          turn={-14}
+          perspective={1200}
+          depth={120}
+          speed={35}
+          direction="up"
+          variance={0.45}
+          parallax={0.6}
+          lift={64}
+          fade={0.6}
+          dim={0.55}
+          overlayColor="#070815"
+        />
+      </div>
+
       {/* Background Neon Aura & Wave Line SVG */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -392,7 +431,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works Section (Direct Match with User Image) */}
+      {/* How It Works Section */}
       <section id="how-it-works" className="py-20 border-t border-white/[0.06] relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           

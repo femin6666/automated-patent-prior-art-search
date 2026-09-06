@@ -338,11 +338,7 @@ export default function LandingPage() {
                       </button>
 
                       {isDomainOpen && (
-                        <div className="absolute right-0 top-full mt-2 z-50 p-2 rounded-2xl bg-[#080a22]/95 border border-indigo-500/40 shadow-[0_15px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.3)] backdrop-blur-2xl animate-in fade-in duration-200">
-                          <div className="px-3 py-1.5 mb-1 border-b border-white/10 flex items-center justify-between">
-                            <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-400 font-bold">Select Domain</span>
-                            <span className="text-[10px] text-zinc-500 font-mono">React Bits List</span>
-                          </div>
+                        <div className="absolute right-0 top-full mt-2 z-[100] p-1.5 rounded-xl bg-[#090c24]/95 border border-indigo-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.95),0_0_25px_rgba(99,102,241,0.4)] backdrop-blur-2xl animate-in fade-in duration-200">
                           <AnimatedList
                             items={DOMAIN_OPTIONS}
                             onItemSelect={(item) => {
@@ -353,7 +349,7 @@ export default function LandingPage() {
                             showGradients={true}
                             enableArrowNavigation={true}
                             displayScrollbar={true}
-                            className="w-[280px]"
+                            className="w-[230px]"
                           />
                         </div>
                       )}

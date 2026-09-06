@@ -30,7 +30,7 @@ const AnimatedItem: React.FC<AnimatedItemProps> = ({
       initial={{ scale: 0.7, opacity: 0 }}
       animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
       transition={{ duration: 0.2, delay }}
-      style={{ marginBottom: '0.5rem', cursor: 'pointer' }}
+      style={{ cursor: 'pointer' }}
     >
       {children}
     </motion.div>

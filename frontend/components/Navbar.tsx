@@ -3,29 +3,16 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
-import { UserCheck, Home, Search, Layers, User, Zap, Sparkles } from "lucide-react";
+import { Home, Search, Layers, User, Zap } from "lucide-react";
 import { api } from "@/services/api";
 import AnimatedDockNav, { DockNavItem } from "./AnimatedDockNav";
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("home");
-  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     api.getMe().then(setUser).catch(() => setUser(null));
-
-    const handleScroll = () => {
-      if (window.scrollY > 15) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const dockNavItems: DockNavItem[] = [
@@ -33,38 +20,32 @@ export default function Navbar() {
     { id: "how-it-works", label: "How It Works", href: "#how-it-works", icon: Layers },
     { id: "search", label: "Search", href: "#search", icon: Search },
     { id: "features", label: "Features", href: "#features", icon: Zap },
-    { id: "profile", label: user ? "Dashboard" : "Login", href: user ? "/dashboard" : "/login", icon: User },
+    { id: "profile", label: user ? "Dashboard" : "Account", href: user ? "/dashboard" : "/login", icon: User },
   ];
 
   return (
-    <header className={`fixed left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? "top-3 px-4 sm:px-6 lg:px-8" : "top-0 w-full"
-    }`}>
-      <div className={`transition-all duration-300 flex items-center justify-between ${
-        isScrolled
-          ? "max-w-6xl mx-auto px-6 py-2 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/50 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.35)]"
-          : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-[#060713]/90 backdrop-blur-xl border-b border-white/10"
-      }`}>
+    <header className="fixed top-3 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-6 py-2.5 bg-[#090c24]/95 backdrop-blur-2xl border border-indigo-500/50 rounded-full shadow-[0_15px_45px_rgba(0,0,0,0.95),0_0_30px_rgba(99,102,241,0.3)] flex items-center justify-between transition-all duration-300">
         
-        {/* Far Left Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-[0_0_20px_rgba(99,102,241,0.5)] group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-[#070817] rounded-[10px] flex items-center justify-center">
+        {/* Far Left Brand Logo with Curved Base */}
+        <Link href="/" className="flex items-center gap-3 group shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-[0_0_20px_rgba(99,102,241,0.5)] group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-[#070817] rounded-full flex items-center justify-center">
               <span className="text-cyan-400 font-bold text-lg">✦</span>
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-lg text-white tracking-tight leading-none flex items-center gap-1">
+            <span className="font-extrabold text-base text-white tracking-tight leading-none flex items-center gap-1">
               PriorArt<span className="text-indigo-400">IQ</span>
             </span>
-            <span className="text-[10px] text-zinc-400 font-medium tracking-wide">
+            <span className="text-[9px] text-zinc-400 font-medium tracking-wide">
               Patent Search, Smarter.
             </span>
           </div>
         </Link>
 
-        {/* Centered Animated Dock Navigation Bar (Matches User Image Specs) */}
-        <div className="flex items-center justify-center">
+        {/* Centered Animated Dock Navigation Bar */}
+        <div className="flex items-center justify-center mx-2">
           <AnimatedDockNav
             items={dockNavItems}
             activeId={activeTab}
@@ -72,36 +53,13 @@ export default function Navbar() {
           />
         </div>
 
-        {/* Far Right Action Buttons */}
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="hidden sm:flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-500/30 transition-all"
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>Dashboard</span>
-            </Link>
-          ) : (
-            <div className="hidden sm:flex items-center gap-2.5">
-              <Link
-                href="/login"
-                className="px-5 py-2 rounded-full bg-white/[0.05] border border-white/15 hover:bg-white/10 text-xs font-semibold text-zinc-200 transition-all"
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-xs font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center gap-1.5"
-              >
-                <span>Get Started</span>
-                <span className="text-sm">→</span>
-              </Link>
-            </div>
-          )}
+        {/* Far Right Rounded Theme Toggle End */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center hover:bg-white/[0.08] transition-all">
+            <ThemeToggle />
+          </div>
         </div>
+
       </div>
     </header>
   );

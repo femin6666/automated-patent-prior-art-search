@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -15,7 +15,7 @@ def generate_pdf_report(search: Search, results: list) -> str:
     Generate a clean PDF prior-art search report using ReportLab.
     Returns absolute path of generated PDF file.
     """
-    filename = f"patentlens_report_{search.id[:8]}_{int(datetime.utcnow().timestamp())}.pdf"
+    filename = f"patentlens_report_{search.id[:8]}_{int(datetime.now(timezone.utc).timestamp())}.pdf"
     filepath = os.path.join(REPORTS_DIR, filename)
 
     doc = SimpleDocTemplate(

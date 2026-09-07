@@ -137,7 +137,7 @@ export default function SearchHistoryPage() {
                         </td>
                         <td className="p-3.5 text-zinc-300 font-medium whitespace-nowrap">{item.domain}</td>
                         <td className="p-3.5 text-zinc-400 font-mono text-[11px] whitespace-nowrap">{formatDate(item.created_at)}</td>
-                        <td className="p-3.5 text-center font-mono text-zinc-400 whitespace-nowrap">10</td>
+                        <td className="p-3.5 text-center font-mono text-zinc-400 whitespace-nowrap">{item.total_results || 10}</td>
                         <td className="p-3.5 text-right font-mono font-bold text-indigo-400 whitespace-nowrap">
                           {item.highest_similarity}%
                         </td>

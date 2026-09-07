@@ -44,6 +44,35 @@ else:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+def ensure_columns_exist(engine_instance):
+    """Ensure newly added columns exist in searches table across PostgreSQL and SQLite."""
+    cols_to_add = [
+        ("total_results", "INTEGER DEFAULT 0"),
+        ("very_high_similarity", "INTEGER DEFAULT 0"),
+        ("high_similarity", "INTEGER DEFAULT 0"),
+        ("moderate_similarity", "INTEGER DEFAULT 0"),
+        ("low_similarity", "INTEGER DEFAULT 0"),
+        ("patents_searched", "INTEGER DEFAULT 0"),
+        ("patents_retrieved", "INTEGER DEFAULT 0"),
+        ("patents_shortlisted", "INTEGER DEFAULT 0"),
+        ("patents_deeply_analyzed", "INTEGER DEFAULT 0"),
+    ]
+    with engine_instance.connect() as conn:
+        for col_name, col_type in cols_to_add:
+            try:
+                if IS_POSTGRES:
+                    conn.execute(text(f"ALTER TABLE searches ADD COLUMN IF NOT EXISTS {col_name} {col_type};"))
+                else:
+                    conn.execute(text(f"ALTER TABLE searches ADD COLUMN {col_name} {col_type};"))
+                conn.commit()
+            except Exception:
+                pass
+
+try:
+    ensure_columns_exist(engine)
+except Exception as me:
+    logger.info(f"Database auto-migration check: {me}")
+
 def get_db():
     """Dependency for obtaining database sessions in FastAPI routes."""
     db = SessionLocal()

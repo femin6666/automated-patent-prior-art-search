@@ -178,32 +178,20 @@ export default function LoginPage() {
       const fullName = user.displayName || "Google User";
       const userEmail = user.email || "user@google.com";
 
-      // Check if user exists in backend database
-      try {
-        const loginRes = await api.login({ email: userEmail, password: "GoogleOAuth2PasswordSecured" });
-        
-        if (loginRes.require_otp) {
-          setOtpTargetEmail(loginRes.otp_sent_to || userEmail);
-          setDemoOTP(loginRes.demo_otp || null);
-          setShowOTPModal(true);
-          sendOTPEmail({ toEmail: loginRes.otp_sent_to || userEmail, otpCode: loginRes.demo_otp || "123456" }).catch(() => {});
-          setLoading(false);
-          return;
-        }
-
-        sendAuthEmail({ toEmail: userEmail, toName: fullName, actionType: "login" }).catch(() => {});
-        router.push("/dashboard");
-      } catch (loginErr: any) {
-        // First-time Google user (account not in database yet): redirect to Sign Up tab and notify
-        console.log("[Google OAuth] First-time user detected:", userEmail);
-        const nameParts = fullName.split(" ");
-        setFirstName(nameParts[0] || "");
-        setLastName(nameParts.slice(1).join(" ") || "");
-        setEmail(userEmail);
-        setMode("signup");
-        setError(null);
-        setSuccessMsg(`First-time Google user detected (${userEmail}). Please create your account to complete registration.`);
+      // Authenticate or auto-register Google account in backend database
+      const authRes = await api.googleAuth({ email: userEmail, name: fullName });
+      
+      if (authRes.require_otp) {
+        setOtpTargetEmail(authRes.otp_sent_to || userEmail);
+        setDemoOTP(authRes.demo_otp || null);
+        setShowOTPModal(true);
+        sendOTPEmail({ toEmail: authRes.otp_sent_to || userEmail, otpCode: authRes.demo_otp || "123456" }).catch(() => {});
+        setLoading(false);
+        return;
       }
+
+      sendAuthEmail({ toEmail: userEmail, toName: fullName, actionType: "login" }).catch(() => {});
+      router.push("/dashboard");
     } catch (err: any) {
       console.warn("Google OAuth error:", err);
       if (err.code === "auth/popup-closed-by-user") {

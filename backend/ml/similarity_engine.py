@@ -100,8 +100,9 @@ def calculate_keyword_similarity(
     for term, weight in weighted_concepts.items():
         if not term:
             continue
-        # Substring match for multi-word phrases or word boundary match
-        if term in patent_text:
+        # Exact word boundary matching for single words, clean phrase matching for multi-word n-grams
+        pattern = r'\b' + re.escape(term) + r'\b' if len(term.split()) == 1 else re.escape(term)
+        if re.search(pattern, patent_text):
             matched_terms.append(term.title())
             matched_weight_sum += weight
             
@@ -173,6 +174,14 @@ def compute_hybrid_score(
     
     effective_user_domain = user_domain or "Electrical Engineering"
     domain_sim = calculate_domain_similarity(effective_user_domain, inferred_domain)
+    
+    # Adaptive Dynamic Weights:
+    # If user provided 0 explicit keywords, shift weight to SBERT Semantic similarity
+    has_user_keywords = bool(user_keywords and any(k.strip() for k in user_keywords))
+    if not has_user_keywords and w_semantic == SEMANTIC_WEIGHT:
+        w_semantic = 0.70
+        w_keyword = 0.15
+        w_domain = 0.15
     
     # Core Distinctive Feature Gate:
     # Identify high-importance distinctive terms in target invention

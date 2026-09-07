@@ -45,3 +45,49 @@ def test_similarity_engine():
     
     dom_sim = calculate_domain_similarity("Agriculture", "Agriculture")
     assert dom_sim == 1.0
+
+def test_keyword_regex_boundary_matching():
+    from backend.ml.similarity_engine import calculate_keyword_similarity
+    # "cellular" should NOT match keyword "cell" via exact word boundaries
+    score_no_match, _ = calculate_keyword_similarity(
+        user_keywords=["cell"],
+        user_concepts=[],
+        target_full_text="cell",
+        patent_abstract="Cellular communication tower technology",
+        patent_description=""
+    )
+    assert score_no_match == 0.0
+    
+    # "cell" as a standalone word should match
+    score_match, matched = calculate_keyword_similarity(
+        user_keywords=["cell"],
+        user_concepts=[],
+        target_full_text="cell",
+        patent_abstract="Primary fuel cell energy storage unit",
+        patent_description=""
+    )
+    assert score_match > 0.0
+    assert "Cell" in matched
+
+def test_adaptive_hybrid_scoring():
+    from backend.ml.similarity_engine import compute_hybrid_score
+    # When no keywords are supplied (user_keywords=[]), weight automatically shifts to 70% semantic SBERT similarity
+    result = compute_hybrid_score(
+        user_embedding=[1.0, 0.0, 0.0],
+        patent_embedding=[1.0, 0.0, 0.0],
+        user_keywords=[],
+        user_concepts=[],
+        user_domain="Electrical Engineering",
+        patent={
+            "title": "Wireless Power Transfer System",
+            "abstract": "A system for transmitting wireless energy.",
+            "description": "Describing resonant charging coils and power transmitters.",
+            "domain": "Electrical Engineering"
+        },
+        target_text_for_concepts="Wireless power transfer energy transmission system"
+    )
+    # Hybrid score should reflect dynamic shift to semantic similarity (1.0 cosine sim * 0.70 + 1.0 domain sim * 0.30)
+    assert result["final_score"] >= 90.0
+    assert result["semantic_score"] == 100.0
+
+

@@ -29,3 +29,5 @@ ENV/
 # OS / IDE
 .DS_Store
 Thumbs.db
+scratch/
+

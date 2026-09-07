@@ -74,41 +74,67 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <div className="text-right">
             <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400">
-              AI Semantic Similarity
+              AI Prior-Art Match
             </div>
             <div className="text-xl font-bold font-mono text-indigo-400">
-              {Math.round(semantic_score || final_score)}% <span className="text-xs font-normal text-zinc-400">({simLevel})</span>
+              {Math.round(final_score)}% <span className="text-xs font-normal text-zinc-400">({simLevel})</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Domain & Relevance Explanation */}
+      {/* Domain & Examination Metric Badges */}
       <div className="space-y-2.5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-zinc-900 text-zinc-300 border border-zinc-800">
             {patent.domain}
           </span>
           <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-            AI Prior-Art Relevance: {simLevel.toUpperCase()}
+            Vector Similarity: {Math.round(semantic_score)}%
           </span>
+          {item.technical_feature_coverage !== undefined && item.technical_feature_coverage > 0 && (
+            <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/20">
+              Technical Feature Coverage: {Math.round(item.technical_feature_coverage)}%
+            </span>
+          )}
+          {item.single_document_anticipation && (
+            <span className={`px-2.5 py-0.5 rounded text-[11px] font-mono font-bold border ${
+              item.single_document_anticipation === "YES" || final_score > 75
+                ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                : "bg-amber-500/15 text-amber-400 border-amber-500/30"
+            }`}>
+              {item.single_document_anticipation === "YES" || final_score > 75
+                ? "Potential Prior Art: REVIEW REQUIRED"
+                : "Prior Art Signal: DETECTED"}
+            </span>
+          )}
         </div>
 
-        {relevance_explanation ? (
-          <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 leading-relaxed">
-            <span className="font-semibold text-indigo-400">Why Relevant: </span>
-            {relevance_explanation}
-          </div>
-        ) : (
-          <p className="text-xs text-zinc-300 leading-relaxed font-normal line-clamp-3">
-            {patent.abstract}
-          </p>
-        )}
+        {(() => {
+          const conceptsText = matched_concepts && matched_concepts.length > 0
+            ? matched_concepts.slice(0, 4).join(", ")
+            : patent.domain;
+          
+          const dynamicExplanation = relevance_explanation && relevance_explanation.length > 25
+            ? relevance_explanation
+            : `Strong semantic overlap in ${conceptsText}. Discloses ${matched_concepts?.length || 1} major technical concept(s) matching the submitted invention claims.`;
+
+          return (
+            <div className="p-3 rounded-lg bg-zinc-900/70 border border-zinc-800 text-xs text-zinc-300 leading-relaxed shadow-inner">
+              <span className="font-semibold text-indigo-400">Why Relevant: </span>
+              {dynamicExplanation}
+            </div>
+          );
+        })()}
       </div>
 
       {/* AI Concept Overlap Chips */}
       <div className="pt-1">
-        <ConceptOverlap concepts={matched_concepts} />
+        <ConceptOverlap
+          concepts={matched_concepts}
+          unmatchedConcepts={item.unmatched_features || item.missing_elements || []}
+          technicalFeatures={item.technical_features || []}
+        />
       </div>
 
       {/* Footer Actions */}

@@ -82,6 +82,15 @@ export const api = {
     return data;
   },
 
+  googleAuth: async (payload: { email: string; name?: string }): Promise<TokenResponse> => {
+    const data = await request<TokenResponse>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (data.access_token) setStoredToken(data.access_token);
+    return data;
+  },
+
   verifyOTP: async (payload: { email: string; otp: string }): Promise<TokenResponse> => {
     const data = await request<TokenResponse>("/auth/verify-otp", {
       method: "POST",

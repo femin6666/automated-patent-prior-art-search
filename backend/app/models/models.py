@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, Float, Integer, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base, IS_POSTGRES, HAS_PGVECTOR
@@ -25,8 +25,8 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
     otp_code = Column(String(6), nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     searches = relationship("Search", back_populates="user", cascade="all, delete-orphan")
@@ -48,7 +48,7 @@ class Patent(Base):
     domain = Column(String(100), index=True, nullable=False)
     source_url = Column(String(500), nullable=True)
     embedding = Column(VECTOR_TYPE, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     search_results = relationship("SearchResult", back_populates="patent", cascade="all, delete-orphan")
@@ -67,7 +67,16 @@ class Search(Base):
     keywords = Column(JSON, default=list)
     risk_level = Column(String(50), nullable=False)  # LOW, MODERATE, HIGH, VERY HIGH
     highest_similarity = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    total_results = Column(Integer, default=0, nullable=True)
+    very_high_similarity = Column(Integer, default=0, nullable=True)
+    high_similarity = Column(Integer, default=0, nullable=True)
+    moderate_similarity = Column(Integer, default=0, nullable=True)
+    low_similarity = Column(Integer, default=0, nullable=True)
+    patents_searched = Column(Integer, default=0, nullable=True)
+    patents_retrieved = Column(Integer, default=0, nullable=True)
+    patents_shortlisted = Column(Integer, default=0, nullable=True)
+    patents_deeply_analyzed = Column(Integer, default=0, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     user = relationship("User", back_populates="searches")
@@ -100,7 +109,7 @@ class SavedPatent(Base):
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     patent_id = Column(String(36), ForeignKey("patents.id", ondelete="CASCADE"), nullable=False, index=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     user = relationship("User", back_populates="saved_patents")
@@ -114,7 +123,7 @@ class Report(Base):
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     search_id = Column(String(36), ForeignKey("searches.id", ondelete="CASCADE"), nullable=False, index=True)
     report_path = Column(String(500), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     user = relationship("User", back_populates="reports")

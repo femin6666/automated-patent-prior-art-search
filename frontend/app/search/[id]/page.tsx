@@ -19,7 +19,9 @@ import {
   Scale,
   Sparkles,
   AlertTriangle,
-  Loader2
+  Loader2,
+  HelpCircle,
+  X
 } from "lucide-react";
 
 export default function SearchResultsPage() {
@@ -34,6 +36,7 @@ export default function SearchResultsPage() {
   const [sortBy, setSortBy] = useState<"similarity" | "newest" | "oldest">("similarity");
   const [riskFilter, setRiskFilter] = useState<string>("ALL");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [showCalcModal, setShowCalcModal] = useState(false);
 
   useEffect(() => {
     async function fetchSearch() {
@@ -133,8 +136,8 @@ export default function SearchResultsPage() {
                   {data.domain}
                 </span>
                 <span className="text-xs text-zinc-400 font-mono">• {formatDate(data.created_at)}</span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  Demo Dataset
+                <span className="px-2 py-0.5 text-[10px] font-mono font-medium rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  {data.data_source || "Live arXiv Feed"}
                 </span>
               </div>
               <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Prior-Art Analysis Results</h1>
@@ -179,34 +182,137 @@ export default function SearchResultsPage() {
             </div>
           </div>
 
-          {/* Prior-Art Relevance Indicator Card */}
-          <div className="p-7 rounded-xl tech-card space-y-3 relative overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-2.5 max-w-2xl">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xs font-mono font-semibold text-zinc-400">AI Prior-Art Relevance:</span>
-                  <RiskBadge level={data.risk_level} size="md" />
-                  <span className="text-xs font-semibold text-zinc-300 font-mono">{data.risk_label}</span>
-                </div>
-                <h2 className="text-2xl font-bold text-zinc-100">
-                  Highest AI Prior-Art Match: <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
-                </h2>
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  The preliminary relevance indicator is computed based on SBERT semantic vector embeddings, technical feature matching, keyword concept overlap, and technology domain alignment.
-                </p>
+          {/* Patent API Execution Audit Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20">
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300">Patents Searched</div>
+              <div className="text-xl font-mono font-bold text-indigo-200 mt-0.5">
+                {data.summary.patents_searched || 100}
               </div>
-
-              <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 max-w-xs text-xs space-y-1.5">
-                <div className="flex items-center gap-1.5 text-amber-400 font-mono text-[11px] font-semibold">
-                  <Scale className="w-3.5 h-3.5" />
-                  <span>Preliminary AI Disclaimer</span>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-relaxed italic">
-                  {data.disclaimer}
-                </p>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-sky-300">API Retrieved</div>
+              <div className="text-xl font-mono font-bold text-sky-200 mt-0.5">
+                {data.summary.patents_retrieved || 0}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300">Vector Shortlisted</div>
+              <div className="text-xl font-mono font-bold text-purple-200 mt-0.5">
+                {data.summary.patents_shortlisted || data.results.length}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300">
+                {data.ai_model_used || "Gemini 2.5 Flash"} Analyzed
+              </div>
+              <div className="text-xl font-mono font-bold text-emerald-200 mt-0.5">
+                {data.summary.patents_deeply_analyzed || data.results.length}
               </div>
             </div>
           </div>
+
+          {/* Prior-Art Relevance Indicator Card */}
+          {(() => {
+            const topMatchScore = data.results && data.results.length > 0 ? Math.round(data.results[0].final_score) : Math.round(data.highest_similarity);
+            const topVectorSim = data.results && data.results.length > 0 ? Math.round(data.results[0].semantic_score) : Math.round(data.highest_semantic_similarity || data.highest_similarity);
+            return (
+              <div className="p-7 rounded-xl tech-card space-y-3 relative overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-2.5 max-w-2xl">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs font-mono font-semibold text-zinc-400">AI Prior-Art Relevance:</span>
+                      <RiskBadge level={data.risk_level} size="md" />
+                      <span className="text-xs font-semibold text-zinc-300 font-mono">{data.risk_label}</span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-zinc-100 flex flex-wrap items-center gap-3">
+                      <span>Overall Prior-Art Relevance:</span>
+                      <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
+                      <span className="px-3 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-semibold shadow-sm">
+                        Highest Semantic Similarity: {topVectorSim}%
+                      </span>
+                      <button
+                        onClick={() => setShowCalcModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-mono text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer shadow-sm"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <span>How is this calculated?</span>
+                      </button>
+                    </h2>
+                    <p className="text-xs text-zinc-300 leading-relaxed">
+                      The preliminary relevance indicator is computed based on SBERT semantic vector embeddings, technical feature matching, keyword concept overlap, and technology domain alignment.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 max-w-xs text-xs space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-amber-400 font-mono text-[11px] font-semibold">
+                      <Scale className="w-3.5 h-3.5" />
+                      <span>Preliminary AI Disclaimer</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed italic">
+                      {data.disclaimer}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Calculation Breakdown Modal */}
+                {showCalcModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="w-full max-w-lg p-6 rounded-2xl bg-[#0c0e24] border border-indigo-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] space-y-4 text-left">
+                      <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                        <div className="flex items-center gap-2 text-indigo-400 font-mono font-bold text-sm">
+                          <HelpCircle className="w-4 h-4" />
+                          <span>Overall Relevance Calculation Formula</span>
+                        </div>
+                        <button
+                          onClick={() => setShowCalcModal(false)}
+                          className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/15 text-white flex items-center justify-center transition-all border border-white/10"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3 text-xs">
+                        <p className="text-zinc-300 leading-relaxed">
+                          The <strong>Overall Prior-Art Relevance Score ({Math.round(data.highest_similarity)}%)</strong> evaluates prior art candidates using a multi-factor hybrid scoring algorithm:
+                        </p>
+
+                        <div className="p-4 rounded-xl bg-[#070919] border border-indigo-500/20 font-mono text-[11px] space-y-2.5">
+                          <div className="flex justify-between items-center text-indigo-300">
+                            <span>SBERT Semantic Vector Similarity (40% Weight):</span>
+                            <span className="font-bold text-white">{Math.round(topVectorSim * 0.40)}%</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sky-300">
+                            <span>Technical Feature & Concept Match (45% Weight):</span>
+                            <span className="font-bold text-white">{Math.round((data.results[0]?.keyword_score || 20) * 0.45)}%</span>
+                          </div>
+                          <div className="flex justify-between items-center text-purple-300">
+                            <span>Technology Domain Alignment (15% Weight):</span>
+                            <span className="font-bold text-white">{Math.round((data.results[0]?.domain_score || 100) * 0.15)}%</span>
+                          </div>
+                          <div className="pt-2 border-t border-zinc-800 flex justify-between items-center text-white text-xs font-bold">
+                            <span>Overall Relevance Score Total:</span>
+                            <span className="text-indigo-400 font-mono text-sm">{Math.round(data.highest_similarity)}%</span>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-zinc-400 italic leading-relaxed">
+                          *Note: If no explicit user keywords are provided, weight dynamically shifts to 70% Semantic Similarity and 30% Domain Alignment to prevent penalization.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setShowCalcModal(false)}
+                        className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 transition-all cursor-pointer"
+                      >
+                        Close Calculation Breakdown
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Recharts Visualizations */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

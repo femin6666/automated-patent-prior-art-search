@@ -67,3 +67,24 @@ def test_invalid_login():
         }
         res = client.post("/api/auth/login", json=login_payload)
         assert res.status_code == 401
+
+def test_google_oauth_existing_and_new_user():
+    import uuid
+    with TestClient(app) as client:
+        email = f"google.user.{uuid.uuid4().hex[:6]}@gmail.com"
+
+        # 1. Google sign-in for new user auto-registers and logs in
+        res1 = client.post("/api/auth/google", json={"email": email, "name": "Google User"})
+        assert res1.status_code == 200
+        data1 = res1.json()
+        assert "access_token" in data1
+        assert data1["user"]["email"] == email
+        assert data1["user"]["is_verified"] is True
+
+        # 2. Subsequent Google sign-in for existing user logs in seamlessly
+        res2 = client.post("/api/auth/google", json={"email": email, "name": "Google User"})
+        assert res2.status_code == 200
+        data2 = res2.json()
+        assert "access_token" in data2
+        assert data2["user"]["email"] == email
+

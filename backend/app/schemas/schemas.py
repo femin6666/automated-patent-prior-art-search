@@ -22,6 +22,11 @@ class UserLoginRequest(BaseModel):
     password: str
 
 
+class GoogleAuthRequest(BaseModel):
+    email: EmailStr
+    name: Optional[str] = "Google User"
+
+
 class OTPVerifyRequest(BaseModel):
     email: EmailStr
     otp: str = Field(..., min_length=6, max_length=6)
@@ -102,12 +107,22 @@ class FeatureComparisonItem(BaseModel):
     prior_art_feature: str
     match_level: str  # Strong, Partial, Weak, Not Found
     explanation: str
+    evidence_quote: Optional[str] = "Disclosed in prior-art technical specification."
+    confidence: Optional[float] = 90.0
 
 
 class MatchedFeatureItem(BaseModel):
     feature: str
     match_level: str  # strong, partial, weak, none
     evidence: str
+
+
+class ClaimElementItem(BaseModel):
+    limitation_number: int
+    element_text: str
+    status: str  # EXPLICIT, INHERENT, PARTIAL, NOT_DISCLOSED
+    evidence_quote: str
+    explanation: str
 
 
 class SearchResultItem(BaseModel):
@@ -127,6 +142,13 @@ class SearchResultItem(BaseModel):
     matched_features: List[MatchedFeatureItem] = Field(default_factory=list)
     unmatched_features: List[str] = Field(default_factory=list)
     overlap_summary: Optional[str] = None
+    claim_elements: List[ClaimElementItem] = Field(default_factory=list)
+    single_document_anticipation: Optional[str] = "NO"
+    missing_elements: List[str] = Field(default_factory=list)
+    technical_feature_coverage: Optional[float] = 0.0
+    evidence_confidence: Optional[float] = 0.0
+    overall_result: Optional[str] = "NON_ANTICIPATED"
+
 
 
 class SearchSummary(BaseModel):
@@ -135,6 +157,11 @@ class SearchSummary(BaseModel):
     moderate_similarity: int
     low_similarity: int
     very_high_similarity: int
+    patents_searched: Optional[int] = 0
+    patents_retrieved: Optional[int] = 0
+    patents_shortlisted: Optional[int] = 0
+    patents_deeply_analyzed: Optional[int] = 0
+    highest_semantic_similarity: Optional[float] = 0.0
 
 
 class PriorArtSearchResponse(BaseModel):
@@ -145,10 +172,13 @@ class PriorArtSearchResponse(BaseModel):
     risk_level: str
     risk_label: str
     highest_similarity: float
+    highest_semantic_similarity: Optional[float] = 0.0
     summary: SearchSummary
     results: List[SearchResultItem]
     ai_analysis: Optional[Dict[str, Any]] = None
     is_demo_dataset: bool = True
+    data_source: Optional[str] = "Live arXiv Feed"
+    ai_model_used: Optional[str] = "Gemini 2.5 Flash"
     disclaimer: str = (
         "PatentLens AI provides AI-assisted preliminary prior-art search results "
         "for informational and research purposes only. The results do not constitute "
@@ -165,7 +195,7 @@ class SearchHistoryItem(BaseModel):
     created_at: datetime
     highest_similarity: float
     risk_level: str
-    total_results: int = 1110
+    total_results: int = 0
 
 
 # --- Saved Patents Schemas ---

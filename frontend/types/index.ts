@@ -34,6 +34,16 @@ export interface FeatureComparisonItem {
   prior_art_feature: string;
   match_level: 'Strong' | 'Partial' | 'Weak' | 'Not Found';
   explanation: string;
+  evidence_quote?: string;
+  confidence?: number;
+}
+
+export interface ClaimElementItem {
+  limitation_number: number;
+  element_text: string;
+  status: 'EXPLICIT' | 'INHERENT' | 'PARTIAL' | 'NOT_DISCLOSED';
+  evidence_quote: string;
+  explanation: string;
 }
 
 export interface SearchResultItem {
@@ -48,6 +58,16 @@ export interface SearchResultItem {
   relevance_explanation?: string;
   feature_comparison?: FeatureComparisonItem[];
   patent_specific_insights?: string[];
+  technical_features?: string[];
+  distinctive_features?: string[];
+  matched_features?: any[];
+  unmatched_features?: string[];
+  claim_elements?: ClaimElementItem[];
+  single_document_anticipation?: 'YES' | 'NO';
+  missing_elements?: string[];
+  technical_feature_coverage?: number;
+  evidence_confidence?: number;
+  overall_result?: 'ANTICIPATED' | 'NON_ANTICIPATED';
 }
 
 export interface SearchSummary {
@@ -56,6 +76,11 @@ export interface SearchSummary {
   moderate_similarity: number;
   low_similarity: number;
   very_high_similarity: number;
+  patents_searched?: number;
+  patents_retrieved?: number;
+  patents_shortlisted?: number;
+  patents_deeply_analyzed?: number;
+  highest_semantic_similarity?: number;
 }
 
 export interface PriorArtSearchResponse {
@@ -66,9 +91,12 @@ export interface PriorArtSearchResponse {
   risk_level: 'LOW' | 'MODERATE' | 'HIGH' | 'VERY HIGH';
   risk_label: string;
   highest_similarity: number;
+  highest_semantic_similarity?: number;
   summary: SearchSummary;
   results: SearchResultItem[];
   is_demo_dataset: boolean;
+  data_source?: string;
+  ai_model_used?: string;
   disclaimer: string;
 }
 

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "PatentLens AI"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
+    DEMO_MODE: bool = True
 
     # Database
     DATABASE_URL: str = "postgresql://postgres:femin12345@localhost:5432/Patentartpro"
@@ -29,9 +30,17 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     # Machine Learning & AI Services
+    LLM_PROVIDER: str = "gemini"
     MODEL_NAME: str = "all-MiniLM-L6-v2"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+    # External Patent APIs Configuration
+    PATENTS_API_KEY: str = ""
+    PATENTS_API_PROVIDER: str = "patentsview"
+    MAX_EXTERNAL_API_RESULTS: int = 100
 
     # Configurable Similarity Thresholds (0-40% Low, 40-70% Moderate, 70-85% High, 85-100% Very High)
     SIMILARITY_THRESHOLD_LOW: float = 40.0

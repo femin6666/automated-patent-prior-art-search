@@ -45,7 +45,8 @@ def seed_patents_if_needed(db: Session = None):
             demo_user = User(
                 name="Demo Inventor",
                 email="inventor@startup.com",
-                password_hash=hash_password("password123")
+                password_hash=hash_password("password123"),
+                is_verified=True
             )
             db.add(demo_user)
             db.commit()

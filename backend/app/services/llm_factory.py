@@ -22,5 +22,5 @@ def get_llm_service(provider_override: str = None) -> Union[GeminiService, GroqS
         logger.info("Initializing Groq LLM Service provider.")
         return GroqService()
     else:
-        logger.info("Initializing Gemini LLM Service provider (gemini-2.5-flash).")
+        logger.info("Initializing Gemini LLM Service provider (gemini-2.0-flash).")
         return GeminiService()

@@ -44,7 +44,15 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  } catch (networkErr: any) {
+    throw new Error(
+      `Failed to connect to API server (${API_BASE_URL}). Please ensure the backend server is running on http://localhost:8000.`
+    );
+  }
+
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {

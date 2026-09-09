@@ -15,7 +15,7 @@ class GeminiService:
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-2.5-flash"
+        self.model_name = settings.GEMINI_MODEL or "gemini-2.0-flash"
         self.client = None
         self._initialize_client()
 

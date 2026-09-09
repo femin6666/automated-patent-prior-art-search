@@ -2,7 +2,7 @@ import logging
 import json
 import re
 import httpx
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 try:
     from backend.app.core.config import settings
 except ImportError:

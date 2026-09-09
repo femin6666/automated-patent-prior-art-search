@@ -34,23 +34,27 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-[#0c0d12] border-r border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 text-zinc-300 select-none z-40">
+    <aside className="w-64 backdrop-blur-2xl bg-white/[0.07] border-r border-white/15 flex flex-col justify-between h-screen sticky top-0 text-white select-none z-40 shadow-2xl">
       <div>
         {/* Logo */}
-        <div className="p-6 border-b border-zinc-800/80 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/60 transition-all">
-              <Sparkles className="w-4 h-4" />
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-0.5 shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-all">
+              <div className="w-full h-full bg-[#0d0f2b] rounded-[10px] flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-indigo-400" />
+              </div>
             </div>
             <div>
-              <h1 className="font-bold text-sm tracking-tight text-zinc-100">PatentLens <span className="text-indigo-400 font-mono text-xs">AI</span></h1>
-              <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Semantic Discovery</p>
+              <h1 className="font-bold text-sm tracking-tight text-white flex items-center gap-1">
+                PatentLens <span className="text-xs font-mono font-semibold text-purple-300 bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-400/30">AI</span>
+              </h1>
+              <p className="text-[9px] text-purple-200/70 font-mono uppercase tracking-widest mt-0.5">Semantic Discovery</p>
             </div>
           </Link>
         </div>
 
         {/* Navigation Items */}
-        <nav className="px-2 space-y-1">
+        <nav className="p-4 space-y-1.5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -58,17 +62,17 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 ${
                   isActive
-                    ? "bg-indigo-500/10 text-zinc-100 border-l-2 border-indigo-500 font-semibold pl-3"
-                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 border-l-2 border-transparent"
+                    ? "bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 border border-white/20 scale-[1.02]"
+                    : "text-white/70 hover:text-white hover:bg-white/10 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? "text-indigo-400" : "text-zinc-500"}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-white/60"}`} />
                   <span>{item.name}</span>
                 </div>
-                {isActive && <ChevronRight className="w-3.5 h-3.5 text-indigo-400" />}
+                {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
               </Link>
             );
           })}
@@ -76,12 +80,12 @@ export default function Sidebar() {
       </div>
 
       {/* Footer / Logout */}
-      <div className="p-4 border-t border-zinc-800/80">
+      <div className="p-4 border-t border-white/10">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-rose-300 hover:text-white hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30 transition-all shadow-inner"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4 text-rose-400" />
           <span>Logout</span>
         </button>
       </div>

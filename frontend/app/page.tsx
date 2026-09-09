@@ -174,10 +174,17 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070815] text-zinc-100 font-sans selection:bg-indigo-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-[#07091e] text-zinc-100 font-sans selection:bg-purple-500 selection:text-white relative overflow-hidden">
       
+      {/* Radiant Gradient / Creative Mesh Background Layer */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute -top-24 -left-24 w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-indigo-600/40 via-purple-600/30 to-pink-500/20 blur-[120px]" />
+        <div className="absolute top-1/4 -right-24 w-[700px] h-[700px] rounded-full bg-gradient-to-bl from-cyan-400/30 via-indigo-600/20 to-purple-900/30 blur-[140px]" />
+        <div className="absolute -bottom-24 left-1/3 w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-pink-500/25 via-purple-600/20 to-indigo-800/20 blur-[130px]" />
+      </div>
+
       {/* Background React Bits <DriftWall /> Layer */}
-      <div className="absolute inset-0 pointer-events-auto z-0 opacity-30 overflow-hidden min-h-[700px]">
+      <div className="absolute inset-0 pointer-events-auto z-0 opacity-25 overflow-hidden min-h-[700px]">
         <DriftWall
           items={DRIFT_WALL_ITEMS}
           columns={6}
@@ -195,7 +202,7 @@ export default function LandingPage() {
           lift={64}
           fade={0.6}
           dim={0.55}
-          overlayColor="#070815"
+          overlayColor="#07091e"
         />
       </div>
 

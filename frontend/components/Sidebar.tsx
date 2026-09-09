@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,12 +15,13 @@ import {
   ChevronRight
 } from "lucide-react";
 import { api } from "@/services/api";
+import Folder from "@/components/Folder";
 
 const NAV_ITEMS = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "New Search", href: "/search", icon: Search },
   { name: "Search History", href: "/history", icon: History },
-  { name: "Saved Patents", href: "/saved", icon: Bookmark },
+  { name: "Saved Patents", href: "/saved", icon: Bookmark, isFolder: true },
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Profile", href: "/profile", icon: User },
 ];
@@ -27,6 +29,7 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await api.logout();
@@ -58,20 +61,41 @@ export default function Sidebar() {
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            const isSaved = item.isFolder;
+            const isHovered = hoveredItem === item.name;
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                onMouseEnter={() => setHoveredItem(item.name)}
+                onMouseLeave={() => setHoveredItem(null)}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 relative group/nav ${
                   isActive
                     ? "bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 border border-white/20 scale-[1.02]"
                     : "text-white/70 hover:text-white hover:bg-white/10 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-white/60"}`} />
+                  {isSaved ? (
+                    <div className="w-5 h-5 flex items-center justify-center shrink-0 overflow-visible">
+                      <Folder
+                        color={isActive ? "#c084fc" : isHovered ? "#a855f7" : "#818cf8"}
+                        size={0.28}
+                        forceOpen={isHovered}
+                        items={[
+                          <span key="1" className="text-[7px] font-bold text-indigo-900">PAT</span>,
+                          <span key="2" className="text-[7px] font-bold text-purple-900">DOC</span>,
+                          <span key="3" className="text-[7px] font-bold text-cyan-900">PDF</span>
+                        ]}
+                      />
+                    </div>
+                  ) : (
+                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-white/60"}`} />
+                  )}
                   <span>{item.name}</span>
                 </div>
+
                 {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
               </Link>
             );

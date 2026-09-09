@@ -45,8 +45,8 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def ensure_columns_exist(engine_instance):
-    """Ensure newly added columns exist in searches table across PostgreSQL and SQLite."""
-    cols_to_add = [
+    """Ensure newly added columns exist in searches and patents tables across PostgreSQL and SQLite."""
+    cols_searches = [
         ("total_results", "INTEGER DEFAULT 0"),
         ("very_high_similarity", "INTEGER DEFAULT 0"),
         ("high_similarity", "INTEGER DEFAULT 0"),
@@ -57,13 +57,31 @@ def ensure_columns_exist(engine_instance):
         ("patents_shortlisted", "INTEGER DEFAULT 0"),
         ("patents_deeply_analyzed", "INTEGER DEFAULT 0"),
     ]
+    cols_patents = [
+        ("claims", "TEXT"),
+        ("source_type", "VARCHAR(50) DEFAULT 'THE LENS'"),
+        ("document_type", "VARCHAR(50) DEFAULT 'PATENT'"),
+        ("cpc_codes", "TEXT"),
+        ("ipc_codes", "TEXT"),
+        ("jurisdiction", "VARCHAR(20)"),
+    ]
     with engine_instance.connect() as conn:
-        for col_name, col_type in cols_to_add:
+        for col_name, col_type in cols_searches:
             try:
                 if IS_POSTGRES:
                     conn.execute(text(f"ALTER TABLE searches ADD COLUMN IF NOT EXISTS {col_name} {col_type};"))
                 else:
                     conn.execute(text(f"ALTER TABLE searches ADD COLUMN {col_name} {col_type};"))
+                conn.commit()
+            except Exception:
+                pass
+
+        for col_name, col_type in cols_patents:
+            try:
+                if IS_POSTGRES:
+                    conn.execute(text(f"ALTER TABLE patents ADD COLUMN IF NOT EXISTS {col_name} {col_type};"))
+                else:
+                    conn.execute(text(f"ALTER TABLE patents ADD COLUMN {col_name} {col_type};"))
                 conn.commit()
             except Exception:
                 pass

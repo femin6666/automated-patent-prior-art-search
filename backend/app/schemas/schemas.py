@@ -76,11 +76,17 @@ class PatentOut(BaseModel):
     title: str
     abstract: str
     description: str
+    claims: Optional[str] = None
     inventors: str
     assignee: str
     publication_date: str
     domain: str
     source_url: Optional[str] = None
+    source_type: Optional[str] = "THE LENS"
+    document_type: Optional[str] = "PATENT"
+    cpc_codes: Optional[str] = None
+    ipc_codes: Optional[str] = None
+    jurisdiction: Optional[str] = None
 
 
 class CreateCustomPatentRequest(BaseModel):

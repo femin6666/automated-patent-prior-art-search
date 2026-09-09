@@ -3,7 +3,7 @@ import os
 
 DOMAINS = [
     "Artificial Intelligence", "Agriculture", "Healthcare", "IoT", 
-    "Robotics", "Energy", "Manufacturing", "Software", "Electronics", "Biotechnology"
+    "Robotics", "Energy", "Manufacturing", "Software", "Electronics", "Biotechnology", "Mechanical Engineering"
 ]
 
 PATENT_TEMPLATES = [
@@ -241,6 +241,48 @@ PATENT_TEMPLATES = [
         "inventors": "Dr. Jennifer Wu, David Sterling",
         "assignee": "NanoDiagnostics Inc.",
         "pub_date": "2024-02-05"
+    },
+
+    # Mechanical Engineering
+    {
+        "domain": "Mechanical Engineering",
+        "patent_number": "US2858719A",
+        "title": "Intermittent Motion Mechanism",
+        "abstract": "A mechanical gearing mechanism for converting continuous rotary motion into step-by-step intermittent rotary motion. The assembly comprises three gears coupled by connecting links, an orbital gear movement arrangement, a cam and follower indexing assembly, and a reverse-motion prevention latch to provide precise dwell periods and controlled step rotary output.",
+        "description": "This invention relates to gearing mechanisms and step-by-step rotary drives for converting continuous rotary input into intermittent rotary output. The apparatus includes a primary continuous rotary input shaft coupled to a driving gear, an intermediate orbital gear arrangement interconnected via three gears connected by links, and an output shaft delivering indexed step-by-step rotary movement. A cam and follower mechanism maintains steady dwell periods between rotational increments, while a reverse-motion prevention mechanism prevents backward rotational drift during dwell intervals. The multiple gear arrangement with connecting links enables smooth velocity transitions from continuous rotation to intermittent rotary output.",
+        "inventors": "H. A. Devaney",
+        "assignee": "General Electric Company",
+        "pub_date": "1958-11-04"
+    },
+    {
+        "domain": "Mechanical Engineering",
+        "patent_number": "US3412624A",
+        "title": "Geneva Drive Indexing Mechanism for Precision Intermittent Rotation",
+        "abstract": "A mechanical indexing drive comprising a driving wheel with a pin engaging slotted wheel slots to convert continuous rotation into intermittent rotary indexing movement with defined dwell periods.",
+        "description": "The mechanism includes a continuous rotary input shaft driving a pin wheel equipped with a locking disc segment. The pin periodically engages radial slots of a star wheel, driving it through an indexed angular step before locking during a dwell period. Used in film advances and mechanical indexing tables.",
+        "inventors": "Robert K. Vance",
+        "assignee": "Precision Kinematics Corp.",
+        "pub_date": "1968-11-26"
+    },
+    {
+        "domain": "Mechanical Engineering",
+        "patent_number": "US4109546A",
+        "title": "Cam-Driven Step-by-Step Indexing Motion Apparatus with Dwell Control",
+        "abstract": "An indexing motion transmission utilizing a globoidal conjugate cam and roller follower turret for converting continuous rotation to step-by-step rotary output with zero-backlash dwell intervals.",
+        "description": "A continuous rotary input turns a globoidal cam having ribbed profile tracks. Roller followers on an output turret ride along the cam tracks to execute smooth acceleration and deceleration periods followed by rigid mechanical dwell stops.",
+        "inventors": "Hans Obermeier",
+        "assignee": "Ferguson Drive Systems",
+        "pub_date": "1978-08-29"
+    },
+    {
+        "domain": "Mechanical Engineering",
+        "patent_number": "US2987932A",
+        "title": "Ratchet and Pawl Intermittent Rotary Motion Drive",
+        "abstract": "An intermittent rotary drive utilizing an oscillating link driven by a crank to advance a ratchet wheel step-by-step with a holding pawl to prevent reverse motion.",
+        "description": "A continuous rotary crank oscillates an input arm carrying a driving pawl. The driving pawl engages teeth of a ratchet wheel to advance an output shaft step-by-step. A spring-loaded holding pawl engages teeth during return stroke to prevent reverse rotation.",
+        "inventors": "Charles E. Miller",
+        "assignee": "Industrial Drive Technologies",
+        "pub_date": "1961-06-13"
     }
 ]
 
@@ -257,7 +299,10 @@ def generate_full_dataset(target_count=100):
         cycle = (i // base_templates_count) + 1
         
         patent_id = f"pat-{i+1:03d}"
-        patent_number = f"US-{2023000000 + (i * 12347) % 999999}-B2"
+        if cycle == 1 and template.get("patent_number"):
+            patent_number = template["patent_number"]
+        else:
+            patent_number = f"US-{2023000000 + (i * 12347) % 999999}-B2"
         
         if cycle == 1:
             title = template["title"]

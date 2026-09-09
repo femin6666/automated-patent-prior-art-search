@@ -5,32 +5,35 @@ import re
 try:
     from backend.ml.keyword_extractor import (
         get_weighted_technical_concepts,
+        extract_atomic_technical_features,
         GENERIC_DOMAIN_NOISE,
         DISTINCTIVE_TECHNICAL_TERMS
     )
 except ImportError:
     from .keyword_extractor import (
         get_weighted_technical_concepts,
+        extract_atomic_technical_features,
         GENERIC_DOMAIN_NOISE,
         DISTINCTIVE_TECHNICAL_TERMS
     )
 
 # Configurable default weights (Prioritizing distinctive technical feature overlap)
-SEMANTIC_WEIGHT = 0.40
-KEYWORD_WEIGHT = 0.45
-DOMAIN_WEIGHT = 0.15
+SEMANTIC_WEIGHT = 0.30
+KEYWORD_WEIGHT = 0.50
+DOMAIN_WEIGHT = 0.20
 
 RELATED_DOMAINS_MAP = {
+    "Mechanical Engineering": {"Robotics", "Manufacturing", "Electronics", "Energy"},
     "Electrical Engineering": {"Electronics", "Energy", "IoT", "Robotics", "Software", "Artificial Intelligence"},
     "Electronics": {"Electrical Engineering", "IoT", "Robotics", "Software", "Energy", "Artificial Intelligence"},
-    "Energy": {"Electrical Engineering", "Electronics", "Manufacturing", "IoT"},
+    "Energy": {"Electrical Engineering", "Electronics", "Manufacturing", "IoT", "Mechanical Engineering"},
     "Artificial Intelligence": {"Software", "Robotics", "Electronics", "IoT", "Electrical Engineering"},
     "Software": {"Artificial Intelligence", "Electronics", "IoT", "Electrical Engineering"},
     "Agriculture": {"IoT", "Biotechnology", "Robotics"},
     "Healthcare": {"Biotechnology", "Electronics", "IoT"},
     "IoT": {"Electronics", "Software", "Robotics", "Artificial Intelligence", "Electrical Engineering"},
-    "Robotics": {"Electronics", "Software", "Manufacturing", "Artificial Intelligence", "Electrical Engineering"},
-    "Manufacturing": {"Robotics", "Electronics", "Energy"},
+    "Robotics": {"Electronics", "Software", "Manufacturing", "Artificial Intelligence", "Electrical Engineering", "Mechanical Engineering"},
+    "Manufacturing": {"Robotics", "Electronics", "Energy", "Mechanical Engineering"},
     "Biotechnology": {"Healthcare", "Agriculture"}
 }
 
@@ -38,6 +41,13 @@ def infer_patent_domain(title: str, abstract: str, existing_domain: str = "") ->
     """Dynamically infer patent technical domain if unset or generic."""
     text = f"{title} {abstract}".lower()
     
+    if any(term in text for term in [
+        "gear", "gears", "rotary", "intermittent motion", "indexing", "cam", "follower",
+        "dwell", "linkage", "ratchet", "pawl", "shaft", "clutch", "sprocket", "pinion",
+        "gearing", "step-by-step rotary", "mechanism"
+    ]):
+        return "Mechanical Engineering"
+
     if any(term in text for term in [
         "wireless power", "impedance", "charging coil", "inductive", "resonant",
         "electromagnetic", "transmitter coil", "receiver coil", "foreign object"
@@ -53,10 +63,10 @@ def infer_patent_domain(title: str, abstract: str, existing_domain: str = "") ->
     if any(term in text for term in ["patient", "genomic", "biomedical", "medical", "clinical", "pathology"]):
         return "Healthcare"
 
-    if any(term in text for term in ["robot", "quadrupedal", "gait", "locomotion", "kinematic"]):
+    if any(term in text for term in ["robot", "quadrupedal", "gait", "locomotion", "kinematic", "manipulator"]):
         return "Robotics"
 
-    return existing_domain or "Electrical Engineering"
+    return existing_domain or "Mechanical Engineering"
 
 def calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     """Calculate cosine similarity between two float vectors (0.0 to 1.0)."""
@@ -85,7 +95,7 @@ def calculate_keyword_similarity(
 ) -> Tuple[float, List[str]]:
     """
     Calculate weighted technical concept overlap score. Distinctive technical terms
-    (e.g., 'wireless power transfer', 'foreign object detection', 'impedance') carry high weight.
+    carry high weight.
     """
     weighted_concepts = get_weighted_technical_concepts(user_keywords, user_concepts, target_full_text)
     if not weighted_concepts:
@@ -100,7 +110,6 @@ def calculate_keyword_similarity(
     for term, weight in weighted_concepts.items():
         if not term:
             continue
-        # Exact word boundary matching for single words, clean phrase matching for multi-word n-grams
         pattern = r'\b' + re.escape(term) + r'\b' if len(term.split()) == 1 else re.escape(term)
         if re.search(pattern, patent_text):
             matched_terms.append(term.title())
@@ -112,7 +121,6 @@ def calculate_keyword_similarity(
     raw_ratio = matched_weight_sum / total_weight_sum
     keyword_score = max(0.0, min(1.0, raw_ratio))
     
-    # Format matched concepts nicely for display (deduplicating substrings)
     unique_matched = []
     for m in matched_terms:
         if not any(m.lower() != u.lower() and m.lower() in u.lower() for u in matched_terms):
@@ -136,7 +144,52 @@ def calculate_domain_similarity(user_domain: str, patent_domain: str) -> float:
     if p_dom in related:
         return 0.7
         
-    return 0.2
+    return 0.1
+
+def calculate_deterministic_final_score(
+    sbert_sim: float,
+    feature_overlap_ratio: float,
+    evidence_strength: float = 0.0,
+    cpc_overlap: float = 0.0,
+    concept_overlap: float = 0.0,
+    domain_sim: float = 0.5,
+    has_target_features: bool = True
+) -> float:
+    """
+    Deterministic backend calculation for final AI Prior-Art Match score.
+    Formula:
+      35% SBERT Cosine Similarity
+    + 35% Technical Feature Overlap (Groq/Gemini limitation match)
+    + 15% Evidence Strength (Exact supporting quotes present)
+    + 10% Domain & Concept Overlap
+    +  5% CPC/IPC Classification Match
+    
+    Applies zero-overlap gate penalty (0.35x) if target has explicit features but patent discloses 0 matches.
+    """
+    # Enforce bounds
+    sbert_sim = max(0.0, min(1.0, sbert_sim))
+    feature_overlap_ratio = max(0.0, min(1.0, feature_overlap_ratio))
+    evidence_strength = max(0.0, min(1.0, evidence_strength))
+    cpc_overlap = max(0.0, min(1.0, cpc_overlap))
+    concept_overlap = max(0.0, min(1.0, concept_overlap))
+    domain_sim = max(0.0, min(1.0, domain_sim))
+
+    raw_weighted = (
+        (0.35 * sbert_sim) +
+        (0.35 * feature_overlap_ratio) +
+        (0.15 * evidence_strength) +
+        (0.10 * max(concept_overlap, domain_sim)) +
+        (0.05 * cpc_overlap)
+    )
+
+    # Gate penalty for zero matching technical features
+    if has_target_features and feature_overlap_ratio == 0.0 and concept_overlap == 0.0:
+        penalty = 0.35
+    else:
+        penalty = 1.0
+
+    final_pct = round(min(1.0, raw_weighted * penalty) * 100.0, 1)
+    return final_pct
 
 def compute_hybrid_score(
     user_embedding: List[float],
@@ -151,9 +204,7 @@ def compute_hybrid_score(
     w_domain: float = DOMAIN_WEIGHT
 ) -> Dict[str, Any]:
     """
-    Compute hybrid similarity score using formula:
-    Final Score = (w_semantic * Semantic) + (w_keyword * FeatureOverlap) + (w_domain * Domain)
-    Applies core technical feature gate penalty to patents missing essential core concepts.
+    Compute hybrid similarity score using deterministic scoring formula.
     """
     patent_title = patent.get("title", "")
     patent_abstract = patent.get("abstract", "")
@@ -164,67 +215,62 @@ def compute_hybrid_score(
     
     semantic_sim = calculate_cosine_similarity(user_embedding, patent_embedding)
     
-    keyword_sim, matched_concepts = calculate_keyword_similarity(
+    # Target Atomic Technical Features Matching
+    target_atomic_features = extract_atomic_technical_features(target_text_for_concepts, top_n=9)
+    patent_full_text_lower = f"{patent_title} {patent_abstract} {patent_desc}".lower()
+
+    matched_atomic_features = []
+    for feat in target_atomic_features:
+        feat_lower = feat.lower()
+        pattern = r'\b' + re.escape(feat_lower) + r'\b' if len(feat_lower.split()) == 1 else re.escape(feat_lower)
+        if re.search(pattern, patent_full_text_lower):
+            matched_atomic_features.append(feat)
+
+    # Calculate keyword & concept overlap
+    keyword_sim, fallback_matched_concepts = calculate_keyword_similarity(
         user_keywords=user_keywords,
         user_concepts=user_concepts,
         target_full_text=target_text_for_concepts,
         patent_abstract=patent_abstract,
         patent_description=patent_desc
     )
-    
-    effective_user_domain = user_domain or "Electrical Engineering"
+
+    feature_overlap_ratio = (len(matched_atomic_features) / len(target_atomic_features)) if target_atomic_features else keyword_sim
+
+    effective_user_domain = user_domain or inferred_domain or "Mechanical Engineering"
     domain_sim = calculate_domain_similarity(effective_user_domain, inferred_domain)
-    
-    # Adaptive Dynamic Weights:
-    # If user provided 0 explicit keywords, shift weight to SBERT Semantic similarity
-    has_user_keywords = bool(user_keywords and any(k.strip() for k in user_keywords))
-    if not has_user_keywords and w_semantic == SEMANTIC_WEIGHT:
-        w_semantic = 0.70
-        w_keyword = 0.15
-        w_domain = 0.15
-    
-    # Core Distinctive Feature Gate:
-    # Identify high-importance distinctive terms in target invention
-    target_lower = target_text_for_concepts.lower()
-    core_distinctive_target_terms = [
-        dt for dt in DISTINCTIVE_TECHNICAL_TERMS if dt in target_lower
-    ]
-    
-    patent_text_lower = f"{patent_title} {patent_abstract} {patent_desc}".lower()
-    has_any_core_match = any(dt in patent_text_lower for dt in core_distinctive_target_terms)
-    
-    # If target invention has core technical features (e.g. 'wireless power transfer', 'foreign object detection')
-    # and patent matches NONE of them, penalize keyword & final score
-    if core_distinctive_target_terms and not has_any_core_match:
-        keyword_sim *= 0.15
-        distinctive_penalty = 0.65
-    else:
-        distinctive_penalty = 1.0
 
-    # If candidate patent MATCHES core distinctive features, give feature bonus
-    if core_distinctive_target_terms and has_any_core_match:
-        matched_core_count = sum(1 for dt in core_distinctive_target_terms if dt in patent_text_lower)
-        bonus_ratio = matched_core_count / len(core_distinctive_target_terms)
-        keyword_sim = min(1.0, keyword_sim + (0.35 * bonus_ratio))
+    # Check CPC match if available
+    cpc_codes_str = str(patent.get("cpc_codes", ""))
+    user_cpc_list = patent.get("cpc_candidates", [])
+    cpc_overlap = 1.0 if any(c in cpc_codes_str for c in user_cpc_list if c) else 0.0
 
-    final_raw = (
-        (w_semantic * semantic_sim) +
-        (w_keyword * keyword_sim) +
-        (w_domain * domain_sim)
-    ) * distinctive_penalty
-    
-    final_score = round(min(1.0, final_raw) * 100.0, 1)
+    # Calculate deterministic final score
+    final_score = calculate_deterministic_final_score(
+        sbert_sim=semantic_sim,
+        feature_overlap_ratio=feature_overlap_ratio,
+        evidence_strength=1.0 if matched_atomic_features else 0.0,
+        cpc_overlap=cpc_overlap,
+        concept_overlap=keyword_sim,
+        domain_sim=domain_sim,
+        has_target_features=bool(target_atomic_features)
+    )
+
     semantic_score = round(semantic_sim * 100.0, 1)
-    keyword_score = round(keyword_sim * 100.0, 1)
+    keyword_score = round(feature_overlap_ratio * 100.0, 1)
     domain_score = round(domain_sim * 100.0, 1)
-    
+
+    display_matched_concepts = matched_atomic_features if matched_atomic_features else fallback_matched_concepts
+
     return {
         "final_score": final_score,
         "semantic_score": semantic_score,
         "keyword_score": keyword_score,
         "domain_score": domain_score,
-        "matched_concepts": matched_concepts,
+        "matched_concepts": display_matched_concepts,
+        "target_atomic_features": target_atomic_features,
         "inferred_domain": inferred_domain,
-        "has_core_match": has_any_core_match
+        "has_core_match": bool(matched_atomic_features)
     }
+
 

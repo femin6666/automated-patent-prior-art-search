@@ -61,6 +61,27 @@ def perform_prior_art_search(
     target_full_text = f"{request.title} {request.problem_statement} {request.description}"
     user_concepts = extract_technical_concepts(target_full_text)
     
+    # 1. Use Gemini to understand invention and generate search queries
+    from backend.app.services.gemini_service import gemini_service
+    invention_analysis = gemini_service.analyze_invention(
+        title=request.title,
+        problem_statement=request.problem_statement,
+        description=request.description,
+        keywords=request.keywords,
+        domain=request.domain
+    )
+
+    gemini_features = invention_analysis.get("technical_features", [])
+    gemini_queries = invention_analysis.get("search_queries", [])
+    cpc_candidates = invention_analysis.get("cpc_candidates", [])
+
+    logger.info("[DEBUG PIPELINE] ==================== INVENTIVE STEP 1: GEMINI ====================")
+    logger.info(f"[DEBUG PIPELINE] Target Invention: '{request.title}' | Domain: '{request.domain}'")
+    logger.info(f"[DEBUG PIPELINE] Gemini Technical Features: {gemini_features}")
+    logger.info(f"[DEBUG PIPELINE] Gemini Distinctive Concepts: {invention_analysis.get('distinctive_concepts', [])}")
+    logger.info(f"[DEBUG PIPELINE] Gemini Search Queries: {gemini_queries}")
+    logger.info(f"[DEBUG PIPELINE] Gemini CPC Candidates: {cpc_candidates}")
+
     combined_text = prepare_combined_text(
         title=request.title,
         problem_statement=request.problem_statement,
@@ -69,15 +90,18 @@ def perform_prior_art_search(
     )
     user_embedding = embedding_service.generate_embedding(combined_text)
 
-    # 1. Fetch live external patent disclosures via Patent API and cache into DB
+    # 2. Fetch live patent candidates via The Lens Patent API & arXiv feed
     try:
         api_stats = patent_api_service.fetch_and_cache_external_patents(
             db=db,
             title=request.title,
             keywords=request.keywords,
             domain=request.domain,
+            search_queries=gemini_queries,
+            cpc_candidates=cpc_candidates,
             limit=100
         )
+        logger.info(f"[DEBUG PIPELINE] Step 2 Lens/arXiv Search Stats: {api_stats}")
     except Exception as e:
         logger.warning(f"[PATENT API] External search note ({e}). Continuing with local dataset candidates.")
         api_stats = {"patents_retrieved": 0, "patents_searched": 0}
@@ -295,7 +319,8 @@ def perform_prior_art_search(
     except Exception:
         ai_analysis = None
 
-    active_data_source = "Live arXiv & CrossRef Feed" if pat_retrieved > 0 else "Cached Patent Repository"
+    from backend.app.services.lens_api_service import lens_api_service
+    active_data_source = "The Lens Patent API & arXiv Feed" if (pat_retrieved > 0 or lens_api_service.is_configured) else "Cached Patent Repository"
     active_ai_model = getattr(llm_service, "model_name", "Gemini 2.5 Flash")
 
     return PriorArtSearchResponse(

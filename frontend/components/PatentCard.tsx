@@ -86,6 +86,20 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
       {/* Domain & Examination Metric Badges */}
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center gap-2">
+          {(() => {
+            const sourceType = patent.source_type || (patent.patent_number.startsWith("ARXIV") ? "arXiv" : "THE LENS");
+            const docType = patent.document_type || (patent.patent_number.startsWith("ARXIV") ? "NON-PATENT LITERATURE" : "PATENT");
+            const isNPL = docType.includes("NON-PATENT") || sourceType.toLowerCase() === "arxiv";
+            return (
+              <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold border ${
+                isNPL
+                  ? "bg-amber-500/10 text-amber-300 border-amber-500/25"
+                  : "bg-cyan-500/10 text-cyan-300 border-cyan-500/25"
+              }`}>
+                Source: {sourceType} • {docType}
+              </span>
+            );
+          })()}
           <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-zinc-900 text-zinc-300 border border-zinc-800">
             {patent.domain}
           </span>
@@ -97,30 +111,47 @@ export default function PatentCard({ item, onSavedToggle }: PatentCardProps) {
               Technical Feature Coverage: {Math.round(item.technical_feature_coverage)}%
             </span>
           )}
-          {item.single_document_anticipation && (
-            <span className={`px-2.5 py-0.5 rounded text-[11px] font-mono font-bold border ${
-              item.single_document_anticipation === "YES" || final_score > 75
-                ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                : "bg-amber-500/15 text-amber-400 border-amber-500/30"
-            }`}>
-              {item.single_document_anticipation === "YES" || final_score > 75
-                ? "Potential Prior Art: REVIEW REQUIRED"
-                : "Prior Art Signal: DETECTED"}
-            </span>
-          )}
+          {(() => {
+            const hasMatchedFeatures = matched_concepts && matched_concepts.length > 0;
+            const isHighRisk = (item.single_document_anticipation === "YES" || final_score > 75) && hasMatchedFeatures;
+            const isDetected = hasMatchedFeatures && final_score >= 35;
+
+            if (isHighRisk) {
+              return (
+                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold border bg-rose-500/15 text-rose-400 border-rose-500/30">
+                  Potential Prior Art: REVIEW REQUIRED
+                </span>
+              );
+            } else if (isDetected) {
+              return (
+                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold border bg-amber-500/15 text-amber-400 border-amber-500/30">
+                  Prior Art Signal: DETECTED
+                </span>
+              );
+            } else {
+              return (
+                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium border bg-zinc-900 text-zinc-400 border-zinc-800">
+                  Prior Art Signal: NO TECHNICAL OVERLAP
+                </span>
+              );
+            }
+          })()}
         </div>
 
         {(() => {
-          const conceptsText = matched_concepts && matched_concepts.length > 0
-            ? matched_concepts.slice(0, 4).join(", ")
-            : patent.domain;
+          const hasMatchedFeatures = matched_concepts && matched_concepts.length > 0;
+          const conceptsText = hasMatchedFeatures ? matched_concepts.slice(0, 5).join(", ") : "";
           
-          const dynamicExplanation = relevance_explanation && relevance_explanation.length > 25
+          const dynamicExplanation = relevance_explanation && relevance_explanation.length > 15
             ? relevance_explanation
-            : `Strong semantic overlap in ${conceptsText}. Discloses ${matched_concepts?.length || 1} major technical concept(s) matching the submitted invention claims.`;
+            : hasMatchedFeatures
+            ? `Matches ${matched_concepts.length} key technical feature(s): ${conceptsText}.`
+            : `Document '${patent.title}' addresses general ${patent.domain} concepts, but zero matching technical features were found in specification text.`;
 
           return (
-            <div className="p-3 rounded-lg bg-zinc-900/70 border border-zinc-800 text-xs text-zinc-300 leading-relaxed shadow-inner">
+            <div className={`p-3 rounded-lg border text-xs leading-relaxed shadow-inner ${
+              hasMatchedFeatures ? "bg-zinc-900/70 border-zinc-800 text-zinc-300" : "bg-zinc-950/40 border-zinc-800/60 text-zinc-400"
+            }`}>
               <span className="font-semibold text-indigo-400">Why Relevant: </span>
               {dynamicExplanation}
             </div>

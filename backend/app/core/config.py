@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     PATENTS_API_KEY: str = ""
     PATENTS_API_PROVIDER: str = "patentsview"
     MAX_EXTERNAL_API_RESULTS: int = 100
+    LENS_API_TOKEN: str = ""
+    LENS_API_URL: str = "https://api.lens.org/patent/search"
 
     # Configurable Similarity Thresholds (0-40% Low, 40-70% Moderate, 70-85% High, 85-100% Very High)
     SIMILARITY_THRESHOLD_LOW: float = 40.0

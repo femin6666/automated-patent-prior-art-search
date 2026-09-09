@@ -2,7 +2,7 @@ import logging
 import json
 import time
 import httpx
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
 try:
@@ -10,19 +10,23 @@ try:
     from backend.app.models.models import Patent
     from backend.ml.embedding_service import embedding_service
     from backend.ml.preprocessing import prepare_combined_text
+    from backend.app.services.lens_api_service import lens_api_service
 except ImportError:
     from ..core.config import settings
     from ..models.models import Patent
     from ...ml.embedding_service import embedding_service
     from ...ml.preprocessing import prepare_combined_text
+    from .lens_api_service import lens_api_service
 
 logger = logging.getLogger("patentlens.patent_api")
 
 
 class PatentAPIService:
     """
-    Service for querying external live Patent APIs (PatentsView / USPTO Open Data / Open Patent APIs)
-    with paginated batching, rate-limit resilience, deduplication, and DB caching.
+    Orchestration service for fetching prior-art records:
+    1. Primary Patent Retrieval: The Lens Patent API (POST https://api.lens.org/patent/search)
+    2. Supplementary Patent Retrieval: PatentsView API (Fallback if Lens key unconfigured or results sparse)
+    3. Separate Non-Patent Literature: arXiv API (Tagged as arXiv / NON-PATENT LITERATURE)
     """
 
     def __init__(self):
@@ -36,30 +40,54 @@ class PatentAPIService:
         title: str,
         keywords: List[str],
         domain: str,
+        search_queries: Optional[List[str]] = None,
+        cpc_candidates: Optional[List[str]] = None,
         limit: int = 100
     ) -> Dict[str, Any]:
         """
-        Fetch external patents matching title/keywords, deduplicate against DB, 
-        generate SBERT embeddings, cache to DB, and return candidate set.
+        Fetch external patents from The Lens Patent API (Primary) and non-patent literature
+        from arXiv (Secondary), deduplicate, generate SBERT embeddings, and cache in DB.
         """
-        logger.info(f"[PATENT API] Initiating external patent search for title='{title}', domain='{domain}', keywords={keywords}")
+        logger.info(f"[PATENT API] Initiating search for title='{title}', domain='{domain}', queries={search_queries}")
 
         target_limit = min(limit, self.max_results)
         raw_candidates = []
 
-        # 1. Primary Search: Query arXiv Open Patent & Technology Feed (Free Open-Access API)
-        logger.info("[PATENT API] Fetching live technology & patent disclosures from arXiv Open Feed...")
-        raw_candidates = self._fetch_from_open_feed(title, keywords, domain, limit=target_limit)
+        # Construct search queries if not provided
+        queries = search_queries or []
+        if not queries:
+            query_terms = [k.strip() for k in (keywords or []) if len(k.strip()) > 2]
+            if not query_terms and title:
+                query_terms = [w.strip() for w in title.split() if len(w.strip()) > 3][:3]
+            if not query_terms:
+                query_terms = [domain or "technology"]
+            queries = [" ".join(query_terms[:4])]
 
-        # 2. Supplementary Search: Query PatentsView API if key is present or extra candidates needed
+        # 1. PRIMARY SEARCH: The Lens Patent API
+        if lens_api_service.is_configured:
+            logger.info("[PATENT API] Fetching primary patent candidates from The Lens Patent API...")
+            lens_patents = lens_api_service.search_patents(
+                queries=queries,
+                cpc_candidates=cpc_candidates,
+                limit=target_limit
+            )
+            raw_candidates.extend(lens_patents)
+            logger.info(f"[PATENT API] Retained {len(lens_patents)} candidate patents from The Lens.")
+
+        # 2. SUPPLEMENTARY SEARCH: PatentsView API if Lens returned < 10 records
         if len(raw_candidates) < 10:
-            logger.info("[PATENT API] Fetching supplementary patent records from PatentsView API...")
+            logger.info("[PATENT API] Querying supplementary patent records from PatentsView API...")
             supp_candidates = self._fetch_from_patentsview(title, keywords, domain, limit=target_limit - len(raw_candidates))
             raw_candidates.extend(supp_candidates)
 
-        logger.info(f"[PATENT API] Total raw external candidate records retrieved: {len(raw_candidates)}")
+        # 3. SEPARATE NON-PATENT LITERATURE: arXiv API
+        logger.info("[PATENT API] Fetching non-patent literature from arXiv Open Feed...")
+        arxiv_records = self._fetch_from_arxiv(title, keywords, domain, limit=15)
+        raw_candidates.extend(arxiv_records)
 
-        # 3. Deduplicate, Generate SBERT Embeddings, and Cache in DB
+        logger.info(f"[PATENT API] Total combined candidate records retrieved: {len(raw_candidates)}")
+
+        # 4. Deduplicate, Generate SBERT Embeddings, and Cache in DB
         newly_cached_patents = []
         skipped_count = 0
 
@@ -73,34 +101,38 @@ class PatentAPIService:
                 skipped_count += 1
                 continue
 
-            # Handle missing or incomplete fields gracefully
+            # Extract fields with graceful fallbacks
             pat_title = (item.get("title") or title or "Untitled Invention Record").strip()
-            pat_abstract = (item.get("abstract") or f"Patent publication {pat_num} in domain {domain}.").strip()
-            pat_desc = (item.get("description") or f"Detailed specification for {pat_title}. Summary: {pat_abstract}").strip()
-            pat_inventors = item.get("inventors") or "Independent Inventor"
-            pat_assignee = item.get("assignee") or "Independent Assignee"
+            pat_abstract = (item.get("abstract") or f"Prior art publication {pat_num} in domain {domain}.").strip()
+            pat_claims = (item.get("claims") or "").strip()
+            pat_desc = (item.get("description") or f"Specification for {pat_title}. Abstract: {pat_abstract}").strip()
+            pat_inventors = item.get("inventors") or "Independent Author"
+            pat_assignee = item.get("assignee") or "Independent Institution"
             pat_date = item.get("publication_date") or "2024-01-01"
             pat_url = item.get("source_url") or f"https://patents.google.com/patent/{pat_num}/en"
+            source_type = item.get("source_type") or "THE LENS"
+            doc_type = item.get("document_type") or "PATENT"
 
-            # Compute SBERT embedding for newly fetched external patent
-            combined_text = prepare_combined_text(
-                title=pat_title,
-                problem_statement="",
-                description=f"{pat_abstract} {pat_desc[:2000]}",
-                keywords=keywords
-            )
-            emb = embedding_service.generate_embedding(combined_text)
+            # Compute SBERT embedding prioritizing Claims > Abstract > Description
+            text_for_embedding = f"{pat_title}. {pat_abstract} {pat_claims[:1000]} {pat_desc[:1500]}"
+            emb = embedding_service.generate_embedding(text_for_embedding)
 
             new_patent = Patent(
                 patent_number=pat_num,
                 title=pat_title,
                 abstract=pat_abstract,
+                claims=pat_claims,
                 description=pat_desc,
                 inventors=pat_inventors,
                 assignee=pat_assignee,
                 publication_date=pat_date,
                 domain=domain or "Technology",
                 source_url=pat_url,
+                source_type=source_type,
+                document_type=doc_type,
+                cpc_codes=item.get("cpc_codes", ""),
+                ipc_codes=item.get("ipc_codes", ""),
+                jurisdiction=item.get("jurisdiction", "US"),
                 embedding=json.dumps(emb) if isinstance(emb, list) else emb
             )
             db.add(new_patent)
@@ -108,9 +140,8 @@ class PatentAPIService:
 
         if newly_cached_patents:
             db.commit()
-            logger.info(f"[PATENT API] Successfully cached {len(newly_cached_patents)} new external patents into PostgreSQL/SQLite.")
+            logger.info(f"[PATENT API] Successfully cached {len(newly_cached_patents)} new records into database.")
 
-        # Total patents in local database after caching
         total_db_patents = db.query(Patent).count()
 
         return {
@@ -125,12 +156,9 @@ class PatentAPIService:
         title: str,
         keywords: List[str],
         domain: str,
-        limit: int = 100
+        limit: int = 50
     ) -> List[Dict[str, Any]]:
-        """
-        Execute paginated batch queries to PatentsView API with rate limit resilience.
-        """
-        # Select query terms from title and keywords
+        """Fetch supplementary patent records from USPTO PatentsView API."""
         query_terms = [k for k in (keywords or []) if len(k) > 2]
         if not query_terms and title:
             query_terms = [w for w in title.split() if len(w) > 3][:3]
@@ -139,72 +167,60 @@ class PatentAPIService:
 
         search_query = " ".join(query_terms[:4])
         url = "https://api.patentsview.org/patents/query"
-        
-        # Paginated batching configuration (batches of 25)
-        batch_size = 25
-        total_pages = max(1, (limit + batch_size - 1) // batch_size)
         results = []
 
-        headers = {
-            "User-Agent": "PatentLens-AI/1.0",
-            "Accept": "application/json"
-        }
+        headers = {"User-Agent": "PatentLens-AI/1.0", "Accept": "application/json"}
         if self.api_key:
             headers["X-Api-Key"] = self.api_key
 
-        for page in range(total_pages):
-            skip = page * batch_size
-            payload = {
-                "q": {"_text_any": {"patent_title": search_query}},
-                "f": ["patent_number", "patent_title", "patent_abstract", "patent_date"],
-                "o": {"page": page + 1, "per_page": batch_size}
-            }
+        payload = {
+            "q": {"_text_any": {"patent_title": search_query}},
+            "f": ["patent_number", "patent_title", "patent_abstract", "patent_date"],
+            "o": {"page": 1, "per_page": min(limit, 25)}
+        }
 
-            # Exponential backoff rate limit retry loop
-            for attempt in range(3):
-                try:
-                    with httpx.Client(timeout=10.0, follow_redirects=True) as http_client:
-                        res = http_client.post(url, json=payload, headers=headers)
-                        if res.status_code == 200:
-                            data = res.json()
-                            patents_data = data.get("patents") or []
-                            for p in patents_data:
-                                p_num = p.get("patent_number")
-                                if p_num:
-                                    results.append({
-                                        "patent_number": f"US-{p_num}",
-                                        "title": p.get("patent_title") or "Untitled US Patent",
-                                        "abstract": p.get("patent_abstract") or f"Abstract for patent US-{p_num}.",
-                                        "description": f"Patent disclosure for US-{p_num}. Abstract: {p.get('patent_abstract', '')}",
-                                        "inventors": "USPTO Inventor",
-                                        "assignee": "USPTO Assignee",
-                                        "publication_date": p.get("patent_date") or "2023-01-01",
-                                        "source_url": f"https://patents.google.com/patent/US{p_num}/en"
-                                    })
-                            break
-                        elif res.status_code in [429, 503]:
-                            time.sleep(1.5 * (attempt + 1))
-                        else:
-                            logger.warning(f"PatentsView API returned status code {res.status_code} for query '{search_query}'.")
-                            break
-                except Exception as e:
-                    logger.warning(f"Attempt {attempt + 1} failed querying PatentsView API: {e}")
-                    time.sleep(1.0)
+        for attempt in range(3):
+            try:
+                with httpx.Client(timeout=10.0, follow_redirects=True) as http_client:
+                    res = http_client.post(url, json=payload, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        for p in data.get("patents") or []:
+                            p_num = p.get("patent_number")
+                            if p_num:
+                                results.append({
+                                    "patent_number": f"US-{p_num}",
+                                    "title": p.get("patent_title") or "Untitled US Patent",
+                                    "abstract": p.get("patent_abstract") or f"Abstract for patent US-{p_num}.",
+                                    "claims": "",
+                                    "description": f"Patent disclosure for US-{p_num}. Abstract: {p.get('patent_abstract', '')}",
+                                    "inventors": "USPTO Inventor",
+                                    "assignee": "USPTO Assignee",
+                                    "publication_date": p.get("patent_date") or "2023-01-01",
+                                    "source_url": f"https://patents.google.com/patent/US{p_num}/en",
+                                    "source_type": "USPTO",
+                                    "document_type": "PATENT",
+                                    "jurisdiction": "US"
+                                })
+                        break
+                    elif res.status_code in [429, 503]:
+                        time.sleep(1.5 * (attempt + 1))
+            except Exception as e:
+                logger.warning(f"PatentsView API attempt {attempt + 1} failed: {e}")
+                time.sleep(1.0)
 
-            if len(results) >= limit:
-                break
+        return results
 
-        return results[:limit]
-
-    def _fetch_from_open_feed(
+    def _fetch_from_arxiv(
         self,
         title: str,
         keywords: List[str],
         domain: str,
-        limit: int = 50
+        limit: int = 15
     ) -> List[Dict[str, Any]]:
         """
-        Fallback open technology and patent disclosure fetcher via Open arXiv & CrossRef APIs.
+        Fetch Non-Patent Literature records from arXiv API.
+        STRICT REQUIREMENT: Source must be labeled 'arXiv' and Document Type 'NON-PATENT LITERATURE'.
         """
         import xml.etree.ElementTree as ET
         import urllib.parse
@@ -215,7 +231,6 @@ class PatentAPIService:
         if not query_terms:
             query_terms = [domain or "technology"]
 
-        # Build arXiv relevance search query
         search_param = "+AND+".join([f"all:{urllib.parse.quote(t)}" for t in query_terms[:3]])
         url_arxiv = f"https://export.arxiv.org/api/query?search_query={search_param}&start=0&max_results={limit}&sortBy=relevance&sortOrder=descending"
 
@@ -226,15 +241,17 @@ class PatentAPIService:
                 if res.status_code == 200:
                     root = ET.fromstring(res.text)
                     namespace = {'atom': 'http://www.w3.org/2005/Atom'}
-                    
+
                     for idx, entry in enumerate(root.findall('atom:entry', namespace)):
                         id_elem = entry.find('atom:id', namespace)
                         raw_id = id_elem.text.split('/')[-1] if id_elem is not None else f"DOC-{idx}"
                         doc_id = raw_id.replace('.', '-').replace('/', '-')
-                        pat_num = f"PAT-{doc_id.upper()}"
+                        
+                        # Format clearly as arXiv non-patent literature identifier
+                        doc_number = f"ARXIV-{doc_id.upper()}"
 
                         t_elem = entry.find('atom:title', namespace)
-                        p_title = t_elem.text.replace('\n', ' ').strip() if t_elem is not None else "Untitled Invention"
+                        p_title = t_elem.text.replace('\n', ' ').strip() if t_elem is not None else "arXiv Research Paper"
 
                         s_elem = entry.find('atom:summary', namespace)
                         p_summary = s_elem.text.replace('\n', ' ').strip() if s_elem is not None else ""
@@ -242,63 +259,28 @@ class PatentAPIService:
                         pub_elem = entry.find('atom:published', namespace)
                         p_date = pub_elem.text[:10] if pub_elem is not None else "2024-01-01"
 
+                        # Extract authors
+                        authors = [a.find('atom:name', namespace).text for a in entry.findall('atom:author', namespace) if a.find('atom:name', namespace) is not None]
+                        author_str = ", ".join(authors[:3]) if authors else "arXiv Researcher"
+
                         records.append({
-                            "patent_number": pat_num,
+                            "patent_number": doc_number,
                             "title": p_title,
                             "abstract": p_summary,
-                            "description": f"Patent disclosure for {p_title}. Summary of technical specification: {p_summary}",
-                            "inventors": "Open Patent Researcher",
-                            "assignee": "Open Technology Consortium",
+                            "claims": "",
+                            "description": f"Scientific paper disclosure for '{p_title}'. Abstract: {p_summary}",
+                            "inventors": author_str,
+                            "assignee": "arXiv Open Science Repository",
                             "publication_date": p_date,
-                            "source_url": f"https://arxiv.org/abs/{raw_id}"
+                            "source_url": f"https://arxiv.org/abs/{raw_id}",
+                            "source_type": "arXiv",
+                            "document_type": "NON-PATENT LITERATURE",
+                            "jurisdiction": "GLOBAL"
                         })
         except Exception as e:
-            logger.warning(f"Error fetching from arXiv Open Patent feed: {e}")
+            logger.warning(f"Error fetching from arXiv API: {e}")
 
-        # If arXiv yields fewer than requested limit, fetch supplementary items from CrossRef API
-        if len(records) < limit:
-            try:
-                encoded_query = None
-                url_crossref = f"https://api.crossref.org/works?query={encoded_query}&rows={limit - len(records)}"
-                with httpx.Client(timeout=12.0, follow_redirects=True) as http_client:
-                    res_cr = http_client.get(url_crossref)
-                    if res_cr.status_code == 200:
-                        data = res_cr.json()
-                        items = data.get("message", {}).get("items", [])
-                        for idx, item in enumerate(items):
-                            doi = item.get("DOI", f"10.1000/cr-{idx}")
-                            clean_doi = doi.replace('/', '-').upper()
-                            pat_num = f"PAT-CR-{clean_doi}"
-
-                            titles = item.get("title", [])
-                            p_title = titles[0].strip() if titles else "Technical Patent Publication"
-
-                            authors = item.get("author", [])
-                            inv_name = f"{authors[0].get('given', '')} {authors[0].get('family', '')}".strip() if authors else "Independent Inventor"
-                            if not inv_name:
-                                inv_name = "Independent Inventor"
-
-                            publisher = item.get("publisher", "Technology Research Repository")
-                            pub_date_parts = item.get("published", {}).get("date-parts", [[2024, 1, 1]])[0]
-                            year = pub_date_parts[0] if len(pub_date_parts) > 0 else 2024
-                            month = f"{pub_date_parts[1]:02d}" if len(pub_date_parts) > 1 else "01"
-                            day = f"{pub_date_parts[2]:02d}" if len(pub_date_parts) > 2 else "01"
-                            p_date = f"{year}-{month}-{day}"
-
-                            records.append({
-                                "patent_number": pat_num,
-                                "title": p_title,
-                                "abstract": f"Technical publication on {p_title} in domain {domain}.",
-                                "description": f"Detailed disclosure for patent reference {pat_num}: {p_title}. Published by {publisher}.",
-                                "inventors": inv_name,
-                                "assignee": publisher,
-                                "publication_date": p_date,
-                                "source_url": item.get("URL", f"https://doi.org/{doi}")
-                            })
-            except Exception as e:
-                logger.warning(f"Error fetching from CrossRef API feed: {e}")
-
-        return records[:limit]
+        return records
 
 
 patent_api_service = PatentAPIService()

@@ -22,8 +22,8 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("patentlens.seed")
 
-def seed_patents_if_needed(db: Session = None):
-    """Seed sample patent dataset and generate SBERT embeddings if database is empty."""
+def seed_patents_if_needed(db: Session = None, force_reseed: bool = False):
+    """Seed sample patent dataset and generate SBERT embeddings if database is missing patents."""
     close_session = False
     if db is None:
         db = SessionLocal()
@@ -52,11 +52,6 @@ def seed_patents_if_needed(db: Session = None):
             db.commit()
             logger.info("Demo user 'inventor@startup.com' created successfully.")
         
-        existing_count = db.query(Patent).count()
-        if existing_count >= 100:
-            logger.info(f"Database already seeded with {existing_count} patents. Skipping seeding.")
-            return
-
         json_path = os.path.join(os.path.dirname(__file__), "..", "data", "sample_patents.json")
         if not os.path.exists(json_path):
             logger.error(f"Sample patent data file not found at {json_path}")
@@ -65,43 +60,63 @@ def seed_patents_if_needed(db: Session = None):
         with open(json_path, "r", encoding="utf-8") as f:
             patents_data = json.load(f)
 
-        logger.info(f"Seeding {len(patents_data)} patents into database & computing SBERT embeddings...")
+        missing_count = sum(1 for p in patents_data if not db.query(Patent).filter(Patent.patent_number == p["patent_number"]).first())
+        if missing_count == 0 and not force_reseed:
+            logger.info(f"Database fully seeded with all {len(patents_data)} sample patents. Skipping seeding.")
+            return
+
+        logger.info(f"Found {missing_count} missing sample patents (force={force_reseed}). Seeding into database & computing SBERT embeddings...")
         
         if not embedding_service.is_loaded:
             embedding_service.load_model()
 
+        import uuid
         added = 0
+        updated = 0
         for item in patents_data:
-            existing = db.query(Patent).filter(Patent.patent_number == item["patent_number"]).first()
-            if existing:
-                continue
+            existing = (
+                db.query(Patent).filter(Patent.patent_number == item["patent_number"]).first()
+                or db.query(Patent).filter(Patent.id == item["id"]).first()
+            )
 
             combined_text = prepare_combined_text(
                 title=item["title"],
                 problem_statement="",
                 description=item["abstract"] + " " + item["description"]
             )
-            
             embedding_vec = embedding_service.generate_embedding(combined_text)
 
-            patent = Patent(
-                id=item["id"],
-                patent_number=item["patent_number"],
-                title=item["title"],
-                abstract=item["abstract"],
-                description=item["description"],
-                inventors=item["inventors"],
-                assignee=item["assignee"],
-                publication_date=item["publication_date"],
-                domain=item["domain"],
-                source_url=item.get("source_url"),
-                embedding=embedding_vec
-            )
-            db.add(patent)
-            added += 1
+            if existing:
+                existing.patent_number = item["patent_number"]
+                existing.title = item["title"]
+                existing.abstract = item["abstract"]
+                existing.description = item["description"]
+                existing.domain = item["domain"]
+                existing.inventors = item["inventors"]
+                existing.assignee = item["assignee"]
+                existing.publication_date = item["publication_date"]
+                existing.source_url = item.get("source_url")
+                existing.embedding = embedding_vec
+                updated += 1
+            else:
+                patent = Patent(
+                    id=item.get("id") or str(uuid.uuid4()),
+                    patent_number=item["patent_number"],
+                    title=item["title"],
+                    abstract=item["abstract"],
+                    description=item["description"],
+                    inventors=item["inventors"],
+                    assignee=item["assignee"],
+                    publication_date=item["publication_date"],
+                    domain=item["domain"],
+                    source_url=item.get("source_url"),
+                    embedding=embedding_vec
+                )
+                db.add(patent)
+                added += 1
 
         db.commit()
-        logger.info(f"Successfully seeded {added} patent documents with 384-d SBERT embeddings.")
+        logger.info(f"Successfully seeded {added} new patents and updated {updated} existing patents with 384-d SBERT embeddings.")
 
     except Exception as e:
         logger.error(f"Error during patent database seeding: {e}")
@@ -111,4 +126,5 @@ def seed_patents_if_needed(db: Session = None):
             db.close()
 
 if __name__ == "__main__":
-    seed_patents_if_needed()
+    seed_patents_if_needed(force_reseed=True)
+

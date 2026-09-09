@@ -37,6 +37,158 @@ class GeminiService:
     def is_configured(self) -> bool:
         return bool(self.api_key and len(self.api_key.strip()) > 10 and not self.api_key.startswith("your_"))
 
+    def analyze_invention(
+        self,
+        title: str,
+        problem_statement: str,
+        description: str,
+        keywords: Optional[List[str]] = None,
+        domain: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Analyze user invention using Gemini 2.5 Flash to extract structured technical features,
+        distinctive concepts, alternative terminology, targeted search queries, and candidate CPC classes.
+        Filters out generic noise terms ('system', 'device', 'technology', 'signal', 'AI', 'electronics').
+        """
+        title = title or ""
+        problem_statement = problem_statement or ""
+        description = description or ""
+        keywords = keywords or []
+        domain = domain or "Technology"
+
+        GENERIC_NOISE = {
+            "system", "device", "technology", "signal", "ai", "electronics",
+            "method", "apparatus", "process", "mechanism", "unit", "module",
+            "component", "feature", "data", "information"
+        }
+
+        if self.is_configured:
+            system_prompt = "You are a Senior Patent Examiner and IP Analyst. Return strict valid JSON only."
+            user_prompt = f"""
+Analyze the target invention disclosure and decompose it into structured technical concepts for prior-art retrieval.
+
+RULES:
+1. Extract "technical_features": Specific engineering components, structural elements, circuits, algorithms, or physical arrangements. Avoid single generic words like "system", "device", "technology", "signal", "AI", "electronics".
+2. Extract "distinctive_concepts": Highly novel/unusual technical limitations or combinations.
+3. Extract "alternative_terms": Synonyms or technical equivalents used in older or international patent literature.
+4. Construct 3-5 "search_queries": Targeted multi-word technical search phrases combining distinctive concepts (e.g. "three-terminal semiconductor junction", "emitter collector base current control"). DO NOT create single broad queries like "semiconductor device".
+5. Suggest 2-4 "cpc_candidates": Relevant CPC classification codes (e.g. "H01L29/66", "G06F18/20").
+6. Identify the primary technical "domain".
+
+INVENTION DISCLOSURE:
+Title: {title}
+Domain: {domain}
+Problem: {problem_statement}
+Description: {description}
+Keywords: {', '.join(keywords)}
+
+Return ONLY valid JSON matching this exact structure:
+{{
+  "technical_features": ["three-terminal semiconductor", "pn junction barrier"],
+  "distinctive_concepts": ["current control via base bias voltage"],
+  "alternative_terms": ["bipolar transistor", "triode semiconductor"],
+  "search_queries": [
+    "three-terminal semiconductor junction",
+    "emitter collector base current control"
+  ],
+  "domain": "Electronics",
+  "cpc_candidates": ["H01L29/66", "H01L29/73"]
+}}
+"""
+            try:
+                if self.client is not None:
+                    from google.genai import types
+                    logger.info("Extracting invention technical features via Gemini SDK...")
+                    res = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=f"{system_prompt}\n\n{user_prompt}",
+                        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
+                    )
+                    if res and res.text:
+                        parsed = json.loads(res.text)
+                        return self._clean_invention_analysis(parsed, title, keywords, domain)
+
+                # REST API Fallback
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
+                payload = {
+                    "contents": [{"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}],
+                    "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+                }
+                with httpx.Client(timeout=15.0) as http_client:
+                    response = http_client.post(url, json=payload)
+                    if response.status_code == 200:
+                        text_content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        parsed = json.loads(text_content)
+                        return self._clean_invention_analysis(parsed, title, keywords, domain)
+            except Exception as e:
+                logger.error(f"[GEMINI] Error in analyze_invention: {e}")
+
+        # Heuristic NLP Fallback
+        return self._heuristic_invention_analysis(title, problem_statement, description, keywords, domain)
+
+    def _clean_invention_analysis(
+        self,
+        parsed: Dict[str, Any],
+        title: str,
+        keywords: List[str],
+        domain: str
+    ) -> Dict[str, Any]:
+        GENERIC_NOISE = {
+            "system", "device", "technology", "signal", "ai", "electronics",
+            "method", "apparatus", "process", "mechanism", "unit", "module"
+        }
+        
+        raw_feats = parsed.get("technical_features", [])
+        clean_feats = [f for f in raw_feats if str(f).strip().lower() not in GENERIC_NOISE]
+
+        raw_queries = parsed.get("search_queries", [])
+        clean_queries = []
+        for q in raw_queries:
+            q_str = str(q).strip()
+            if q_str and q_str.lower() not in GENERIC_NOISE and len(q_str.split()) >= 2:
+                clean_queries.append(q_str)
+
+        if not clean_queries:
+            clean_queries = [f"{title} {k}" for k in (keywords[:3] or [domain])]
+
+        return {
+            "technical_features": clean_feats or [title],
+            "distinctive_concepts": parsed.get("distinctive_concepts", []),
+            "alternative_terms": parsed.get("alternative_terms", []),
+            "search_queries": clean_queries,
+            "domain": parsed.get("domain") or domain,
+            "cpc_candidates": parsed.get("cpc_candidates", [])
+        }
+
+    def _heuristic_invention_analysis(
+        self,
+        title: str,
+        problem_statement: str,
+        description: str,
+        keywords: List[str],
+        domain: str
+    ) -> Dict[str, Any]:
+        from backend.ml.keyword_extractor import extract_atomic_technical_features
+        full_text = f"{title} {problem_statement} {description}"
+        atomic_feats = extract_atomic_technical_features(full_text, top_n=8)
+        
+        search_queries = []
+        if len(atomic_feats) >= 2:
+            search_queries.append(f"{atomic_feats[0]} {atomic_feats[1]}")
+        if len(atomic_feats) >= 4:
+            search_queries.append(f"{atomic_feats[2]} {atomic_feats[3]}")
+        if title:
+            search_queries.append(title)
+
+        return {
+            "technical_features": atomic_feats or [title],
+            "distinctive_concepts": [f for f in atomic_feats if len(f.split()) >= 2],
+            "alternative_terms": keywords or [],
+            "search_queries": search_queries,
+            "domain": domain or "Technology",
+            "cpc_candidates": []
+        }
+
     def analyze_patent_pair(
         self,
         target_title: str,
@@ -204,24 +356,18 @@ Return ONLY valid JSON matching this exact structure:
         patent_number: str,
         patent_title: str,
         patent_abstract: str,
-        similarity_score: float
+        similarity_score: float,
+        patent_description: str = ""
     ) -> Dict[str, Any]:
         """Grounded NLP claim decomposition fallback when LLM API is unavailable."""
+        from backend.ml.keyword_extractor import extract_atomic_technical_features
+
         target_text = f"{target_title} {target_description}".lower()
-        patent_text = f"{patent_title} {patent_abstract}".lower()
+        patent_text = f"{patent_title} {patent_abstract} {patent_description}".lower()
 
-        distinctive_candidates = [
-            "wireless power transfer", "contactless vehicle charging", "inductive charging",
-            "resonant charging", "transmitter coil", "receiver coil", "electromagnetic field",
-            "impedance measurement", "voltage monitoring", "current monitoring",
-            "resonant frequency", "charging efficiency", "foreign object detection",
-            "abnormal condition detection", "dynamic threshold", "temperature compensation",
-            "calibration", "automatic power reduction", "power interruption"
-        ]
-
-        target_tech_features = [f for f in distinctive_candidates if f in target_text]
+        target_tech_features = extract_atomic_technical_features(target_text, top_n=9)
         if not target_tech_features:
-            target_tech_features = [target_title.lower()]
+            target_tech_features = [target_title.title()]
 
         claim_elements = []
         matched_feats = []
@@ -230,34 +376,35 @@ Return ONLY valid JSON matching this exact structure:
         feature_comparison = []
 
         for feat in target_tech_features:
-            feat_title = feat.title()
-            if feat in patent_text:
+            feat_lower = feat.lower()
+            pattern = r'\b' + re.escape(feat_lower) + r'\b' if len(feat_lower.split()) == 1 else re.escape(feat_lower)
+            if re.search(pattern, patent_text):
                 matched_feats.append(feat)
                 matched_feature_objects.append({
-                    "feature": feat_title,
-                    "match_level": "strong" if similarity_score > 65.0 else "partial",
+                    "feature": feat,
+                    "match_level": "strong" if similarity_score > 60.0 else "partial",
                     "evidence": f"Discloses '{feat}' in patent specification ('{patent_title}')."
                 })
                 claim_elements.append({
-                    "element": feat_title,
-                    "status": "EXPLICIT" if similarity_score > 65.0 else "PARTIAL",
+                    "element": feat,
+                    "status": "EXPLICIT" if similarity_score > 60.0 else "PARTIAL",
                     "evidence": f"Explicitly discloses {feat} in patent '{patent_title}'.",
                     "source_document": patent_number or patent_title
                 })
                 feature_comparison.append({
-                    "target_feature": feat_title,
+                    "target_feature": feat,
                     "prior_art_feature": f"Discloses {feat} in specification",
-                    "match_level": "Strong" if similarity_score > 65.0 else "Partial",
-                    "explanation": f"Both specifications disclose {feat} routines.",
-                    "evidence_quote": f"Discloses subterranean {feat} sensors transmitting volumetric telemetry to field controller.",
-                    "confidence": 92.0 if similarity_score > 65.0 else 78.0
+                    "match_level": "Strong" if similarity_score > 60.0 else "Partial",
+                    "explanation": f"Both specifications disclose {feat} structures.",
+                    "evidence_quote": f"Explicit disclosure of {feat} in patent document text.",
+                    "confidence": 92.0 if similarity_score > 60.0 else 78.0
                 })
             else:
-                unmatched_feats.append(feat_title)
+                unmatched_feats.append(feat)
                 claim_elements.append({
-                    "element": feat_title,
+                    "element": feat,
                     "status": "NOT_DISCLOSED",
-                    "evidence": f"Feature '{feat_title}' is not disclosed in '{patent_title}'.",
+                    "evidence": f"Feature '{feat}' is not disclosed in '{patent_title}'.",
                     "source_document": patent_number or patent_title
                 })
 
@@ -273,39 +420,43 @@ Return ONLY valid JSON matching this exact structure:
             )
         }
 
-        if coverage_pct >= 85.0:
+        if coverage_pct >= 80.0:
             overall_result = "ANTICIPATED"
-        elif coverage_pct >= 40.0:
+        elif coverage_pct >= 35.0:
             overall_result = "PARTIALLY_DISCLOSED"
         else:
             overall_result = "NOT_ANTICIPATED"
 
-        relevance = f"This prior art is relevant because it discloses {matched_count}/{total_elems} key limitations of '{target_title}'." if matched_feats else f"Document '{patent_title}' addresses related domain features."
-        overlap_summary = f"Identified direct disclosure across key features including {', '.join([f.title() for f in matched_feats[:3]])}." if matched_feats else "Partial domain overlap identified."
+        if matched_feats:
+            relevance = f"This prior art is relevant because it explicitly discloses {matched_count}/{total_elems} key technical features of '{target_title}': {', '.join(matched_feats[:4])}."
+            overlap_summary = f"Direct technical feature match identified across {', '.join(matched_feats[:3])}."
+        else:
+            relevance = f"Document '{patent_title}' has low technical relevance. Zero matching technical features were detected in prior art text."
+            overlap_summary = "Zero direct technical feature overlap detected between target invention and prior art document."
 
         return {
             "ai_powered": False,
             "model_used": "Heuristic-NLP",
             "provider": "heuristic",
             "overall_result": overall_result,
-            "confidence": 85 if matched_feats else 60,
+            "confidence": 85 if matched_feats else 40,
             "technical_feature_coverage": coverage_pct,
             "claim_elements": claim_elements,
             "single_document_anticipation": single_doc_anticipation,
             "missing_elements": unmatched_feats,
-            "reasoning": f"Grounded heuristic analysis evaluated {total_elems} claim limitations against prior-art document.",
-            "technical_features": [f.title() for f in target_tech_features],
-            "distinctive_features": [f.title() for f in target_tech_features if len(f.split()) >= 2],
+            "reasoning": f"Grounded analysis evaluated {total_elems} claim limitations against prior-art document.",
+            "technical_features": target_tech_features,
+            "distinctive_features": [f for f in target_tech_features if len(f.split()) >= 2],
             "matched_features": matched_feature_objects,
             "unmatched_features": unmatched_feats,
             "overlap_summary": overlap_summary,
             "relevance_explanation": relevance,
-            "patent_specific_insights": [f"Prior-art document addresses '{patent_title}'.", f"Feature disclosure coverage: {coverage_pct}%."],
+            "patent_specific_insights": [f"Prior-art document addresses '{patent_title}'.", f"Feature disclosure coverage: {coverage_pct}% ({matched_count}/{total_elems} matched)."],
             "feature_comparison": feature_comparison or [{
                 "target_feature": target_title,
                 "prior_art_feature": patent_title,
-                "match_level": "Weak",
-                "explanation": f"Low structural overlap detected with '{patent_title}'."
+                "match_level": "Not Found",
+                "explanation": f"Zero matching technical features found in '{patent_title}'."
             }]
         }
 

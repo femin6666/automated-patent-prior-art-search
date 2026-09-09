@@ -22,11 +22,16 @@ export interface Patent {
   title: string;
   abstract: string;
   description: string;
+  claims?: string;
   inventors: string;
   assignee: string;
   publication_date: string;
   domain: string;
   source_url?: string;
+  source_type?: string;
+  document_type?: string;
+  cpc_codes?: string;
+  jurisdiction?: string;
 }
 
 export interface FeatureComparisonItem {

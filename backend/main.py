@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 
 # Add parent directory to sys.path so imports work regardless of execution CWD
+# Server reloaded with instant rate-limit circuit breaker and fast GET search details
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -13,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 try:
     from backend.app.core.config import settings
-    from backend.app.core.database import engine, Base
+    from backend.app.core.database import engine, Base, ensure_columns_exist
     from backend.ml.embedding_service import embedding_service
     from backend.scripts.seed_database import seed_patents_if_needed
 
@@ -24,7 +25,7 @@ try:
     from backend.app.api.users import router as users_router
 except ImportError:
     from app.core.config import settings
-    from app.core.database import engine, Base
+    from app.core.database import engine, Base, ensure_columns_exist
     from ml.embedding_service import embedding_service
     from scripts.seed_database import seed_patents_if_needed
 
@@ -40,11 +41,16 @@ logger = logging.getLogger("patentlens.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler to load ML model & seed database once at startup."""
+    print("\n[PATENTLENS AI] Initializing backend services...", flush=True)
     logger.info("Initializing PatentLens AI Backend...")
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning(f"Database table check note: {e}")
     
     try:
         embedding_service.load_model(settings.MODEL_NAME)
+        print(f"[PATENTLENS AI] SBERT embedding model '{settings.MODEL_NAME}' ready.", flush=True)
         logger.info(f"SBERT model '{settings.MODEL_NAME}' successfully loaded into memory.")
     except Exception as e:
         logger.warning(f"Could not preload SBERT model: {e}")
@@ -54,6 +60,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error during startup seed: {e}")
 
+    print("[PATENTLENS AI] Backend ready! Listening on http://localhost:8000\n", flush=True)
     logger.info("================ AI MODEL CONFIGURATION DIAGNOSTICS ================")
     logger.info(f"Gemini Model:    {settings.GEMINI_MODEL}")
     logger.info(f"Groq Model:      {settings.GROQ_MODEL}")
@@ -124,4 +131,7 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    print("\n==================================================", flush=True)
+    print("  Starting PatentLens AI Server on http://localhost:8000", flush=True)
+    print("==================================================\n", flush=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

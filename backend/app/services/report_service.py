@@ -108,11 +108,12 @@ def generate_pdf_report(search: Search, results: list) -> str:
     elements.append(Spacer(1, 15))
 
     # 4. Search Methodology
-    elements.append(Paragraph("AI Search Methodology", section_style))
+    elements.append(Paragraph("AI Search Methodology & Scoring Formula", section_style))
     methodology_text = (
-        "This search utilized SBERT (Sentence-Transformers all-MiniLM-L6-v2) for 384-dimensional vector embedding "
-        "generation, pgvector cosine distance nearest-neighbor retrieval, and a hybrid scoring model incorporating "
-        "Semantic Similarity (70%), Keyword & Concept Overlap (20%), and Domain Alignment (10%)."
+        "This prior-art assessment utilizes SBERT vector embedding retrieval, Lens Patent API multi-path search, "
+        "and an authoritative 5-factor scoring architecture: (25% SBERT Semantic Similarity) + (35% Technical Feature Overlap) + "
+        "(20% Evidence Verification Strength) + (10% Distinctive Concepts) + (10% Domain & CPC Classification Alignment). "
+        "Scores are subject to transparent data availability caps and evidence verification gating."
     )
     elements.append(Paragraph(methodology_text, body_style))
     elements.append(Spacer(1, 15))
@@ -126,19 +127,26 @@ def generate_pdf_report(search: Search, results: list) -> str:
             Paragraph("<b>Patent Number & Title</b>", body_style),
             Paragraph("<b>Domain</b>", body_style),
             Paragraph("<b>Semantic</b>", body_style),
-            Paragraph("<b>Final Score</b>", body_style)
+            Paragraph("<b>Canonical Score</b>", body_style)
         ]
     ]
 
     for item in results[:5]:
-        pat = item.patent
-        p_info = f"<b>{pat.patent_number}</b><br/>{pat.title}"
+        pat = item.patent if hasattr(item, "patent") else item.get("patent")
+        pat_num = pat.patent_number if hasattr(pat, "patent_number") else pat.get("patent_number")
+        pat_title = pat.title if hasattr(pat, "title") else pat.get("title")
+        pat_domain = pat.domain if hasattr(pat, "domain") else pat.get("domain")
+        rank_val = getattr(item, "rank", 1)
+        sem_val = getattr(item, "semantic_score", 0.0)
+        final_val = getattr(item, "final_score", 0.0)
+
+        p_info = f"<b>{pat_num}</b><br/>{pat_title}"
         table_data.append([
-            Paragraph(f"#{item.rank}", body_style),
+            Paragraph(f"#{rank_val}", body_style),
             Paragraph(p_info, body_style),
-            Paragraph(pat.domain, body_style),
-            Paragraph(f"{item.semantic_score}%", body_style),
-            Paragraph(f"<b>{item.final_score}%</b>", body_style)
+            Paragraph(pat_domain, body_style),
+            Paragraph(f"{sem_val}%", body_style),
+            Paragraph(f"<b>{final_val}%</b>", body_style)
         ])
 
     t_results = Table(table_data, colWidths=[40, 260, 90, 70, 70])

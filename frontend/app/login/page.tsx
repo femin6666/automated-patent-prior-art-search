@@ -482,9 +482,22 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Forgot Password Link */}
+                {/* Forgot Password & Quick Demo Links */}
                 {mode === "signin" && (
-                  <div className="flex justify-end pt-1">
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("inventor@startup.com");
+                        setPassword("password123");
+                        setError(null);
+                      }}
+                      className="text-xs font-mono font-medium text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5 cursor-pointer bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                      <span>Use Demo Account</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => { setMode("forgot"); setError(null); setSuccessMsg(null); }}

@@ -60,7 +60,8 @@ def seed_patents_if_needed(db: Session = None, force_reseed: bool = False):
         with open(json_path, "r", encoding="utf-8") as f:
             patents_data = json.load(f)
 
-        missing_count = sum(1 for p in patents_data if not db.query(Patent).filter(Patent.patent_number == p["patent_number"]).first())
+        existing_patent_map = {p.patent_number: p for p in db.query(Patent).all()}
+        missing_count = sum(1 for p in patents_data if p["patent_number"] not in existing_patent_map)
         if missing_count == 0 and not force_reseed:
             logger.info(f"Database fully seeded with all {len(patents_data)} sample patents. Skipping seeding.")
             return
@@ -74,10 +75,7 @@ def seed_patents_if_needed(db: Session = None, force_reseed: bool = False):
         added = 0
         updated = 0
         for item in patents_data:
-            existing = (
-                db.query(Patent).filter(Patent.patent_number == item["patent_number"]).first()
-                or db.query(Patent).filter(Patent.id == item["id"]).first()
-            )
+            existing = existing_patent_map.get(item["patent_number"])
 
             combined_text = prepare_combined_text(
                 title=item["title"],

@@ -63,17 +63,8 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
   const matchedCount = item.matched_feature_count ?? (strongMatches.length + partialMatches.length);
   const totalCount = item.total_feature_count ?? (strongMatches.length + partialMatches.length + missingFeatures.length);
 
-  const computedScore = bd.is_gated
-    ? Math.round(final_score)
-    : Math.round(
-        bd.semantic_similarity * 0.25 +
-        bd.technical_features * 0.35 +
-        bd.evidence_strength * 0.20 +
-        bd.distinctive_concepts * 0.10 +
-        bd.domain_cpc_alignment * 0.10
-      );
-
-  const simLevel = semantic_similarity_label || (computedScore >= 85 ? "Very High" : computedScore >= 70 ? "High" : computedScore >= 40 ? "Moderate" : "Low");
+  const computedScore = Math.round(final_score);
+  const simLevel = item.relevance_level || semantic_similarity_label || (computedScore >= 70 ? "Very High" : computedScore >= 50 ? "High" : computedScore >= 30 ? "Moderate" : "Low");
 
   const evidenceItems = item.evidence_items || [];
   const topEvidence = evidenceItems[0] || (item.matched_features && item.matched_features[0] ? {
@@ -237,7 +228,9 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
               <span>Feature Match (35%)</span>
-              <span className="text-sky-400 font-bold">{Math.round(bd.technical_features)}% ({matchedCount}/{totalCount})</span>
+              <span className="text-sky-400 font-bold">
+                {totalCount > 0 ? `${Math.round(bd.technical_features)}% (${matchedCount}/${totalCount})` : "Not Available"}
+              </span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
               <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, bd.technical_features)}%` }} />

@@ -130,8 +130,9 @@ export interface SearchResultItem {
   family_size?: number;
   is_family_representative?: boolean;
   family_id?: string;
-  temporal_status?: 'BEFORE_REFERENCE_DATE' | 'AFTER_REFERENCE_DATE' | 'DATE_UNKNOWN';
+  temporal_status?: 'BEFORE_REFERENCE_DATE' | 'AFTER_REFERENCE_DATE' | 'DATE_UNKNOWN' | string;
   result_status?: string;
+  relevance_level?: string;
   evidence_status?: 'VERIFIED' | 'PARTIAL' | 'NOT_VERIFIED' | 'NOT_AVAILABLE';
   raw_feature_coverage?: number;
   weighted_technical_score?: number;
@@ -139,6 +140,8 @@ export interface SearchResultItem {
   total_feature_count?: number;
   claims_status?: 'AVAILABLE' | 'NOT_AVAILABLE';
   full_text_status?: 'AVAILABLE' | 'NOT_AVAILABLE';
+  score_cap?: number;
+  score_cap_reason?: string;
 }
 
 export interface SearchSummary {

@@ -73,6 +73,7 @@ class PatentOut(BaseModel):
 
     id: str
     patent_number: str
+    lens_id: Optional[str] = None
     title: str
     abstract: str
     description: str
@@ -81,6 +82,7 @@ class PatentOut(BaseModel):
     assignee: str
     publication_date: str
     priority_date: Optional[str] = None
+    earliest_priority_date: Optional[str] = None
     filing_date: Optional[str] = None
     grant_date: Optional[str] = None
     domain: str
@@ -90,6 +92,16 @@ class PatentOut(BaseModel):
     cpc_codes: Optional[str] = None
     ipc_codes: Optional[str] = None
     jurisdiction: Optional[str] = None
+    has_abstract: bool = True
+    has_claims: bool = False
+    has_description: bool = False
+    has_full_text: bool = False
+    simple_family_id: Optional[str] = None
+    simple_family_size: Optional[int] = 1
+    extended_family_size: Optional[int] = 1
+    citations_count: Optional[int] = 0
+    cited_by_count: Optional[int] = 0
+    data_quality_status: Optional[str] = "LIMITED"
 
 
 class CreateCustomPatentRequest(BaseModel):
@@ -176,7 +188,11 @@ class EvidenceItem(BaseModel):
     status: str = "verified"
     similarity: float = 0.0
     evidence: str = ""
+    evidence_text: Optional[str] = ""
     source: str = "Claim 1"
+    source_section: str = "CLAIMS"
+    match_status: str = "MATCHED"
+    verification_status: str = "VERIFIED"
     verified: bool = True
 
 
@@ -221,6 +237,7 @@ class SearchResultItem(BaseModel):
     family_id: Optional[str] = None
     temporal_status: str = "BEFORE_REFERENCE_DATE"
     result_status: str = "TECHNICALLY_RELEVANT"
+    relevance_level: str = "MODERATE TECHNICAL RELEVANCE"
     evidence_status: str = "VERIFIED"
     raw_feature_coverage: float = 0.0
     weighted_technical_score: float = 0.0
@@ -228,6 +245,14 @@ class SearchResultItem(BaseModel):
     total_feature_count: int = 0
     claims_status: str = "AVAILABLE"
     full_text_status: str = "AVAILABLE"
+    has_abstract: bool = True
+    has_claims: bool = False
+    has_description: bool = False
+    has_full_text: bool = False
+    score_cap: Optional[float] = None
+    score_cap_reason: Optional[str] = None
+    verification_status: str = "NOT_VERIFIED"
+    data_quality_status: str = "LIMITED"
 
     # 4 Separated Conclusions
     technical_relevance_conclusion: str = "Evaluated technical feature disclosure overlap against prior art."

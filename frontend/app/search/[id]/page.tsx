@@ -116,10 +116,10 @@ export default function SearchResultsPage() {
   if (riskFilter !== "ALL") {
     filteredResults = filteredResults.filter((r) => {
       const score = r.final_score;
-      if (riskFilter === "LOW") return score < 40;
-      if (riskFilter === "MODERATE") return score >= 40 && score < 70;
-      if (riskFilter === "HIGH") return score >= 70 && score < 85;
-      if (riskFilter === "VERY HIGH") return score >= 85;
+      if (riskFilter === "LOW") return score < 30;
+      if (riskFilter === "MODERATE") return score >= 30 && score < 50;
+      if (riskFilter === "HIGH") return score >= 50 && score < 70;
+      if (riskFilter === "VERY HIGH") return score >= 70;
       return true;
     });
   }
@@ -257,29 +257,46 @@ export default function SearchResultsPage() {
             return (
               <div className="p-7 rounded-xl tech-card space-y-3 relative overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div className="space-y-2.5 max-w-2xl">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xs font-mono font-semibold text-zinc-400">AI Preliminary Prior-Art Relevance:</span>
+                  <div className="space-y-3 max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-xs font-mono font-semibold text-zinc-400">AI Preliminary Prior-Art Assessment:</span>
                       <RiskBadge level={data.risk_level} size="md" />
                       <span className="text-xs font-semibold text-zinc-300 font-mono">{data.risk_label}</span>
                     </div>
-                    <h2 className="text-2xl font-bold text-zinc-100 flex flex-wrap items-center gap-3">
-                      <span>Overall Technical Relevance:</span>
-                      <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
-                      <span className="px-3 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-semibold shadow-sm">
-                        Highest SBERT Semantic: {topVectorSim}%
-                      </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono pt-1">
+                      <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30">
+                        <div className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Technical Relevance</div>
+                        <div className="text-2xl font-black text-indigo-400 mt-0.5">{Math.round(data.highest_similarity)}%</div>
+                        <div className="text-[10px] text-zinc-400 mt-0.5 font-sans">Calculated via 5-factor hybrid matrix</div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Evidence Confidence</div>
+                        <div className="text-2xl font-black text-emerald-400 mt-0.5">
+                          {Math.round(data.results[0]?.confidence_score || data.results[0]?.evidence_confidence || 45)}%
+                        </div>
+                        <div className="text-[10px] text-zinc-400 mt-0.5 font-sans">
+                          {(data.results[0]?.confidence_score || 45) <= 50 ? "Low (Limited text evidence)" : "High (Verified in specification)"}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
+                        <div className="text-[10px] text-purple-300 font-bold uppercase tracking-wider">SBERT Semantic Sim</div>
+                        <div className="text-2xl font-black text-purple-400 mt-0.5">{topVectorSim}%</div>
+                        <div className="text-[10px] text-zinc-400 mt-0.5 font-sans">384-d Vector Embedding</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-1">
                       <button
                         onClick={() => setShowCalcModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-mono text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer shadow-sm"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-mono text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer shadow-sm"
                       >
                         <HelpCircle className="w-3.5 h-3.5" />
-                        <span>How is this calculated?</span>
+                        <span>View Single-Source Score Calculation Formula</span>
                       </button>
-                    </h2>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      The preliminary relevance score is computed by the deterministic backend scoring engine using 25% SBERT Semantic Vector Similarity, 35% Technical Feature Match, 20% Evidence Verification, 10% Distinctive Concept Overlap, and 10% Domain/CPC Alignment.
-                    </p>
+                    </div>
                   </div>
 
                   <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 max-w-xs text-xs space-y-1.5">

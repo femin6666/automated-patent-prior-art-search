@@ -34,10 +34,10 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     # Machine Learning & AI Services
-    LLM_PROVIDER: str = "gemini"
+    LLM_PROVIDER: str = "groq"
     MODEL_NAME: str = "all-MiniLM-L6-v2"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
@@ -48,10 +48,10 @@ class Settings(BaseSettings):
     LENS_API_TOKEN: str = ""
     LENS_API_URL: str = "https://api.lens.org/patent/search"
 
-    # Configurable Similarity Thresholds (0-40% Low, 40-70% Moderate, 70-85% High, 85-100% Very High)
-    SIMILARITY_THRESHOLD_LOW: float = 40.0
-    SIMILARITY_THRESHOLD_MODERATE: float = 70.0
-    SIMILARITY_THRESHOLD_HIGH: float = 85.0
+    # Configurable Similarity Thresholds (0-29% Low, 30-49% Moderate, 50-69% High, 70-100% Very High)
+    SIMILARITY_THRESHOLD_LOW: float = 30.0
+    SIMILARITY_THRESHOLD_MODERATE: float = 50.0
+    SIMILARITY_THRESHOLD_HIGH: float = 70.0
     SIMILARITY_THRESHOLD_VERY_HIGH: float = 100.0
 
 

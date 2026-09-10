@@ -7,35 +7,41 @@ logger = logging.getLogger("patentlens.embedding_service")
 class SentenceTransformerEmbeddingService:
     _instance = None
     _model = None
+    _load_attempted = False
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(SentenceTransformerEmbeddingService, cls).__new__(cls)
         return cls._instance
 
-    def load_model(self, model_name: str = "all-MiniLM-L6-v2"):
+    def load_model(self, model_name: str = "all-MiniLM-L6-v2", force: bool = False):
         """Load SBERT model into memory ONCE during application startup with dynamic GPU/MPS/CPU hardware detection."""
-        if self._model is None:
-            logger.info(f"Loading Sentence Transformer model '{model_name}'...")
-            try:
-                import torch
-                from sentence_transformers import SentenceTransformer
-                
-                if torch.cuda.is_available():
-                    device = "cuda"
-                elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                    device = "mps"
-                else:
-                    device = "cpu"
-                
-                logger.info(f"Initializing Sentence Transformer '{model_name}' on device: {device}")
-                self._model = SentenceTransformer(model_name, device=device)
-                logger.info(f"Successfully loaded Sentence Transformer model '{model_name}' on {device}.")
-            except Exception as e:
-                logger.error(f"Failed to load sentence_transformers model '{model_name}': {e}")
-                # Fallback flag handling if sentence_transformers isn't fully installed or offline
-                self._model = None
-                raise RuntimeError(f"Could not initialize SBERT embedding model: {e}")
+        if self._model is not None and not force:
+            return
+
+        if self._load_attempted and self._model is None and not force:
+            return
+
+        self._load_attempted = True
+        logger.info(f"Loading Sentence Transformer model '{model_name}'...")
+        try:
+            import torch
+            from sentence_transformers import SentenceTransformer
+            
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                device = "mps"
+            else:
+                device = "cpu"
+            
+            logger.info(f"Initializing Sentence Transformer '{model_name}' on device: {device}")
+            self._model = SentenceTransformer(model_name, device=device)
+            logger.info(f"Successfully loaded Sentence Transformer model '{model_name}' on {device}.")
+        except Exception as e:
+            logger.error(f"Failed to load sentence_transformers model '{model_name}': {e}")
+            self._model = None
+            raise RuntimeError(f"Could not initialize SBERT embedding model: {e}")
 
     @property
     def is_loaded(self) -> bool:
@@ -48,7 +54,7 @@ class SentenceTransformerEmbeddingService:
         if not text:
             return [0.0] * 384
 
-        if self._model is None:
+        if self._model is None and not self._load_attempted:
             try:
                 self.load_model()
             except Exception as le:

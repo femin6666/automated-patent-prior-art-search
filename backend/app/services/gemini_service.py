@@ -12,10 +12,11 @@ logger = logging.getLogger("patentlens.gemini")
 
 class GeminiService:
     """Service for generating evidence-based patent claim examination using Google's official google-genai SDK (gemini-2.5-flash)."""
+    _rate_limited = False
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-2.5-flash"
+        self.model_name = settings.GEMINI_MODEL or "gemini-1.5-flash"
         self.client = None
         self._initialize_client()
 
@@ -35,6 +36,8 @@ class GeminiService:
 
     @property
     def is_configured(self) -> bool:
+        if GeminiService._rate_limited:
+            return False
         return bool(self.api_key and len(self.api_key.strip()) > 10 and not self.api_key.startswith("your_"))
 
     def analyze_invention(
@@ -56,7 +59,7 @@ class GeminiService:
         keywords = keywords or []
         domain = domain or "Technology"
 
-        if self.is_configured:
+        if self.is_configured and not GeminiService._rate_limited:
             system_prompt = "You are a Senior Patent Examiner and IP Analyst. Return strict valid JSON only."
             user_prompt = f"""
 Analyze the target invention disclosure and decompose it into structured technical concepts for prior-art retrieval.
@@ -73,15 +76,17 @@ RULES & SCHEMA REQUIREMENTS:
 9. "inputs" & "outputs": Physical parameters, signals, measurements.
 10. "technical_effects": Engineering benefits (e.g. "prevents parasitic heating").
 11. "alternative_terms": Technical synonyms used in international patent literature.
-12. "search_queries": Generate EXACTLY 8 multi-strategy queries:
-   1. Exact technical concepts
-   2. Technical synonyms
-   3. Component + function
-   4. Function + relationship
-   5. Operating principle
-   6. Claims-oriented terminology
-   7. Classification + technical concepts
-   8. Broad conceptual discovery
+12. "search_queries": Generate EXACTLY 10 multi-strategy queries covering all 10 search paths:
+   1. Broad technical terminology
+   2. Component + function
+   3. Component + relationship
+   4. Distinctive technical concepts
+   5. Claims-style terminology
+   6. Operating principle
+   7. CPC/IPC search
+   8. Alternative terminology / synonyms
+   9. Functional-effect search
+   10. Problem-solution search
 13. "possible_cpc_ipc_classes": 2-5 relevant CPC/IPC classification codes (e.g. "H02J50/60", "H02J50/12").
 
 INVENTION DISCLOSURE:
@@ -128,13 +133,15 @@ Return ONLY valid JSON matching this exact structure:
   "search_concepts": ["foreign object detection", "wireless power transfer"],
   "search_queries": [
     "\"wireless power transfer\" AND \"foreign object detection\"",
-    "\"foreign object sensing\" AND \"inductive charging\"",
-    "\"transmitter coil\" AND \"threshold adjustment\"",
-    "\"impedance monitoring\" AND \"parasitic heat reduction\"",
-    "\"resonant frequency shift\" AND \"object detection\"",
+    "\"transmitter coil\" AND \"adjusts detection threshold\"",
+    "\"controller\" AND \"coupled to coil sensor\"",
+    "\"foreign object detection using coil electrical parameters\"",
     "claim:(\"foreign object detection\" AND coil)",
+    "\"adaptive threshold adjustment\" AND \"alignment\"",
     "cpc:H02J50/60 AND \"foreign object\"",
-    "\"wireless charging\" AND \"safety interlock\""
+    "\"inductive power transfer\" AND \"parasitic load\"",
+    "\"prevents parasitic heating\" AND \"coil sensor\"",
+    "\"parasitic heating\" AND \"detection threshold adjustment\""
   ],
   "possible_cpc_ipc_classes": ["H02J50/60", "H02J50/12"]
 }}
@@ -142,12 +149,17 @@ Return ONLY valid JSON matching this exact structure:
             try:
                 if self.client is not None:
                     from google.genai import types
+                    import concurrent.futures
                     logger.info("Extracting invention technical features via Gemini SDK...")
-                    res = self.client.models.generate_content(
-                        model=self.model_name,
-                        contents=f"{system_prompt}\n\n{user_prompt}",
-                        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
-                    )
+                    def _call_sdk():
+                        return self.client.models.generate_content(
+                            model=self.model_name,
+                            contents=f"{system_prompt}\n\n{user_prompt}",
+                            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
+                        )
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                        fut = pool.submit(_call_sdk)
+                        res = fut.result(timeout=4.0)
                     if res and res.text:
                         parsed = json.loads(res.text)
                         return self._clean_invention_analysis(parsed, title, keywords, domain)
@@ -158,16 +170,23 @@ Return ONLY valid JSON matching this exact structure:
                     "contents": [{"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}],
                     "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
                 }
-                with httpx.Client(timeout=15.0) as http_client:
+                with httpx.Client(timeout=4.0) as http_client:
                     response = http_client.post(url, json=payload)
                     if response.status_code == 200:
                         text_content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
                         parsed = json.loads(text_content)
                         return self._clean_invention_analysis(parsed, title, keywords, domain)
+                    elif response.status_code == 429:
+                        GeminiService._rate_limited = True
+                        logger.warning("[GEMINI] 429 Rate limit in analyze_invention. Activating circuit breaker.")
             except Exception as e:
-                logger.error(f"[GEMINI] Error in analyze_invention: {e}")
+                err_str = str(e).lower()
+                if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                    GeminiService._rate_limited = True
+                    logger.warning(f"[GEMINI] Rate limit / quota exhausted in analyze_invention: {e}. Activating circuit breaker for instant grounded NLP fallback.")
+                else:
+                    logger.error(f"[GEMINI] Error in analyze_invention: {e}")
 
-        # Heuristic NLP Fallback
         return self._heuristic_invention_analysis(title, problem_statement, description, keywords, domain)
 
     def _clean_invention_analysis(
@@ -253,7 +272,10 @@ Return ONLY valid JSON matching this exact structure:
         keywords: List[str],
         domain: str
     ) -> Dict[str, Any]:
-        from backend.ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
+        try:
+            from backend.ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
+        except ImportError:
+            from ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
         full_text = f"{title} {problem_statement} {description}"
         struct_res = extract_structured_invention_features(full_text)
         atomic_feats = extract_atomic_technical_features(full_text, top_n=8)
@@ -319,7 +341,7 @@ Return ONLY valid JSON matching this exact structure:
         patent_abstract = patent_abstract or ""
         patent_description = patent_description or ""
 
-        if self.is_configured:
+        if self.is_configured and not GeminiService._rate_limited:
             system_prompt = "You are a Senior Patent Examiner conducting strict prior-art claim analysis. Output strict valid JSON only."
             user_prompt = f"""
 You are a Senior Patent Examiner conducting a rigorous prior-art anticipation and feature disclosure comparison.
@@ -413,15 +435,20 @@ Return ONLY valid JSON matching this exact structure:
             try:
                 if self.client is not None:
                     from google.genai import types
-                    logger.info("Executing Gemini 2.5 Flash analysis via official google-genai SDK...")
-                    response = self.client.models.generate_content(
-                        model=self.model_name,
-                        contents=f"{system_prompt}\n\n{user_prompt}",
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            temperature=0.1
+                    import concurrent.futures
+                    logger.info("Executing Gemini Flash analysis via official google-genai SDK...")
+                    def _call_pair_sdk():
+                        return self.client.models.generate_content(
+                            model=self.model_name,
+                            contents=f"{system_prompt}\n\n{user_prompt}",
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                temperature=0.1
+                            )
                         )
-                    )
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                        fut = pool.submit(_call_pair_sdk)
+                        response = fut.result(timeout=3.0)
                     if response and response.text:
                         parsed = json.loads(response.text)
                         parsed["ai_powered"] = True
@@ -434,7 +461,7 @@ Return ONLY valid JSON matching this exact structure:
                     "contents": [{"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}],
                     "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
                 }
-                with httpx.Client(timeout=15.0) as http_client:
+                with httpx.Client(timeout=3.0) as http_client:
                     res = http_client.post(url, json=payload)
                     if res.status_code == 200:
                         text_content = res.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -443,9 +470,17 @@ Return ONLY valid JSON matching this exact structure:
                         parsed["model_used"] = self.model_name
                         parsed["provider"] = "gemini"
                         return self._normalize_parsed_response(parsed)
+                    elif res.status_code == 429:
+                        GeminiService._rate_limited = True
+                        logger.warning("[GEMINI] 429 Rate limit encountered. Activating circuit breaker for instant grounded NLP fallback.")
 
             except Exception as e:
-                logger.error(f"Error in Gemini patent pair analysis: {e}")
+                err_str = str(e).lower()
+                if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                    GeminiService._rate_limited = True
+                    logger.warning(f"[GEMINI] Rate limit / quota exhausted: {e}. Switching immediately to instant grounded NLP fallback.")
+                else:
+                    logger.error(f"Error in Gemini patent pair analysis: {e}")
 
         # Heuristic NLP Fallback when API key is offline or unconfigured
         return self._normalize_parsed_response(self._generate_heuristic_pair_analysis(
@@ -469,7 +504,10 @@ Return ONLY valid JSON matching this exact structure:
         patent_description: str = ""
     ) -> Dict[str, Any]:
         """Grounded NLP claim decomposition fallback when LLM API is unavailable."""
-        from backend.ml.keyword_extractor import extract_atomic_technical_features
+        try:
+            from backend.ml.keyword_extractor import extract_atomic_technical_features
+        except ImportError:
+            from ml.keyword_extractor import extract_atomic_technical_features
 
         target_text = f"{target_title} {target_description}".lower()
         patent_text = f"{patent_title} {patent_abstract} {patent_description}".lower()
@@ -586,7 +624,7 @@ Return ONLY valid JSON matching this exact structure:
         risk_level: str
     ) -> Dict[str, Any]:
         """Generate high-level overall summary across top prior-art matches using Gemini 2.5 Flash."""
-        if not self.is_configured:
+        if not self.is_configured or GeminiService._rate_limited:
             return self._generate_fallback_summary(invention_title, risk_level, matched_patents)
 
         try:
@@ -619,11 +657,16 @@ Return ONLY valid JSON.
 
             if self.client is not None:
                 from google.genai import types
-                res = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=user_prompt,
-                    config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
-                )
+                import concurrent.futures
+                def _call_novelty_sdk():
+                    return self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
+                    )
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(_call_novelty_sdk)
+                    res = fut.result(timeout=3.0)
                 if res and res.text:
                     parsed = json.loads(res.text)
                     parsed["ai_powered"] = True
@@ -636,7 +679,7 @@ Return ONLY valid JSON.
                 "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                 "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
             }
-            with httpx.Client(timeout=15.0) as http_client:
+            with httpx.Client(timeout=3.0) as http_client:
                 response = http_client.post(url, json=payload)
                 if response.status_code == 200:
                     text_content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -645,9 +688,17 @@ Return ONLY valid JSON.
                     parsed["model_used"] = self.model_name
                     parsed["provider"] = "gemini"
                     return parsed
+                elif response.status_code == 429:
+                    GeminiService._rate_limited = True
+                    logger.warning("[GEMINI] 429 Rate limit in generate_novelty_analysis. Activating circuit breaker.")
 
         except Exception as e:
-            logger.error(f"Error in Gemini novelty analysis: {e}")
+            err_str = str(e).lower()
+            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                GeminiService._rate_limited = True
+                logger.warning(f"[GEMINI] Rate limit / quota in generate_novelty_analysis: {e}. Activating circuit breaker.")
+            else:
+                logger.error(f"Error in Gemini novelty analysis: {e}")
 
         return self._generate_fallback_summary(invention_title, risk_level, matched_patents)
 

@@ -28,13 +28,13 @@ def test_risk_classifier():
     res_low = classify_prior_art_risk(25.0)
     assert res_low["risk_level"] == "LOW"
     
-    res_mod = classify_prior_art_risk(50.0)
+    res_mod = classify_prior_art_risk(40.0)
     assert res_mod["risk_level"] == "MODERATE"
 
-    res_high = classify_prior_art_risk(75.0)
+    res_high = classify_prior_art_risk(60.0)
     assert res_high["risk_level"] == "HIGH"
 
-    res_vhigh = classify_prior_art_risk(90.0)
+    res_vhigh = classify_prior_art_risk(80.0)
     assert res_vhigh["risk_level"] == "VERY HIGH"
 
 def test_similarity_engine():

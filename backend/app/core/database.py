@@ -16,7 +16,8 @@ if IS_POSTGRES:
             settings.DATABASE_URL,
             pool_pre_ping=True,
             pool_size=10,
-            max_overflow=20
+            max_overflow=20,
+            connect_args={"connect_timeout": 2}
         )
         # Test connection & attempt vector extension creation
         with engine.connect() as conn:
@@ -61,6 +62,13 @@ def ensure_columns_exist(engine_instance):
         ("claims", "TEXT"),
         ("source_type", "VARCHAR(50) DEFAULT 'THE LENS'"),
         ("document_type", "VARCHAR(50) DEFAULT 'PATENT'"),
+        ("lens_id", "VARCHAR(100)"),
+        ("filing_date", "VARCHAR(50)"),
+        ("earliest_priority_date", "VARCHAR(50)"),
+        ("simple_family_id", "VARCHAR(100)"),
+        ("simple_family_size", "INTEGER DEFAULT 1"),
+        ("extended_family_size", "INTEGER DEFAULT 1"),
+        ("data_quality_status", "VARCHAR(50) DEFAULT 'LIMITED'"),
         ("cpc_codes", "TEXT"),
         ("ipc_codes", "TEXT"),
         ("jurisdiction", "VARCHAR(20)"),
@@ -86,10 +94,8 @@ def ensure_columns_exist(engine_instance):
             except Exception:
                 pass
 
-try:
-    ensure_columns_exist(engine)
-except Exception as me:
-    logger.info(f"Database auto-migration check: {me}")
+# Note: ensure_columns_exist is called inside startup lifespan in main.py to avoid module import side-effects
+
 
 def get_db():
     """Dependency for obtaining database sessions in FastAPI routes."""

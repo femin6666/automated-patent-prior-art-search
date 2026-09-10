@@ -42,11 +42,20 @@ TECHNICAL_SYNONYMS_MAP = {
     "cam and follower": ["cam mechanism", "cam-actuated follower", "rotary cam follower assembly"],
     "spiking neural network": ["snn", "neuromorphic network", "event-driven neural model"],
     "vertical-cavity surface-emitting laser": ["vcsel", "surface-emitting semiconductor laser", "vcsel array"],
-    "lidar point cloud": ["laser scanner point cloud", "3d lidar measurement", "spatial point cloud data"]
+    "lidar point cloud": ["laser scanner point cloud", "3d lidar measurement", "spatial point cloud data"],
+    "waste segregation": ["waste sorting", "garbage classification", "refuse separation", "trash sorting", "recyclable material sorting"],
+    "waste sorting": ["waste segregation", "garbage classification", "trash sorting", "material separation"],
+    "material classification": ["waste material identification", "waste type recognition", "trash category classification"]
 }
 
 # Domain-specific highly distinctive technical terms that signal specialized technical IP
 DISTINCTIVE_TECHNICAL_TERMS = {
+    # Waste Segregation & Automated Recycling
+    "waste segregation", "waste sorting", "automated waste sorting", "material classification",
+    "recyclable sorting", "waste item identification", "pneumatic sorting actuator",
+    "optical waste sensor", "trash classification", "destination container routing",
+    "waste material separation", "garbage classification", "refuse separation",
+
     # Mechanical Engineering & Indexing
     "continuous rotary input", "intermittent rotary output", "multiple gear arrangement",
     "gears connected by links", "orbital gear movement", "indexed/step-by-step movement",

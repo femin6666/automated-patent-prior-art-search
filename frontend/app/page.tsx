@@ -248,7 +248,7 @@ export default function LandingPage() {
       <Navbar />
 
       {/* Main Hero Section: Split 2-Column Layout */}
-      <section className="relative pt-28 pb-20 overflow-hidden z-10">
+      <section id="search" className="relative pt-28 pb-20 overflow-hidden z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             

@@ -95,26 +95,50 @@ class PatentAPIService:
 
         logger.info(f"[PATENT API] Total combined candidate records retrieved: {len(raw_candidates)}")
 
-        # 4. Deduplicate, Generate SBERT Embeddings (Weighted Priority), and Cache in DB
+        # 4. Deduplicate, Generate Batch SBERT Embeddings, and Cache in DB
         from backend.ml.preprocessing import prepare_weighted_patent_text
         newly_cached_patents = []
         skipped_count = 0
 
+        # Bulk DB check for existing patents
+        all_pat_nums = [item.get("patent_number", "").strip() for item in raw_candidates if item.get("patent_number", "").strip()]
+        existing_pat_set = set()
+        if all_pat_nums:
+            existing_rows = db.query(Patent.patent_number).filter(Patent.patent_number.in_(all_pat_nums)).all()
+            existing_pat_set = {r[0] for r in existing_rows}
+
+        items_to_process = []
+        texts_to_embed = []
+
         for item in raw_candidates:
             pat_num = item.get("patent_number", "").strip()
-            if not pat_num:
-                continue
-
-            existing = db.query(Patent).filter(Patent.patent_number == pat_num).first()
-            if existing:
+            if not pat_num or pat_num in existing_pat_set:
                 skipped_count += 1
                 continue
 
-            # Extract fields with graceful fallbacks
             pat_title = (item.get("title") or title or "Untitled Invention Record").strip()
             pat_abstract = (item.get("abstract") or f"Prior art publication {pat_num} in domain {domain}.").strip()
             pat_claims = (item.get("claims") or "").strip()
-            pat_desc = (item.get("description") or f"Specification for {pat_title}. Abstract: {pat_abstract}").strip()
+            pat_desc = (item.get("description") or "").strip()
+
+            text_for_embedding = prepare_weighted_patent_text(
+                title=pat_title,
+                abstract=pat_abstract,
+                claims=pat_claims,
+                description=pat_desc
+            )
+            items_to_process.append((item, pat_num, pat_title, pat_abstract, pat_claims, pat_desc))
+            texts_to_embed.append(text_for_embedding)
+
+        embeddings = []
+        if texts_to_embed:
+            try:
+                embeddings = embedding_service.generate_embeddings(texts_to_embed)
+            except Exception:
+                embeddings = [embedding_service.generate_embedding(t) for t in texts_to_embed]
+
+        for idx, (item, pat_num, pat_title, pat_abstract, pat_claims, pat_desc) in enumerate(items_to_process):
+            emb = embeddings[idx] if idx < len(embeddings) else []
             pat_inventors = item.get("inventors") or "Independent Author"
             pat_assignee = item.get("assignee") or "Independent Institution"
             pat_date = item.get("publication_date") or "2024-01-01"
@@ -122,17 +146,9 @@ class PatentAPIService:
             source_type = item.get("source_type") or "THE LENS"
             doc_type = item.get("document_type") or "PATENT"
 
-            # Compute SBERT embedding prioritizing Claims > Abstract > Description > Title
-            text_for_embedding = prepare_weighted_patent_text(
-                title=pat_title,
-                abstract=pat_abstract,
-                claims=pat_claims,
-                description=pat_desc
-            )
-            emb = embedding_service.generate_embedding(text_for_embedding)
-
             new_patent = Patent(
                 patent_number=pat_num,
+                lens_id=item.get("lens_id"),
                 title=pat_title,
                 abstract=pat_abstract,
                 claims=pat_claims,
@@ -140,6 +156,12 @@ class PatentAPIService:
                 inventors=pat_inventors,
                 assignee=pat_assignee,
                 publication_date=pat_date,
+                filing_date=item.get("filing_date"),
+                earliest_priority_date=item.get("earliest_priority_date") or pat_date,
+                simple_family_id=item.get("simple_family_id") or item.get("family_id"),
+                simple_family_size=item.get("simple_family_size", 1),
+                extended_family_size=item.get("extended_family_size", 1),
+                data_quality_status=item.get("data_quality_status", "LIMITED"),
                 domain=domain or "Technology",
                 source_url=pat_url,
                 source_type=source_type,
@@ -174,17 +196,9 @@ class PatentAPIService:
         if not lens_api_service.is_configured or not top_patent_numbers:
             return []
 
-        logger.info(f"[PATENT API] Running citation expansion for top candidates: {top_patent_numbers[:5]}")
-        citation_records = lens_api_service.fetch_citations_and_family(top_patent_numbers[:5])
-        if citation_records:
-            self.fetch_and_cache_external_patents(
-                db=db,
-                title="Citation Expansion",
-                keywords=[],
-                domain="Technology",
-                search_queries=[f"citation:\"{p}\"" for p in top_patent_numbers[:3]]
-            )
-        return citation_records
+        logger.info(f"[PATENT API] Running citation expansion for top candidates: {top_patent_numbers[:3]}")
+        citation_records = lens_api_service.fetch_citations_and_family(top_patent_numbers[:3])
+        return citation_records or []
 
 
     def _fetch_from_patentsview(
@@ -272,7 +286,7 @@ class PatentAPIService:
 
         records = []
         try:
-            with httpx.Client(timeout=12.0, follow_redirects=True) as http_client:
+            with httpx.Client(timeout=3.0, follow_redirects=True) as http_client:
                 res = http_client.get(url_arxiv)
                 if res.status_code == 200:
                     root = ET.fromstring(res.text)

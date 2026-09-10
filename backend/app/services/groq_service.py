@@ -34,6 +34,90 @@ class GroqService:
     def is_configured(self) -> bool:
         return bool(self.client is not None or (self.api_key and len(self.api_key.strip()) > 10 and not self.api_key.startswith("your_")))
 
+    def analyze_invention(
+        self,
+        title: str,
+        problem_statement: str,
+        description: str,
+        # pyrefly: ignore [unknown-name]
+        keywords: Optional[List[str]] = None,
+        domain: str = ""
+    ) -> Dict[str, Any]:
+        """Analyze user invention using Groq LLaMA 3.3 70B to extract structured features & search queries."""
+        title = title or ""
+        problem_statement = problem_statement or ""
+        description = description or ""
+        keywords = keywords or []
+        domain = domain or "Technology"
+
+        if self.is_configured and self.client is not None:
+            try:
+                system_prompt = "You are a Senior Patent Examiner and IP Analyst. Return strict valid JSON only."
+                user_prompt = f"""
+Analyze the target invention disclosure and decompose it into structured technical concepts for prior-art retrieval.
+
+INVENTION DISCLOSURE:
+Title: {title}
+Domain: {domain}
+Problem: {problem_statement}
+Description: {description}
+Keywords: {', '.join(keywords)}
+
+Return ONLY valid JSON matching this exact structure:
+{{
+  "title": "{title}",
+  "technical_problem": "Core technical problem description",
+  "technical_domain": "{domain}",
+  "core_invention": "1-sentence summary of primary technical mechanism",
+  "essential_features": ["essential claim feature 1", "essential claim feature 2"],
+  "optional_features": ["optional feature 1"],
+  "technical_features": ["component + function + relationship 1", "component + function + relationship 2"],
+  "structured_quadruplets": [
+    {{
+      "component": "controller",
+      "function": "adjusts threshold",
+      "relationship": "coupled to sensor",
+      "purpose": "prevents false positive"
+    }}
+  ],
+  "distinctive_features": ["distinctive concept 1", "distinctive concept 2"],
+  "search_queries": [
+    "\"{title}\" AND \"{domain}\"",
+    "query strategy 2",
+    "query strategy 3",
+    "query strategy 4",
+    "query strategy 5",
+    "query strategy 6",
+    "query strategy 7",
+    "query strategy 8"
+  ],
+  "possible_cpc_ipc_classes": ["H02J50/60"]
+}}
+"""
+                import concurrent.futures
+                def _call_groq_inv():
+                    return self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.1
+                    )
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(_call_groq_inv)
+                    res = fut.result(timeout=2.0)
+                text_content = res.choices[0].message.content
+                parsed = json.loads(text_content)
+                from backend.app.services.gemini_service import gemini_service
+                return gemini_service._clean_invention_analysis(parsed, title, keywords, domain)
+            except Exception as e:
+                logger.warning(f"Groq analyze_invention error/timeout ({e}). Falling back to Gemini / Heuristic.")
+
+        from backend.app.services.gemini_service import gemini_service
+        return gemini_service.analyze_invention(title, problem_statement, description, keywords, domain)
+
     def analyze_patent_pair(
         self,
         target_title: str,
@@ -148,15 +232,20 @@ Return ONLY valid JSON matching this exact structure:
 }}
 """
 
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.1
-                )
+                import concurrent.futures
+                def _call_groq_pair():
+                    return self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.1
+                    )
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(_call_groq_pair)
+                    response = fut.result(timeout=3.0)
                 text_content = response.choices[0].message.content
                 parsed = json.loads(text_content)
                 parsed["ai_powered"] = True
@@ -181,7 +270,10 @@ Return ONLY valid JSON matching this exact structure:
             )
 
     def _generate_heuristic_pair_analysis(self, *args, **kwargs):
-        from backend.app.services.gemini_service import gemini_service
+        try:
+            from backend.app.services.gemini_service import gemini_service
+        except ImportError:
+            from .gemini_service import gemini_service
         return gemini_service._generate_heuristic_pair_analysis(*args, **kwargs)
 
     def generate_novelty_analysis(
@@ -221,12 +313,17 @@ Provide a structured analysis in JSON format with keys:
 
 Return ONLY valid JSON.
 """
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[{"role": "user", "content": user_prompt}],
-                    response_format={"type": "json_object"},
-                    temperature=0.2
-                )
+                import concurrent.futures
+                def _call_groq_nov():
+                    return self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[{"role": "user", "content": user_prompt}],
+                        response_format={"type": "json_object"},
+                        temperature=0.2
+                    )
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(_call_groq_nov)
+                    response = fut.result(timeout=3.0)
                 parsed = json.loads(response.choices[0].message.content)
                 parsed["ai_powered"] = True
                 parsed["model_used"] = self.model_name

@@ -169,6 +169,8 @@ def calculate_deterministic_final_score(
     evidence_strength: float = 0.0,
     distinctive_score: float = 0.0,
     domain_cpc_score: float = 0.5,
+    technology_domain_score: float = 0.5,
+    cpc_match_score: float = 0.5,
     has_target_features: bool = True,
     essential_feature_coverage: float = 1.0,
     has_text_evidence: bool = True
@@ -191,6 +193,8 @@ def calculate_deterministic_final_score(
     evidence_strength = max(0.0, min(1.0, evidence_strength))
     distinctive_score = max(0.0, min(1.0, distinctive_score))
     domain_cpc_score = max(0.0, min(1.0, domain_cpc_score))
+    technology_domain_score = max(0.0, min(1.0, technology_domain_score))
+    cpc_match_score = max(0.0, min(1.0, cpc_match_score))
     essential_feature_coverage = max(0.0, min(1.0, essential_feature_coverage))
 
     # Calculate weighted component contributions according to 25/35/20/10/10 formula
@@ -230,6 +234,8 @@ def calculate_deterministic_final_score(
         "evidence_strength": round(evidence_strength * 100.0, 1),
         "distinctive_concepts": round(distinctive_score * 100.0, 1),
         "domain_cpc_alignment": round(domain_cpc_score * 100.0, 1),
+        "technology_domain_score": round(technology_domain_score * 100.0, 1),
+        "cpc_match_score": round(cpc_match_score * 100.0, 1),
         "final_score": final_pct,
         "confidence_score": confidence_score,
         "is_gated": is_gated,
@@ -539,6 +545,8 @@ def compute_hybrid_score(
         evidence_strength=evidence_strength,
         distinctive_score=distinctive_score,
         domain_cpc_score=domain_cpc_score,
+        technology_domain_score=base_domain_sim,
+        cpc_match_score=cpc_overlap,
         has_target_features=bool(clean_target_features),
         essential_feature_coverage=essential_coverage,
         has_text_evidence=has_text_evidence

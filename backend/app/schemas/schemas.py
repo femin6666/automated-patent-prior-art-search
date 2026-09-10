@@ -137,14 +137,16 @@ class ClaimElementItem(BaseModel):
 
 class ScoreBreakdown(BaseModel):
     semantic_similarity: float = 0.0  # 25% weight
-    technical_features: float = 0.0   # 40% weight
-    evidence_strength: float = 0.0    # 15% weight
+    technical_features: float = 0.0   # 35% weight
+    evidence_strength: float = 0.0    # 20% weight
     distinctive_concepts: float = 0.0 # 10% weight
     domain_cpc_alignment: float = 0.0 # 10% weight
+    technology_domain_score: Optional[float] = 0.0
+    cpc_match_score: Optional[float] = 0.0
     final_score: float = 0.0
     confidence_score: float = 0.0
     is_gated: bool = False
-    formula_explanation: str = "Final Score = (25% Semantic) + (40% Technical Features) + (15% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
+    formula_explanation: str = "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
 
 
 class PatentFamilyMember(BaseModel):

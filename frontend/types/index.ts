@@ -57,6 +57,8 @@ export interface ScoreBreakdown {
   evidence_strength: number;
   distinctive_concepts: number;
   domain_cpc_alignment: number;
+  technology_domain_score?: number;
+  cpc_match_score?: number;
   final_score: number;
   is_gated: boolean;
   formula_explanation: string;

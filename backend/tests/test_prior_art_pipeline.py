@@ -363,8 +363,10 @@ def test_battery_predictive_health_relevance():
         patent=generic_ai_paper,
         target_text_for_concepts=target_text,
         distinctive_features=distinctive_features,
-    """
-    pass
+        technical_features=tech_features
+    )
+
+    assert score_bat["final_score"] > score_ai["final_score"]
 
 
 def test_feature_coverage_transparency():

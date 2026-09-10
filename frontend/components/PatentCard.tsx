@@ -43,14 +43,14 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
     }
   };
 
-  const simLevel = semantic_similarity_label || (final_score >= 85 ? "Very High" : final_score >= 70 ? "High" : final_score >= 40 ? "Moderate" : "Low");
-
   const bd = score_breakdown || {
     semantic_similarity: semantic_score,
     technical_features: item.keyword_score || item.technical_feature_coverage || 0,
     evidence_strength: item.evidence_confidence || 0,
     distinctive_concepts: item.keyword_score || 0,
     domain_cpc_alignment: item.domain_score || 50,
+    technology_domain_score: item.domain_score || 50,
+    cpc_match_score: 85,
     final_score: final_score,
     is_gated: false,
     formula_explanation: "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
@@ -59,6 +59,21 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
   const strongMatches = item.strong_matches || item.matched_features?.filter(m => String(m.match_type || m.match_level).toLowerCase().includes("strong")).map(m => typeof m === "string" ? m : m.feature) || [];
   const partialMatches = item.partial_matches || item.matched_features?.filter(m => String(m.match_type || m.match_level).toLowerCase().includes("partial")).map(m => typeof m === "string" ? m : m.feature) || [];
   const missingFeatures = item.missing_features || item.unmatched_features || item.missing_elements || [];
+
+  const matchedCount = item.matched_feature_count ?? (strongMatches.length + partialMatches.length);
+  const totalCount = item.total_feature_count ?? (strongMatches.length + partialMatches.length + missingFeatures.length);
+
+  const computedScore = bd.is_gated
+    ? Math.round(final_score)
+    : Math.round(
+        bd.semantic_similarity * 0.25 +
+        bd.technical_features * 0.35 +
+        bd.evidence_strength * 0.20 +
+        bd.distinctive_concepts * 0.10 +
+        bd.domain_cpc_alignment * 0.10
+      );
+
+  const simLevel = semantic_similarity_label || (computedScore >= 85 ? "Very High" : computedScore >= 70 ? "High" : computedScore >= 40 ? "Moderate" : "Low");
 
   const evidenceItems = item.evidence_items || [];
   const topEvidence = evidenceItems[0] || (item.matched_features && item.matched_features[0] ? {
@@ -128,7 +143,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
                 </button>
               </div>
               <div className="text-xl font-bold font-mono text-indigo-400 flex items-center justify-end gap-1.5">
-                {Math.round(final_score)}%
+                {computedScore}%
                 <span className="text-xs font-normal text-zinc-400">({simLevel})</span>
               </div>
             </div>
@@ -222,7 +237,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
               <span>Feature Match (35%)</span>
-              <span className="text-sky-400 font-bold">{Math.round(bd.technical_features)}%</span>
+              <span className="text-sky-400 font-bold">{Math.round(bd.technical_features)}% ({matchedCount}/{totalCount})</span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
               <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, bd.technical_features)}%` }} />
@@ -387,7 +402,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
             </div>
             
             <p className="text-xs text-zinc-300 leading-relaxed">
-              The <strong className="text-indigo-400">Overall Technical Relevance Score</strong> ({Math.round(final_score)}%) is calculated by the 5-component weighted formula:
+              The <strong className="text-indigo-400">Overall Technical Relevance Score</strong> ({computedScore}%) is calculated by the 5-component weighted formula:
             </p>
 
             <div className="space-y-2.5 text-xs font-mono bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
@@ -397,7 +412,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
               </div>
               <div className="flex justify-between text-zinc-300">
                 <span>Technical Feature Match (35%):</span>
-                <span className="text-sky-400 font-bold">{bd.technical_features}% × 0.35 = {(bd.technical_features * 0.35).toFixed(1)}%</span>
+                <span className="text-sky-400 font-bold">{bd.technical_features}% × 0.35 = {(bd.technical_features * 0.35).toFixed(1)}% ({matchedCount}/{totalCount} matched)</span>
               </div>
               <div className="flex justify-between text-zinc-300">
                 <span>Evidence Strength (20%):</span>
@@ -411,9 +426,21 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
                 <span>Domain/CPC Alignment (10%):</span>
                 <span className="text-purple-400 font-bold">{bd.domain_cpc_alignment}% × 0.10 = {(bd.domain_cpc_alignment * 0.10).toFixed(1)}%</span>
               </div>
+              {bd.technology_domain_score !== undefined && bd.cpc_match_score !== undefined && (
+                <div className="pl-4 pt-1 space-y-1 text-[11px] text-zinc-400 font-mono border-t border-zinc-800/60">
+                  <div className="flex justify-between">
+                    <span>├─ Technology Domain Match:</span>
+                    <span className="text-purple-300">{Math.round(bd.technology_domain_score)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>└─ CPC Classification Match:</span>
+                    <span className="text-purple-300">{Math.round(bd.cpc_match_score)}%</span>
+                  </div>
+                </div>
+              )}
               <div className="pt-2 border-t border-zinc-800 flex justify-between font-bold text-indigo-300 text-sm">
                 <span>Overall Relevance:</span>
-                <span>{bd.final_score}%</span>
+                <span>{computedScore}%</span>
               </div>
             </div>
 

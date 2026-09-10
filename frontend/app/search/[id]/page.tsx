@@ -251,7 +251,7 @@ export default function SearchResultsPage() {
               domain_cpc_alignment: data.results[0]?.domain_score || 50,
               final_score: topMatchScore,
               is_gated: false,
-              formula_explanation: "Final Score = (25% Semantic) + (40% Technical Features) + (15% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
+              formula_explanation: "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
             };
 
             return (
@@ -278,7 +278,7 @@ export default function SearchResultsPage() {
                       </button>
                     </h2>
                     <p className="text-xs text-zinc-300 leading-relaxed">
-                      The preliminary relevance score is computed by the deterministic backend scoring engine using 25% SBERT Semantic Vector Similarity, 40% Technical Feature Score, 15% Evidence Verification, 10% Distinctive Concept Overlap, and 10% Domain/CPC Alignment.
+                      The preliminary relevance score is computed by the deterministic backend scoring engine using 25% SBERT Semantic Vector Similarity, 35% Technical Feature Match, 20% Evidence Verification, 10% Distinctive Concept Overlap, and 10% Domain/CPC Alignment.
                     </p>
                   </div>
 
@@ -316,16 +316,16 @@ export default function SearchResultsPage() {
                         </p>
 
                         <div className="p-4 rounded-xl bg-[#070919] border border-indigo-500/20 font-mono text-[11px] space-y-2.5">
-                          <div className="flex justify-between items-center text-sky-300">
-                            <span>1. Technical Feature Score (40% Weight):</span>
-                            <span className="font-bold text-white">{topScoreBreakdown.technical_features}%</span>
-                          </div>
                           <div className="flex justify-between items-center text-indigo-300">
-                            <span>2. SBERT Semantic Similarity (25% Weight):</span>
+                            <span>1. SBERT Semantic Similarity (25% Weight):</span>
                             <span className="font-bold text-white">{topScoreBreakdown.semantic_similarity}%</span>
                           </div>
+                          <div className="flex justify-between items-center text-sky-300">
+                            <span>2. Technical Feature Score (35% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.technical_features}%</span>
+                          </div>
                           <div className="flex justify-between items-center text-emerald-300">
-                            <span>3. Evidence Text Strength (15% Weight):</span>
+                            <span>3. Evidence Text Strength (20% Weight):</span>
                             <span className="font-bold text-white">{topScoreBreakdown.evidence_strength}%</span>
                           </div>
                           <div className="flex justify-between items-center text-amber-300">

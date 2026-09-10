@@ -30,6 +30,7 @@ export default function SearchResultsPage() {
   const searchId = params.id as string;
 
   const [data, setData] = useState<PriorArtSearchResponse | null>(null);
+  const [savedPatentIds, setSavedPatentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,8 +42,18 @@ export default function SearchResultsPage() {
   useEffect(() => {
     async function fetchSearch() {
       try {
-        const res = await api.getSearchDetails(searchId);
+        const [res, savedList] = await Promise.all([
+          api.getSearchDetails(searchId),
+          api.getSavedPatents().catch(() => [])
+        ]);
         setData(res);
+        const ids = new Set<string>();
+        savedList.forEach((s) => {
+          if (s.patent_id) ids.add(s.patent_id);
+          if (s.patent?.id) ids.add(s.patent.id);
+          if (s.patent?.patent_number) ids.add(s.patent.patent_number);
+        });
+        setSavedPatentIds(ids);
       } catch (err: any) {
         setError(err.message || "Failed to load search results.");
       } finally {
@@ -105,10 +116,10 @@ export default function SearchResultsPage() {
   if (riskFilter !== "ALL") {
     filteredResults = filteredResults.filter((r) => {
       const score = r.final_score;
-      if (riskFilter === "LOW") return score <= 40;
-      if (riskFilter === "MODERATE") return score > 40 && score <= 65;
-      if (riskFilter === "HIGH") return score > 65 && score <= 80;
-      if (riskFilter === "VERY HIGH") return score > 80;
+      if (riskFilter === "LOW") return score < 40;
+      if (riskFilter === "MODERATE") return score >= 40 && score < 70;
+      if (riskFilter === "HIGH") return score >= 70 && score < 85;
+      if (riskFilter === "VERY HIGH") return score >= 85;
       return true;
     });
   }
@@ -183,31 +194,47 @@ export default function SearchResultsPage() {
           </div>
 
           {/* Patent API Execution Audit Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20">
             <div className="text-center">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300">Patents Searched</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300">Searched</div>
               <div className="text-xl font-mono font-bold text-indigo-200 mt-0.5">
-                {data.summary.patents_searched || 100}
+                {data.summary.pipeline_metrics?.patents_searched || data.summary.patents_searched || 100}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-sky-300">API Retrieved</div>
               <div className="text-xl font-mono font-bold text-sky-200 mt-0.5">
-                {data.summary.patents_retrieved || 0}
+                {data.summary.pipeline_metrics?.patents_retrieved || data.summary.patents_retrieved || 0}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300">Vector Shortlisted</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300">Shortlisted</div>
               <div className="text-xl font-mono font-bold text-purple-200 mt-0.5">
-                {data.summary.patents_shortlisted || data.results.length}
+                {data.summary.pipeline_metrics?.vector_shortlisted || data.summary.patents_shortlisted || data.results.length}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300">
-                {data.ai_model_used || "Gemini 2.5 Flash"} Analyzed
-              </div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300">Unique Families</div>
               <div className="text-xl font-mono font-bold text-emerald-200 mt-0.5">
-                {data.summary.patents_deeply_analyzed || data.results.length}
+                {data.summary.pipeline_metrics?.unique_families || data.summary.unique_families_count || data.results.length}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">With Claims</div>
+              <div className="text-xl font-mono font-bold text-cyan-200 mt-0.5">
+                {data.summary.pipeline_metrics?.patents_with_claims || 0}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300">Full Text</div>
+              <div className="text-xl font-mono font-bold text-amber-200 mt-0.5">
+                {data.summary.pipeline_metrics?.patents_with_full_text || 0}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-rose-300">Evidence Verified</div>
+              <div className="text-xl font-mono font-bold text-rose-200 mt-0.5">
+                {data.summary.pipeline_metrics?.evidence_verified_matches || 0}
               </div>
             </div>
           </div>
@@ -216,20 +243,31 @@ export default function SearchResultsPage() {
           {(() => {
             const topMatchScore = data.results && data.results.length > 0 ? Math.round(data.results[0].final_score) : Math.round(data.highest_similarity);
             const topVectorSim = data.results && data.results.length > 0 ? Math.round(data.results[0].semantic_score) : Math.round(data.highest_semantic_similarity || data.highest_similarity);
+            const topScoreBreakdown = data.results[0]?.score_breakdown || {
+              semantic_similarity: topVectorSim,
+              technical_features: data.results[0]?.keyword_score || 0,
+              evidence_strength: data.results[0]?.evidence_confidence || 0,
+              distinctive_concepts: data.results[0]?.keyword_score || 0,
+              domain_cpc_alignment: data.results[0]?.domain_score || 50,
+              final_score: topMatchScore,
+              is_gated: false,
+              formula_explanation: "Final Score = (25% Semantic) + (40% Technical Features) + (15% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
+            };
+
             return (
               <div className="p-7 rounded-xl tech-card space-y-3 relative overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="space-y-2.5 max-w-2xl">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-xs font-mono font-semibold text-zinc-400">AI Prior-Art Relevance:</span>
+                      <span className="text-xs font-mono font-semibold text-zinc-400">AI Preliminary Prior-Art Relevance:</span>
                       <RiskBadge level={data.risk_level} size="md" />
                       <span className="text-xs font-semibold text-zinc-300 font-mono">{data.risk_label}</span>
                     </div>
                     <h2 className="text-2xl font-bold text-zinc-100 flex flex-wrap items-center gap-3">
-                      <span>Overall Prior-Art Relevance:</span>
+                      <span>Overall Technical Relevance:</span>
                       <span className="text-indigo-400 font-mono">{Math.round(data.highest_similarity)}%</span>
                       <span className="px-3 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-semibold shadow-sm">
-                        Highest Semantic Similarity: {topVectorSim}%
+                        Highest SBERT Semantic: {topVectorSim}%
                       </span>
                       <button
                         onClick={() => setShowCalcModal(true)}
@@ -240,7 +278,7 @@ export default function SearchResultsPage() {
                       </button>
                     </h2>
                     <p className="text-xs text-zinc-300 leading-relaxed">
-                      The preliminary relevance indicator is computed based on SBERT semantic vector embeddings, technical feature matching, keyword concept overlap, and technology domain alignment.
+                      The preliminary relevance score is computed by the deterministic backend scoring engine using 25% SBERT Semantic Vector Similarity, 40% Technical Feature Score, 15% Evidence Verification, 10% Distinctive Concept Overlap, and 10% Domain/CPC Alignment.
                     </p>
                   </div>
 
@@ -262,7 +300,7 @@ export default function SearchResultsPage() {
                       <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
                         <div className="flex items-center gap-2 text-indigo-400 font-mono font-bold text-sm">
                           <HelpCircle className="w-4 h-4" />
-                          <span>Overall Relevance Calculation Formula</span>
+                          <span>Authoritative Score Calculation Formula</span>
                         </div>
                         <button
                           onClick={() => setShowCalcModal(false)}
@@ -274,30 +312,44 @@ export default function SearchResultsPage() {
 
                       <div className="space-y-3 text-xs">
                         <p className="text-zinc-300 leading-relaxed">
-                          The <strong>Overall Prior-Art Relevance Score ({Math.round(data.highest_similarity)}%)</strong> evaluates prior art candidates using a multi-factor hybrid scoring algorithm:
+                          The <strong>Overall Prior-Art Technical Relevance Score ({Math.round(data.highest_similarity)}%)</strong> evaluates prior art candidates using the authoritative single-source formula:
                         </p>
 
                         <div className="p-4 rounded-xl bg-[#070919] border border-indigo-500/20 font-mono text-[11px] space-y-2.5">
-                          <div className="flex justify-between items-center text-indigo-300">
-                            <span>SBERT Semantic Vector Similarity (40% Weight):</span>
-                            <span className="font-bold text-white">{Math.round(topVectorSim * 0.40)}%</span>
-                          </div>
                           <div className="flex justify-between items-center text-sky-300">
-                            <span>Technical Feature & Concept Match (45% Weight):</span>
-                            <span className="font-bold text-white">{Math.round((data.results[0]?.keyword_score || 20) * 0.45)}%</span>
+                            <span>1. Technical Feature Score (40% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.technical_features}%</span>
+                          </div>
+                          <div className="flex justify-between items-center text-indigo-300">
+                            <span>2. SBERT Semantic Similarity (25% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.semantic_similarity}%</span>
+                          </div>
+                          <div className="flex justify-between items-center text-emerald-300">
+                            <span>3. Evidence Text Strength (15% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.evidence_strength}%</span>
+                          </div>
+                          <div className="flex justify-between items-center text-amber-300">
+                            <span>4. Distinctive Concept Match (10% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.distinctive_concepts}%</span>
                           </div>
                           <div className="flex justify-between items-center text-purple-300">
-                            <span>Technology Domain Alignment (15% Weight):</span>
-                            <span className="font-bold text-white">{Math.round((data.results[0]?.domain_score || 100) * 0.15)}%</span>
+                            <span>5. Domain & CPC/IPC Alignment (10% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.domain_cpc_alignment}%</span>
                           </div>
                           <div className="pt-2 border-t border-zinc-800 flex justify-between items-center text-white text-xs font-bold">
-                            <span>Overall Relevance Score Total:</span>
-                            <span className="text-indigo-400 font-mono text-sm">{Math.round(data.highest_similarity)}%</span>
+                            <span>Overall Relevance Score:</span>
+                            <span className="text-indigo-400 font-mono text-sm">{topScoreBreakdown.final_score}%</span>
                           </div>
                         </div>
 
+                        {topScoreBreakdown.is_gated && (
+                          <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px]">
+                            ⚠️ <strong>Technical Relevance Gate Applied:</strong> The final score was capped because the technical feature overlap score is under 20%.
+                          </div>
+                        )}
+
                         <p className="text-[11px] text-zinc-400 italic leading-relaxed">
-                          *Note: If no explicit user keywords are provided, weight dynamically shifts to 70% Semantic Similarity and 30% Domain Alignment to prevent penalization.
+                          {topScoreBreakdown.formula_explanation}
                         </p>
                       </div>
 
@@ -376,13 +428,25 @@ export default function SearchResultsPage() {
               </div>
             ) : (
               filteredResults.map((item) => (
-                <PatentCard key={item.patent.id} item={item} />
+                <PatentCard
+                  key={item.patent.id}
+                  item={item}
+                  isInitialSaved={savedPatentIds.has(item.patent.id) || savedPatentIds.has(item.patent.patent_number)}
+                />
               ))
             )}
+          {/* Legal Disclaimer Footer */}
+          <div className="mt-8 p-4 rounded-xl bg-zinc-950/80 border border-zinc-800/80 text-[11px] text-zinc-400 leading-relaxed font-mono flex items-start gap-3">
+            <Scale className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-zinc-200 uppercase tracking-wider block mb-0.5">Legal Disclaimer</span>
+              PatentLens AI provides AI-assisted preliminary technical prior-art relevance analysis. Results are intended for research and screening purposes and do not constitute a legal opinion or definitive patentability determination. Professional patent review is recommended before filing or making legal decisions.
+            </div>
           </div>
-
         </div>
+      </div>
       </main>
     </div>
+
   );
 }

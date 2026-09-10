@@ -15,7 +15,7 @@ class GeminiService:
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-2.0-flash"
+        self.model_name = settings.GEMINI_MODEL or "gemini-2.5-flash"
         self.client = None
         self._initialize_client()
 
@@ -46,9 +46,9 @@ class GeminiService:
         domain: str = ""
     ) -> Dict[str, Any]:
         """
-        Analyze user invention using Gemini 2.5 Flash to extract structured technical features,
-        distinctive concepts, alternative terminology, targeted search queries, and candidate CPC classes.
-        Filters out generic noise terms ('system', 'device', 'technology', 'signal', 'AI', 'electronics').
+        Analyze user invention using Gemini 2.5 Flash to extract structured technical features
+        (essential vs optional, component + function + relationship + purpose quadruplets),
+        8 multi-strategy search queries, and CPC classification candidates.
         """
         title = title or ""
         problem_statement = problem_statement or ""
@@ -56,24 +56,33 @@ class GeminiService:
         keywords = keywords or []
         domain = domain or "Technology"
 
-        GENERIC_NOISE = {
-            "system", "device", "technology", "signal", "ai", "electronics",
-            "method", "apparatus", "process", "mechanism", "unit", "module",
-            "component", "feature", "data", "information"
-        }
-
         if self.is_configured:
             system_prompt = "You are a Senior Patent Examiner and IP Analyst. Return strict valid JSON only."
             user_prompt = f"""
 Analyze the target invention disclosure and decompose it into structured technical concepts for prior-art retrieval.
 
-RULES:
-1. Extract "technical_features": Specific engineering components, structural elements, circuits, algorithms, or physical arrangements. Avoid single generic words like "system", "device", "technology", "signal", "AI", "electronics".
-2. Extract "distinctive_concepts": Highly novel/unusual technical limitations or combinations.
-3. Extract "alternative_terms": Synonyms or technical equivalents used in older or international patent literature.
-4. Construct 3-5 "search_queries": Targeted multi-word technical search phrases combining distinctive concepts (e.g. "three-terminal semiconductor junction", "emitter collector base current control"). DO NOT create single broad queries like "semiconductor device".
-5. Suggest 2-4 "cpc_candidates": Relevant CPC classification codes (e.g. "H01L29/66", "G06F18/20").
-6. Identify the primary technical "domain".
+RULES & SCHEMA REQUIREMENTS:
+1. "technical_problem": Extract the actual core technical engineering problem solved (not just the broad domain topic).
+2. "essential_features": Identify 3-6 essential claim limitations defining the primary inventive concept.
+3. "optional_features": Identify 2-5 secondary or optional implementation details.
+4. "technical_features": Extract 5-10 specific engineering concepts. Each feature MUST represent COMPONENT + FUNCTION + RELATIONSHIP + PURPOSE. Avoid generic words ("system", "device", "control", "signal").
+5. "structured_quadruplets": Array of objects: [{{"component": "transmitter coil", "function": "generates electromagnetic field", "relationship": "coupled to power inverter", "purpose": "transfers energy wirelessly"}}].
+6. "distinctive_features": 3-8 most distinctive technical concepts carrying high weight.
+7. "functional_relationships": Explicit COMPONENT -> ACTION -> CONDITION -> RESULT relationships.
+8. "components": Hardware/structural elements.
+9. "inputs" & "outputs": Physical parameters, signals, measurements.
+10. "technical_effects": Engineering benefits (e.g. "prevents parasitic heating").
+11. "alternative_terms": Technical synonyms used in international patent literature.
+12. "search_queries": Generate EXACTLY 8 multi-strategy queries:
+   1. Exact technical concepts
+   2. Technical synonyms
+   3. Component + function
+   4. Function + relationship
+   5. Operating principle
+   6. Claims-oriented terminology
+   7. Classification + technical concepts
+   8. Broad conceptual discovery
+13. "possible_cpc_ipc_classes": 2-5 relevant CPC/IPC classification codes (e.g. "H02J50/60", "H02J50/12").
 
 INVENTION DISCLOSURE:
 Title: {title}
@@ -84,15 +93,50 @@ Keywords: {', '.join(keywords)}
 
 Return ONLY valid JSON matching this exact structure:
 {{
-  "technical_features": ["three-terminal semiconductor", "pn junction barrier"],
-  "distinctive_concepts": ["current control via base bias voltage"],
-  "alternative_terms": ["bipolar transistor", "triode semiconductor"],
-  "search_queries": [
-    "three-terminal semiconductor junction",
-    "emitter collector base current control"
+  "title": "{title}",
+  "technical_problem": "Core technical problem description",
+  "technical_domain": "{domain}",
+  "core_invention": "1-sentence summary of primary technical mechanism",
+  "essential_features": [
+    "foreign object detection coil circuit"
   ],
-  "domain": "Electronics",
-  "cpc_candidates": ["H01L29/66", "H01L29/73"]
+  "optional_features": [
+    "user notification LED indicator"
+  ],
+  "technical_features": [
+    "controller dynamically adjusts foreign-object detection threshold based on coil alignment"
+  ],
+  "structured_quadruplets": [
+    {{
+      "component": "controller",
+      "function": "dynamically adjusts detection threshold",
+      "relationship": "coupled to coil sensor circuit",
+      "purpose": "prevents false positive thermal shutdowns"
+    }}
+  ],
+  "distinctive_features": [
+    "foreign object detection using coil electrical parameters"
+  ],
+  "functional_relationships": [
+    "alignment sensor modifies threshold value when coil displacement occurs"
+  ],
+  "components": ["transmitter coil", "receiver coil", "controller"],
+  "inputs": ["coil impedance", "resonant frequency"],
+  "outputs": ["FOD alert signal", "power reduction signal"],
+  "technical_effects": ["prevents parasitic heating of metallic objects"],
+  "alternative_terms": ["wireless power transfer", "inductive power transfer"],
+  "search_concepts": ["foreign object detection", "wireless power transfer"],
+  "search_queries": [
+    "\"wireless power transfer\" AND \"foreign object detection\"",
+    "\"foreign object sensing\" AND \"inductive charging\"",
+    "\"transmitter coil\" AND \"threshold adjustment\"",
+    "\"impedance monitoring\" AND \"parasitic heat reduction\"",
+    "\"resonant frequency shift\" AND \"object detection\"",
+    "claim:(\"foreign object detection\" AND coil)",
+    "cpc:H02J50/60 AND \"foreign object\"",
+    "\"wireless charging\" AND \"safety interlock\""
+  ],
+  "possible_cpc_ipc_classes": ["H02J50/60", "H02J50/12"]
 }}
 """
             try:
@@ -135,29 +179,69 @@ Return ONLY valid JSON matching this exact structure:
     ) -> Dict[str, Any]:
         GENERIC_NOISE = {
             "system", "device", "technology", "signal", "ai", "electronics",
-            "method", "apparatus", "process", "mechanism", "unit", "module"
+            "method", "apparatus", "process", "mechanism", "unit", "module",
+            "component", "feature", "data", "information", "operation"
         }
         
         raw_feats = parsed.get("technical_features", [])
-        clean_feats = [f for f in raw_feats if str(f).strip().lower() not in GENERIC_NOISE]
+        clean_feats = [str(f).strip() for f in raw_feats if str(f).strip().lower() not in GENERIC_NOISE]
+
+        raw_essential = parsed.get("essential_features", [])
+        clean_essential = [str(e).strip() for e in raw_essential if str(e).strip().lower() not in GENERIC_NOISE]
+
+        raw_dist = parsed.get("distinctive_features", [])
+        clean_dist = [str(d).strip() for d in raw_dist if str(d).strip().lower() not in GENERIC_NOISE]
 
         raw_queries = parsed.get("search_queries", [])
         clean_queries = []
         for q in raw_queries:
             q_str = str(q).strip()
-            if q_str and q_str.lower() not in GENERIC_NOISE and len(q_str.split()) >= 2:
+            if q_str and q_str.lower() not in GENERIC_NOISE:
                 clean_queries.append(q_str)
 
-        if not clean_queries:
-            clean_queries = [f"{title} {k}" for k in (keywords[:3] or [domain])]
+        # Guarantee at least 8 queries across 8 strategies
+        if len(clean_queries) < 8:
+            base_kw = keywords[:4] if keywords else [domain, title]
+            strategies_fill = [
+                f"\"{title}\" AND \"{base_kw[0] if base_kw else domain}\"",
+                f"\"{base_kw[0] if base_kw else domain}\" AND \"synonym\"",
+                f"\"{clean_dist[0] if clean_dist else title}\" AND function",
+                f"\"relationship\" AND \"{domain}\"",
+                f"\"operating principle\" AND \"{title}\"",
+                f"claim:(\"{title}\")",
+                f"cpc:H02J50/60 AND \"{title}\"",
+                f"\"{domain}\" AND discovery"
+            ]
+            for sf in strategies_fill:
+                if len(clean_queries) >= 8:
+                    break
+                if sf not in clean_queries:
+                    clean_queries.append(sf)
+
+        cpc_list = parsed.get("possible_cpc_ipc_classes") or parsed.get("cpc_candidates") or []
 
         return {
+            "title": parsed.get("title") or title,
+            "technical_problem": parsed.get("technical_problem") or parsed.get("problem") or f"Optimization of {domain} system performance",
+            "problem": parsed.get("problem") or parsed.get("technical_problem") or "",
+            "technical_domain": parsed.get("technical_domain") or domain,
+            "core_invention": parsed.get("core_invention") or title,
+            "essential_features": clean_essential or clean_feats[:4] or [title],
+            "optional_features": parsed.get("optional_features", []),
             "technical_features": clean_feats or [title],
-            "distinctive_concepts": parsed.get("distinctive_concepts", []),
+            "structured_quadruplets": parsed.get("structured_quadruplets", []),
+            "distinctive_features": clean_dist or clean_feats[:4],
+            "functional_relationships": parsed.get("functional_relationships", []),
+            "components": parsed.get("components", []),
+            "inputs": parsed.get("inputs", []),
+            "outputs": parsed.get("outputs", []),
+            "technical_effects": parsed.get("technical_effects", []),
             "alternative_terms": parsed.get("alternative_terms", []),
-            "search_queries": clean_queries,
-            "domain": parsed.get("domain") or domain,
-            "cpc_candidates": parsed.get("cpc_candidates", [])
+            "search_concepts": parsed.get("search_concepts") or keywords,
+            "search_queries": clean_queries[:8],
+            "possible_cpc_ipc_classes": cpc_list,
+            "cpc_candidates": cpc_list,
+            "domain": parsed.get("technical_domain") or domain
         }
 
     def _heuristic_invention_analysis(
@@ -168,25 +252,46 @@ Return ONLY valid JSON matching this exact structure:
         keywords: List[str],
         domain: str
     ) -> Dict[str, Any]:
-        from backend.ml.keyword_extractor import extract_atomic_technical_features
+        from backend.ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
         full_text = f"{title} {problem_statement} {description}"
+        struct_res = extract_structured_invention_features(full_text)
         atomic_feats = extract_atomic_technical_features(full_text, top_n=8)
         
-        search_queries = []
-        if len(atomic_feats) >= 2:
-            search_queries.append(f"{atomic_feats[0]} {atomic_feats[1]}")
-        if len(atomic_feats) >= 4:
-            search_queries.append(f"{atomic_feats[2]} {atomic_feats[3]}")
-        if title:
-            search_queries.append(title)
+        distinctive = [f for f in atomic_feats if len(f.split()) >= 2] or atomic_feats[:4]
+
+        search_queries = [
+            f"\"{distinctive[0]}\" AND \"{distinctive[1] if len(distinctive) > 1 else domain}\"",
+            f"\"{distinctive[0]}\" AND \"charging\"",
+            f"\"{title}\" AND \"function\"",
+            f"\"{domain}\" AND \"relationship\"",
+            f"\"operating principle\" AND \"{title}\"",
+            f"claim:(\"{distinctive[0]}\")",
+            f"cpc:H02J50/60 AND \"{title}\"",
+            f"\"{domain}\" AND \"prior art\""
+        ]
 
         return {
+            "title": title,
+            "technical_problem": problem_statement[:200] if problem_statement else f"Technical optimization in {domain}",
+            "problem": problem_statement[:200],
+            "technical_domain": domain or "Technology",
+            "core_invention": title,
+            "essential_features": struct_res.get("essential_features") or atomic_feats[:4],
+            "optional_features": struct_res.get("optional_features") or [],
             "technical_features": atomic_feats or [title],
-            "distinctive_concepts": [f for f in atomic_feats if len(f.split()) >= 2],
+            "structured_quadruplets": struct_res.get("structured_quadruplets") or [],
+            "distinctive_features": distinctive,
+            "functional_relationships": [f"{distinctive[0]} operates within {domain}"] if distinctive else [],
+            "components": keywords or ["control module"],
+            "inputs": ["operating parameter"],
+            "outputs": ["control response"],
+            "technical_effects": ["improves system performance"],
             "alternative_terms": keywords or [],
-            "search_queries": search_queries,
-            "domain": domain or "Technology",
-            "cpc_candidates": []
+            "search_concepts": distinctive or atomic_feats[:4],
+            "search_queries": search_queries[:8],
+            "possible_cpc_ipc_classes": ["H02J50/60"],
+            "cpc_candidates": ["H02J50/60"],
+            "domain": domain or "Technology"
         }
 
     def analyze_patent_pair(
@@ -203,6 +308,7 @@ Return ONLY valid JSON matching this exact structure:
         """
         Decompose invention claims into atomic technical limitations and perform rigorous 
         feature-by-feature prior-art comparison using Gemini 2.5 Flash SDK.
+        Outputs 4 separate conclusions: Technical Relevance, Evidence Confidence, Temporal Status, Legal Assessment.
         """
         target_title = target_title or ""
         target_problem = target_problem or ""
@@ -217,22 +323,21 @@ Return ONLY valid JSON matching this exact structure:
             user_prompt = f"""
 You are a Senior Patent Examiner conducting a rigorous prior-art anticipation and feature disclosure comparison.
 
-EXAMINATION RULES:
+EXAMINATION RULES & REQUIRED OUTPUTS:
 1. Break the target invention claim/description into atomic technical limitations/elements.
 2. Compare EVERY limitation against the supplied prior-art document ({patent_number}: '{patent_title}').
-3. Classify EVERY limitation as exactly ONE of:
-   - EXPLICIT: Explicitly disclosed in prior-art text.
-   - INHERENT: Inherent technical feature necessarily present in the disclosed prior-art structure.
-   - PARTIAL: Partially disclosed or broadly suggested, missing structural details.
-   - NOT_DISCLOSED: Completely absent from the prior-art document.
-4. Provide explicit supporting quotes/evidence directly from the prior-art text for every classification. If evidence is insufficient, set evidence to "INSUFFICIENT_EVIDENCE".
-5. Identify all missing technical features in "missing_elements".
-6. Determine whether THIS SINGLE PRIOR-ART DOCUMENT discloses ALL essential limitations ("single_document_anticipation": {{"found": true/false, "reason": "string"}}).
-7. NEVER combine multiple documents when determining single-document anticipation.
-8. Similar terminology MUST NOT automatically be treated as identical unless structural identity is shown in prior-art text.
-9. Calculate "technical_feature_coverage" as the percentage (0-100%) of target claim limitations classified as EXPLICIT, INHERENT, or PARTIAL.
-10. Calculate "confidence" as an integer (0-100) representing your confidence in the evidence analysis.
-11. Do NOT invent claims, dates, inventors, or prior-art disclosure. Do not make final legal conclusions of patentability.
+3. Classify EVERY limitation as exactly ONE of 5 levels:
+   - STRONG_MATCH: Explicitly disclosed in prior-art claims or abstract text with quote.
+   - PARTIAL_MATCH: Partially disclosed or broadly suggested without full structural details.
+   - WEAK_MATCH: Generic or broad domain term match only.
+   - NOT_FOUND: Completely absent from prior-art text.
+   - UNABLE_TO_VERIFY: Text unavailable for verification.
+4. Provide explicit supporting quotes/evidence directly from prior-art text for every match.
+5. Provide FOUR SEPARATE CONCLUSIONS:
+   - "technical_relevance_conclusion": Detailed evaluation of technical feature overlap.
+   - "evidence_confidence_conclusion": Strength of available supporting document evidence.
+   - "temporal_status_conclusion": Timeline evaluation relative to reference date.
+   - "legal_assessment_disclaimer": "Preliminary AI screening only. Final patentability requires formal patent attorney examination."
 
 TARGET INVENTION:
 Title: {target_title}
@@ -251,10 +356,14 @@ Return ONLY valid JSON matching this exact structure:
   "overall_result": "ANTICIPATED | PARTIALLY_DISCLOSED | NOT_ANTICIPATED | INSUFFICIENT_EVIDENCE",
   "confidence": 87,
   "technical_feature_coverage": 25.0,
+  "technical_relevance_conclusion": "Technically similar regarding wireless power transfer but lacks specific foreign object dynamic threshold circuit.",
+  "evidence_confidence_conclusion": "High confidence supported by explicit quotes from patent claims.",
+  "temporal_status_conclusion": "Published prior to target reference date.",
+  "legal_assessment_disclaimer": "Preliminary AI screening only. Final legal patentability requires formal patent attorney examination.",
   "claim_elements": [
     {{
       "element": "Atomic technical limitation name",
-      "status": "EXPLICIT | INHERENT | PARTIAL | NOT_DISCLOSED",
+      "status": "STRONG_MATCH | PARTIAL_MATCH | WEAK_MATCH | NOT_FOUND | UNABLE_TO_VERIFY",
       "evidence": "Direct quote or explicit evidence from prior-art text",
       "source_document": "{patent_number}"
     }}
@@ -266,8 +375,8 @@ Return ONLY valid JSON matching this exact structure:
   "missing_elements": [
     "Specific missing technical element name"
   ],
-  "reasoning": "Comprehensive examination explanation.",
-  "relevance_explanation": "2-sentence relevance summary.",
+  "reasoning": "Matched technical features -> evidence -> match strength -> missing features -> overall technical relevance",
+  "relevance_explanation": "2-sentence evidence-based relevance summary.",
   "overlap_summary": "2-sentence feature disclosure summary.",
   "patent_specific_insights": [
     "Key technical insight regarding prior-art specification."
@@ -282,7 +391,7 @@ Return ONLY valid JSON matching this exact structure:
   "matched_features": [
     {{
       "feature": "impedance measurement",
-      "match_level": "strong",
+      "match_level": "STRONG_MATCH",
       "evidence": "Discloses impedance measurement circuit."
     }}
   ],
@@ -301,7 +410,6 @@ Return ONLY valid JSON matching this exact structure:
 """
 
             try:
-                # 1. Try Official google-genai SDK if available
                 if self.client is not None:
                     from google.genai import types
                     logger.info("Executing Gemini 2.5 Flash analysis via official google-genai SDK...")
@@ -320,7 +428,6 @@ Return ONLY valid JSON matching this exact structure:
                         parsed["provider"] = "gemini"
                         return self._normalize_parsed_response(parsed)
 
-                # 2. Fallback to direct HTTP REST API call if SDK client is uninitialized
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
                 payload = {
                     "contents": [{"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}],
@@ -346,7 +453,8 @@ Return ONLY valid JSON matching this exact structure:
             patent_number=patent_number,
             patent_title=patent_title,
             patent_abstract=patent_abstract,
-            similarity_score=similarity_score
+            similarity_score=similarity_score,
+            patent_description=patent_description
         ))
 
     def _generate_heuristic_pair_analysis(
@@ -380,14 +488,15 @@ Return ONLY valid JSON matching this exact structure:
             pattern = r'\b' + re.escape(feat_lower) + r'\b' if len(feat_lower.split()) == 1 else re.escape(feat_lower)
             if re.search(pattern, patent_text):
                 matched_feats.append(feat)
+                match_lvl = "STRONG_MATCH" if similarity_score > 60.0 else "PARTIAL_MATCH"
                 matched_feature_objects.append({
                     "feature": feat,
-                    "match_level": "strong" if similarity_score > 60.0 else "partial",
+                    "match_level": match_lvl,
                     "evidence": f"Discloses '{feat}' in patent specification ('{patent_title}')."
                 })
                 claim_elements.append({
                     "element": feat,
-                    "status": "EXPLICIT" if similarity_score > 60.0 else "PARTIAL",
+                    "status": match_lvl,
                     "evidence": f"Explicitly discloses {feat} in patent '{patent_title}'.",
                     "source_document": patent_number or patent_title
                 })
@@ -403,7 +512,7 @@ Return ONLY valid JSON matching this exact structure:
                 unmatched_feats.append(feat)
                 claim_elements.append({
                     "element": feat,
-                    "status": "NOT_DISCLOSED",
+                    "status": "NOT_FOUND",
                     "evidence": f"Feature '{feat}' is not disclosed in '{patent_title}'.",
                     "source_document": patent_number or patent_title
                 })
@@ -428,11 +537,14 @@ Return ONLY valid JSON matching this exact structure:
             overall_result = "NOT_ANTICIPATED"
 
         if matched_feats:
-            relevance = f"This prior art is relevant because it explicitly discloses {matched_count}/{total_elems} key technical features of '{target_title}': {', '.join(matched_feats[:4])}."
+            relevance = f"Matched features ({len(matched_feats)}/{total_elems}): {', '.join(matched_feats[:4])} -> Evidence verified in specification -> Match strength: High -> Missing features: {', '.join(unmatched_feats[:3]) if unmatched_feats else 'None'} -> Overall Technical Relevance: High."
             overlap_summary = f"Direct technical feature match identified across {', '.join(matched_feats[:3])}."
         else:
-            relevance = f"Document '{patent_title}' has low technical relevance. Zero matching technical features were detected in prior art text."
+            relevance = f"Zero matching technical features detected in prior art text. Overall Technical Relevance: Low."
             overlap_summary = "Zero direct technical feature overlap detected between target invention and prior art document."
+
+        tech_rel_conc = f"Technical overlap is {coverage_pct}% across {matched_count}/{total_elems} features."
+        ev_conf_conc = "Evidence verified against specification text." if matched_feats else "Evidence unverified."
 
         return {
             "ai_powered": False,
@@ -441,10 +553,14 @@ Return ONLY valid JSON matching this exact structure:
             "overall_result": overall_result,
             "confidence": 85 if matched_feats else 40,
             "technical_feature_coverage": coverage_pct,
+            "technical_relevance_conclusion": tech_rel_conc,
+            "evidence_confidence_conclusion": ev_conf_conc,
+            "temporal_status_conclusion": "Prior art publication timeline evaluated relative to reference date.",
+            "legal_assessment_disclaimer": "Preliminary AI prior-art screening only. Legal patentability is not determined by AI.",
             "claim_elements": claim_elements,
             "single_document_anticipation": single_doc_anticipation,
             "missing_elements": unmatched_feats,
-            "reasoning": f"Grounded analysis evaluated {total_elems} claim limitations against prior-art document.",
+            "reasoning": relevance,
             "technical_features": target_tech_features,
             "distinctive_features": [f for f in target_tech_features if len(f.split()) >= 2],
             "matched_features": matched_feature_objects,

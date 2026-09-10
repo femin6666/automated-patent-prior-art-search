@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 GENERIC_DOMAIN_NOISE = {
@@ -8,7 +8,8 @@ GENERIC_DOMAIN_NOISE = {
     "provides", "provided", "configured", "based", "monitoring", "control",
     "controlling", "data", "algorithm", "algorithms", "application", "applications",
     "process", "processing", "unit", "units", "module", "modules", "operation",
-    "operating", "user", "time", "real", "high", "low", "new", "improved"
+    "operating", "user", "time", "real", "high", "low", "new", "improved",
+    "mechanism", "component", "feature", "information", "technology"
 }
 
 TECHNICAL_STOP_WORDS = {
@@ -21,6 +22,25 @@ TECHNICAL_STOP_WORDS = {
     "s", "t", "can", "will", "just", "don", "should", "now", "using", "used",
     "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having",
     "do", "does", "did", "doing", "would", "could", "ought"
+}
+
+# Technical synonyms & acronym mapping dictionary for patent retrieval
+TECHNICAL_SYNONYMS_MAP = {
+    "state of health": ["soh", "battery health status", "degradation state", "battery capacity retention"],
+    "soh": ["state of health", "battery health", "health status", "capacity degradation"],
+    "foreign object detection": ["fod", "foreign object sensing", "parasitic metal detection", "abnormal body detection"],
+    "fod": ["foreign object detection", "foreign object sensing", "parasitic load detection"],
+    "wireless power transfer": ["wpt", "wireless charging", "inductive power transfer", "resonant energy transfer", "near-field charging"],
+    "wpt": ["wireless power transfer", "wireless charging", "inductive charging"],
+    "semiconductor": ["transistor", "solid-state device", "semiconductive element", "bipolar junction"],
+    "soil moisture": ["soil humidity", "volumetric water content", "ground moisture level"],
+    "neural network": ["deep learning model", "machine learning architecture", "artificial neural network", "predictive model"],
+    "impedance matching": ["impedance tuning", "resonant matching circuit", "reflection coefficient minimization"],
+    "geneva drive": ["geneva mechanism", "maltese cross mechanism", "intermittent gear drive"],
+    "cam and follower": ["cam mechanism", "cam-actuated follower", "rotary cam follower assembly"],
+    "spiking neural network": ["snn", "neuromorphic network", "event-driven neural model"],
+    "vertical-cavity surface-emitting laser": ["vcsel", "surface-emitting semiconductor laser", "vcsel array"],
+    "lidar point cloud": ["laser scanner point cloud", "3d lidar measurement", "spatial point cloud data"]
 }
 
 # Domain-specific highly distinctive technical terms that signal specialized technical IP
@@ -50,6 +70,139 @@ DISTINCTIVE_TECHNICAL_TERMS = {
     "zero-copy memory management", "zero-knowledge proof", "cas12 trans-cleavage"
 }
 
+def get_synonyms_for_term(term: str) -> List[str]:
+    """Retrieve technical synonyms and acronym expansions for a given term."""
+    term_lower = term.lower().strip()
+    synonyms = []
+    for key, syn_list in TECHNICAL_SYNONYMS_MAP.items():
+        if key in term_lower or term_lower in key:
+            for syn in syn_list:
+                if syn.lower() != term_lower and syn not in synonyms:
+                    synonyms.append(syn)
+    return synonyms
+
+def clean_technical_feature_phrase(phrase: str) -> str:
+    """Clean feature phrase by stripping leading/trailing generic noise words and incomplete n-gram fragments."""
+    if not phrase:
+        return ""
+    words = phrase.strip().split()
+    NOISE_HEAD_TAIL = {
+        "based", "using", "collected", "smart", "system", "device", "method", "unit",
+        "module", "for", "with", "from", "via", "type", "mode", "process", "apparatus",
+        "technology", "mechanism", "data", "information"
+    }
+    
+    # Strip leading noise words
+    while words and words[0].lower() in NOISE_HEAD_TAIL:
+        words.pop(0)
+    # Strip trailing noise words
+    while words and words[-1].lower() in NOISE_HEAD_TAIL:
+        words.pop()
+        
+    cleaned = " ".join(words).strip()
+    if len(cleaned.split()) == 1 and cleaned.lower() in NOISE_HEAD_TAIL:
+        return ""
+    return cleaned.title()
+
+def extract_structured_invention_features(text: str) -> Dict[str, Any]:
+    """
+    Decompose invention disclosure into complete technical feature objects formatted as
+    Component + Function + Relationship + Purpose quadruplets, separating essential
+    features from optional features.
+    """
+    if not text or len(text.strip()) < 5:
+        return {
+            "essential_features": [],
+            "optional_features": [],
+            "structured_quadruplets": [],
+            "synonyms_map": {}
+        }
+
+    lower_text = text.lower()
+    atomic_features = extract_atomic_technical_features(text, top_n=10)
+
+    structured_quadruplets = []
+    essential_features = []
+    optional_features = []
+    synonyms_map = {}
+
+    # Extract sentences containing structural actions / relationships
+    sentences = [s.strip() for s in re.split(r'[\.\;\n]', text) if len(s.strip()) > 15]
+
+    for feat in atomic_features:
+        feat_cleaned = clean_technical_feature_phrase(feat)
+        if not feat_cleaned or feat_cleaned.lower() in GENERIC_DOMAIN_NOISE:
+            continue
+
+        feat = feat_cleaned
+        feat_lower = feat.lower()
+
+        syns = get_synonyms_for_term(feat)
+        if syns:
+            synonyms_map[feat] = syns
+
+        # Determine essential vs optional status based on distinctiveness and multi-word structure
+        is_distinctive = feat_lower in DISTINCTIVE_TECHNICAL_TERMS or len(feat.split()) >= 3
+        is_essential = is_distinctive or len(feat.split()) == 2
+
+        weight = 3.0 if is_distinctive else (2.0 if is_essential else 1.0)
+
+        # Locate sentence containing this feature to build quadruplet (Component + Function + Relationship + Purpose)
+        matching_sentence = next((s for s in sentences if feat_lower in s.lower()), None)
+
+        if matching_sentence:
+            comp_match = feat
+            func_match = f"operates using {feat_lower}"
+            rel_match = "coupled to system processing module"
+            purp_match = "to optimize operational accuracy"
+
+            if "to " in matching_sentence.lower():
+                parts = re.split(r'\bto\b', matching_sentence, flags=re.IGNORECASE)
+                if len(parts) >= 2:
+                    purp_match = f"to {parts[1].strip()[:60]}"
+                    func_match = parts[0].strip()[:80]
+
+            quad = {
+                "feature": feat,
+                "component": comp_match,
+                "function": func_match,
+                "relationship": rel_match,
+                "purpose": purp_match,
+                "quadruplet_text": f"{comp_match} -> {func_match} [{rel_match}] -> {purp_match}",
+                "is_essential": is_essential,
+                "weight": weight,
+                "synonyms": syns
+            }
+        else:
+            quad = {
+                "feature": feat,
+                "component": feat,
+                "function": f"provides {feat.lower()} functionality",
+                "relationship": "integrated within system architecture",
+                "purpose": "improves technical performance",
+                "quadruplet_text": f"{feat} -> provides {feat.lower()} functionality",
+                "is_essential": is_essential,
+                "weight": weight,
+                "synonyms": syns
+            }
+
+        structured_quadruplets.append(quad)
+        if is_essential:
+            essential_features.append(feat)
+        else:
+            optional_features.append(feat)
+
+    if not essential_features and atomic_features:
+        essential_features = atomic_features[:4]
+        optional_features = atomic_features[4:]
+
+    return {
+        "essential_features": essential_features,
+        "optional_features": optional_features,
+        "structured_quadruplets": structured_quadruplets,
+        "synonyms_map": synonyms_map
+    }
+
 def extract_atomic_technical_features(text: str, top_n: int = 9) -> List[str]:
     """
     Extract atomic technical feature items (6-9 items) from target invention text.
@@ -74,7 +227,7 @@ def extract_atomic_technical_features(text: str, top_n: int = 9) -> List[str]:
         lower_text
     )
     for p in pattern_matches:
-        if len(p.split()) >= 2 and p not in GENERIC_DOMAIN_NOISE:
+        if len(p.split()) >= 2 and p.lower() not in GENERIC_DOMAIN_NOISE:
             p_title = p.title()
             if not any(p.lower() in f.lower() or f.lower() in p.lower() for f in features):
                 features.append(p_title)
@@ -195,7 +348,10 @@ def get_weighted_technical_concepts(user_keywords: List[str], user_concepts: Lis
     atomic = extract_atomic_technical_features(text_input, top_n=9)
     for f in atomic:
         term = f.strip().lower()
-        weighted_terms[term] = 5.0
+        if term in GENERIC_DOMAIN_NOISE:
+            weighted_terms[term] = 0.1
+        else:
+            weighted_terms[term] = 5.0
 
     extracted = extract_technical_concepts(text_input, top_n=10)
     for c in extracted:
@@ -214,5 +370,6 @@ def get_weighted_technical_concepts(user_keywords: List[str], user_concepts: Lis
             weighted_terms[d_term] = 5.0
 
     return weighted_terms
+
 
 

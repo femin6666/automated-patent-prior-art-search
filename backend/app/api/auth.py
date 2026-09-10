@@ -84,10 +84,17 @@ def register_user(request: UserRegisterRequest, response: Response, db: Session 
 def login_user(request: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
     """Authenticate user credentials and issue JWT tokens (or request OTP if unverified)."""
     user = db.query(User).filter(User.email == request.email.lower().strip()).first()
-    if not user or not verify_password(request.password, user.password_hash):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email address or password.",
+            detail="No account found with this email address. Please sign up to create an account.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    if not verify_password(request.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password. Please check your password and try again.",
             headers={"WWW-Authenticate": "Bearer"}
         )
 
@@ -124,31 +131,46 @@ def login_user(request: UserLoginRequest, response: Response, db: Session = Depe
 
 @router.post("/google", response_model=TokenResponse)
 def google_auth(request: GoogleAuthRequest, response: Response, db: Session = Depends(get_db)):
-    """Authenticate or auto-register user via Google OAuth 2.0."""
+    """Authenticate or register user via Google OAuth 2.0. Requires 6-digit OTP verification for first-time Google sign-in."""
     email_clean = request.email.lower().strip()
     user = db.query(User).filter(User.email == email_clean).first()
 
     if not user:
+        # First-time Google user: Create account requiring OTP verification
+        otp = generate_otp_code()
+        expires = datetime.now(timezone.utc) + timedelta(minutes=10)
         user = User(
             name=request.name.strip() if request.name else email_clean.split("@")[0],
             email=email_clean,
             password_hash=hash_password(f"GoogleOAuth2Secured_{email_clean}"),
-            is_verified=True,
-            otp_code=None,
-            otp_expires_at=None
+            is_verified=False,
+            otp_code=otp,
+            otp_expires_at=expires
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-    else:
-        # User already exists! Ensure is_verified is True since Google verified the identity
-        if not user.is_verified:
-            user.is_verified = True
-            user.otp_code = None
-            user.otp_expires_at = None
-            db.commit()
-            db.refresh(user)
 
+        return TokenResponse(
+            require_otp=True,
+            otp_sent_to=user.email,
+            demo_otp=user.otp_code,
+            user=UserOut.model_validate(user)
+        )
+
+    # User already exists in database
+    if not user.is_verified:
+        user.otp_code = generate_otp_code()
+        user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        db.commit()
+        return TokenResponse(
+            require_otp=True,
+            otp_sent_to=user.email,
+            demo_otp=user.otp_code,
+            user=UserOut.model_validate(user)
+        )
+
+    # Verified returning Google user: generate access & refresh tokens directly
     access_token = create_access_token({"sub": user.id, "email": user.email})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
 

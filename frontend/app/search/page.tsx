@@ -44,11 +44,13 @@ export default function NewSearchPage() {
 
   const [title, setTitle] = useState("");
   const [domain, setDomain] = useState("Artificial Intelligence");
+  const [customDomain, setCustomDomain] = useState("");
   const [problemStatement, setProblemStatement] = useState("");
   const [description, setDescription] = useState("");
   
   const [keywords, setKeywords] = useState<string[]>(["Machine Learning", "IoT"]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [referenceDate, setReferenceDate] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -81,6 +83,12 @@ export default function NewSearchPage() {
       setError("Invention title is required.");
       return;
     }
+
+    if (domain === "Other" && !customDomain.trim()) {
+      setError("Please specify your custom technology domain.");
+      return;
+    }
+
     if (problemStatement.trim().length < 10) {
       setError("Problem statement must be at least 10 characters long.");
       return;
@@ -89,6 +97,10 @@ export default function NewSearchPage() {
       setError("Detailed invention description must be at least 20 characters long.");
       return;
     }
+
+    const effectiveDomain = (domain === "Other" && customDomain.trim())
+      ? customDomain.trim()
+      : domain;
 
     setIsProcessing(true);
     setActiveStage(0);
@@ -103,10 +115,11 @@ export default function NewSearchPage() {
     try {
       const response = await api.performSearch({
         title,
-        domain,
+        domain: effectiveDomain,
         problem_statement: problemStatement,
         description,
         keywords,
+        reference_date: referenceDate.trim() || undefined,
       });
 
       clearInterval(interval);
@@ -160,13 +173,13 @@ export default function NewSearchPage() {
               />
             </div>
 
-            {/* Technology Domain Dropdown */}
-            <div className="p-6 rounded-xl tech-card space-y-2">
+            {/* Technology Domain Dropdown & Custom Domain Field */}
+            <div className="p-6 rounded-xl tech-card space-y-3">
               <label className="block text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">Technology Domain *</label>
               <select
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg tech-input text-sm text-zinc-100 focus:outline-none"
+                className="w-full px-4 py-2.5 rounded-lg tech-input text-sm text-zinc-100 focus:outline-none cursor-pointer"
               >
                 {DOMAIN_OPTIONS.map((d) => (
                   <option key={d} value={d} className="bg-[#09090b] text-zinc-100">
@@ -174,6 +187,34 @@ export default function NewSearchPage() {
                   </option>
                 ))}
               </select>
+
+              {domain === "Other" && (
+                <div className="pt-1 animate-in fade-in duration-200">
+                  <label className="block text-[11px] font-mono text-indigo-400 mb-1">Specify Custom Technology Domain *</label>
+                  <input
+                    type="text"
+                    required
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value)}
+                    placeholder="Write your technology domain... e.g. Nanotechnology, Quantum Computing, Aerospace"
+                    className="w-full px-4 py-2.5 rounded-lg tech-input text-sm text-zinc-100 placeholder-zinc-500 border border-indigo-500/40 focus:border-indigo-400 focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Reference Date Input */}
+            <div className="p-6 rounded-xl tech-card space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">Invention / Reference Date (Optional)</label>
+                <span className="text-[11px] text-zinc-400 font-mono">Used for temporal prior-art classification</span>
+              </div>
+              <input
+                type="date"
+                value={referenceDate}
+                onChange={(e) => setReferenceDate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg tech-input text-sm text-zinc-100 placeholder-zinc-500"
+              />
             </div>
 
             {/* Problem Statement */}

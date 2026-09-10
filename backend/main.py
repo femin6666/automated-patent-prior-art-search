@@ -54,6 +54,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error during startup seed: {e}")
 
+    logger.info("================ AI MODEL CONFIGURATION DIAGNOSTICS ================")
+    logger.info(f"Gemini Model:    {settings.GEMINI_MODEL}")
+    logger.info(f"Groq Model:      {settings.GROQ_MODEL}")
+    logger.info(f"Embedding Model: {settings.MODEL_NAME}")
+    logger.info("====================================================================")
+
     yield
     logger.info("Shutting down PatentLens AI Backend...")
 

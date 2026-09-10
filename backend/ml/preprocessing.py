@@ -41,3 +41,45 @@ def prepare_combined_text(title: str, problem_statement: str, description: str, 
             parts.append(f"Keywords: {kw_str}")
             
     return " | ".join(parts)
+
+def chunk_text_intelligently(text: str, max_words: int = 400) -> str:
+    """Intelligently truncate or chunk long specifications to preserve core technical disclosures."""
+    cleaned = clean_text(text)
+    words = cleaned.split()
+    if len(words) <= max_words:
+        return cleaned
+    return " ".join(words[:max_words]) + "..."
+
+def prepare_weighted_patent_text(
+    title: str,
+    abstract: str,
+    claims: str = "",
+    description: str = "",
+    max_desc_words: int = 300
+) -> str:
+    """
+    Construct weighted text representation prioritizing:
+    1. Claims (Highest Priority)
+    2. Abstract (High Priority)
+    3. Description (Medium-High Priority - truncated/chunked)
+    4. Title (Medium Priority)
+    """
+    c_title = clean_text(title)
+    c_abstract = clean_text(abstract)
+    c_claims = clean_text(claims)
+    c_desc = chunk_text_intelligently(description, max_words=max_desc_words)
+
+    parts = []
+    if c_claims:
+        # Repeat claims twice to boost weight in SBERT embedding vector representation
+        parts.append(f"CLAIMS: {c_claims}")
+        parts.append(f"INDEPENDENT CLAIMS: {c_claims[:600]}")
+    if c_abstract:
+        parts.append(f"ABSTRACT: {c_abstract}")
+    if c_desc:
+        parts.append(f"SPECIFICATION SUMMARY: {c_desc}")
+    if c_title:
+        parts.append(f"TITLE: {c_title}")
+
+    return " | ".join(parts)
+

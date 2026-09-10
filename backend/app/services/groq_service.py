@@ -278,7 +278,7 @@ Return ONLY valid JSON.
                 })
         parsed["claim_elements"] = norm_claims
 
-        # Normalize target response structure fields
+        # Normalize target response structure fields & feature comparisons
         raw_matched = parsed.get("matched_features", [])
         norm_matched = []
         evidence_list = []
@@ -287,26 +287,52 @@ Return ONLY valid JSON.
         for m in raw_matched:
             if isinstance(m, dict):
                 feat_name = m.get("feature") or m.get("target_feature") or ""
-                ev_quote = m.get("evidence") or m.get("evidence_quote") or "NOT_FOUND"
-                m_level = m.get("match_level", "strong").lower()
+                ev_quote = m.get("evidence") or m.get("evidence_quote") or m.get("patent_evidence") or "NOT_FOUND"
+                m_level = str(m.get("match_level") or m.get("match_type") or "STRONG_MATCH").upper()
+                if "STRONG" in m_level:
+                    m_level = "STRONG_MATCH"
+                elif "PARTIAL" in m_level:
+                    m_level = "PARTIAL_MATCH"
+                elif "WEAK" in m_level:
+                    m_level = "WEAK_MATCH"
+                else:
+                    m_level = "NOT_FOUND"
+
+                section = m.get("source_section") or "specification"
+                conf = float(m.get("confidence") or 85.0)
+
                 norm_matched.append({
                     "feature": feat_name,
-                    "match_level": m_level,
-                    "evidence": ev_quote
+                    "target_feature": feat_name,
+                    "match_type": m_level,
+                    "match_level": m_level.lower().replace("_match", ""),
+                    "evidence": ev_quote,
+                    "patent_evidence": ev_quote,
+                    "source_section": section,
+                    "confidence": conf
                 })
                 if ev_quote and ev_quote != "NOT_FOUND":
                     evidence_list.append(f"Feature '{feat_name}': \"{ev_quote}\"")
-                if "partial" in m_level:
+                if "PARTIAL" in m_level:
                     partial_list.append(feat_name)
             elif isinstance(m, str):
-                norm_matched.append({"feature": m, "match_level": "strong", "evidence": "NOT_FOUND"})
+                norm_matched.append({
+                    "feature": m,
+                    "target_feature": m,
+                    "match_type": "STRONG_MATCH",
+                    "match_level": "strong",
+                    "evidence": "NOT_FOUND",
+                    "patent_evidence": "NOT_FOUND",
+                    "source_section": "specification",
+                    "confidence": 70.0
+                })
 
         parsed["matched_features"] = norm_matched
         parsed["partial_matches"] = partial_list or parsed.get("partial_matches", [])
         parsed["unmatched_features"] = parsed.get("unmatched_features") or parsed.get("missing_elements") or []
         parsed["evidence"] = evidence_list or ["NOT_FOUND"]
-        parsed["technical_overlap_summary"] = parsed.get("technical_overlap_summary") or parsed.get("overlap_summary") or "Technical overlap examination completed."
-        parsed["relevance_explanation"] = parsed.get("relevance_explanation") or "Technical disclosure compared against invention."
+        parsed["technical_summary"] = parsed.get("technical_summary") or parsed.get("relevance_explanation") or "Technical disclosure compared against invention."
+        parsed["relevance_explanation"] = parsed.get("relevance_explanation") or parsed.get("technical_summary") or "Technical disclosure compared against invention."
 
         return parsed
 

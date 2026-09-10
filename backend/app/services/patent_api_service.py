@@ -71,8 +71,16 @@ class PatentAPIService:
                 cpc_candidates=cpc_candidates,
                 limit=target_limit
             )
-            raw_candidates.extend(lens_patents)
-            logger.info(f"[PATENT API] Retained {len(lens_patents)} candidate patents from The Lens.")
+
+            # Independent CPC/IPC Classification Retrieval Path
+            if cpc_candidates:
+                cpc_patents = lens_api_service.search_by_cpc_classification(cpc_codes=cpc_candidates, limit=20)
+                lens_patents.extend(cpc_patents)
+
+            # Apply Patent Family Deduplication
+            dedup_lens_patents = lens_api_service.group_by_patent_family(lens_patents)
+            raw_candidates.extend(dedup_lens_patents)
+            logger.info(f"[PATENT API] Retained {len(dedup_lens_patents)} distinct patent families from The Lens.")
 
         # 2. SUPPLEMENTARY SEARCH: PatentsView API if Lens returned < 10 records
         if len(raw_candidates) < 10:
@@ -87,7 +95,8 @@ class PatentAPIService:
 
         logger.info(f"[PATENT API] Total combined candidate records retrieved: {len(raw_candidates)}")
 
-        # 4. Deduplicate, Generate SBERT Embeddings, and Cache in DB
+        # 4. Deduplicate, Generate SBERT Embeddings (Weighted Priority), and Cache in DB
+        from backend.ml.preprocessing import prepare_weighted_patent_text
         newly_cached_patents = []
         skipped_count = 0
 
@@ -113,8 +122,13 @@ class PatentAPIService:
             source_type = item.get("source_type") or "THE LENS"
             doc_type = item.get("document_type") or "PATENT"
 
-            # Compute SBERT embedding prioritizing Claims > Abstract > Description
-            text_for_embedding = f"{pat_title}. {pat_abstract} {pat_claims[:1000]} {pat_desc[:1500]}"
+            # Compute SBERT embedding prioritizing Claims > Abstract > Description > Title
+            text_for_embedding = prepare_weighted_patent_text(
+                title=pat_title,
+                abstract=pat_abstract,
+                claims=pat_claims,
+                description=pat_desc
+            )
             emb = embedding_service.generate_embedding(text_for_embedding)
 
             new_patent = Patent(
@@ -150,6 +164,28 @@ class PatentAPIService:
             "patents_skipped_duplicates": skipped_count,
             "patents_searched": total_db_patents + len(raw_candidates)
         }
+
+    def execute_citation_expansion(
+        self,
+        db: Session,
+        top_patent_numbers: List[str]
+    ) -> List[Dict[str, Any]]:
+        """Fetch backward/forward citations and related family members for top candidates."""
+        if not lens_api_service.is_configured or not top_patent_numbers:
+            return []
+
+        logger.info(f"[PATENT API] Running citation expansion for top candidates: {top_patent_numbers[:5]}")
+        citation_records = lens_api_service.fetch_citations_and_family(top_patent_numbers[:5])
+        if citation_records:
+            self.fetch_and_cache_external_patents(
+                db=db,
+                title="Citation Expansion",
+                keywords=[],
+                domain="Technology",
+                search_queries=[f"citation:\"{p}\"" for p in top_patent_numbers[:3]]
+            )
+        return citation_records
+
 
     def _fetch_from_patentsview(
         self,

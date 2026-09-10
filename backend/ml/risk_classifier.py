@@ -11,44 +11,48 @@ RISK_DISCLAIMER = (
 )
 
 def get_similarity_level_label(score: float) -> str:
-    """Return text label for similarity score using configurable application thresholds."""
+    """Return text label for similarity score using standardized thresholds (0-39 Low, 40-69 Moderate, 70-84 High, 85-100 Very High)."""
     val = max(0.0, min(100.0, float(score)))
-    if val <= settings.SIMILARITY_THRESHOLD_LOW:
+    if val < 40.0:
         return "Low"
-    elif val <= settings.SIMILARITY_THRESHOLD_MODERATE:
+    elif val < 70.0:
         return "Moderate"
-    elif val <= settings.SIMILARITY_THRESHOLD_HIGH:
+    elif val < 85.0:
         return "High"
     else:
         return "Very High"
 
 def classify_prior_art_risk(highest_similarity_score: float) -> Dict[str, Any]:
     """
-    Classify AI Prior-Art Relevance level based on the highest similarity score (0 - 100).
-    Thresholds: 0-40% Low, 40-70% Moderate, 70-85% High, 85-100% Very High.
+    Classify AI Prior-Art Relevance level based on the highest deterministic similarity score.
+    Thresholds:
+      0-39%: LOW Relevance / Low Risk
+     40-69%: MODERATE Relevance / Moderate Risk
+     70-84%: HIGH Relevance / High Risk
+     85-100%: VERY HIGH Relevance / Very High Risk
     """
     score = max(0.0, min(100.0, float(highest_similarity_score)))
     
-    if score <= settings.SIMILARITY_THRESHOLD_LOW:
+    if score < 40.0:
         level = "LOW"
-        label = "Low Conceptual Overlap"
+        label = "Low Technical Relevance"
         color = "green"
-        description = "Low conceptual similarity detected with existing documents in the database."
-    elif score <= settings.SIMILARITY_THRESHOLD_MODERATE:
+        description = "Low prior-art relevance detected. Target invention shows low technical feature overlap with retrieved patents."
+    elif score < 70.0:
         level = "MODERATE"
-        label = "Moderate Technical Overlap"
+        label = "Moderate Technical Relevance"
         color = "yellow"
-        description = "Moderate overlap detected in technical concepts or system architecture."
-    elif score <= settings.SIMILARITY_THRESHOLD_HIGH:
+        description = "Moderate technical relevance detected. Overlap identified in general concepts; claim-level limitation analysis recommended."
+    elif score < 85.0:
         level = "HIGH"
-        label = "High Technical Overlap"
+        label = "High Technical Relevance"
         color = "orange"
-        description = "High overlap found in core technical methods and processing workflows."
+        description = "High technical relevance detected. Strong overlap in core technical mechanisms and component disclosures."
     else:
         level = "VERY HIGH"
-        label = "Very High Technical Overlap"
+        label = "Very High Technical Relevance"
         color = "red"
-        description = "Very high similarity across multiple technical dimensions and vector representations."
+        description = "Very high technical relevance detected. Prior-art documents explicitly disclose multiple core technical limitations."
 
     return {
         "risk_level": level,

@@ -179,7 +179,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="text-3xl font-black font-mono text-white mt-3">
-                {totalSearches > 0 ? totalSearches : 3}
+                {totalSearches}
               </div>
             </div>
 
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="text-3xl font-black font-mono text-white mt-3">
-                {savedCount > 0 ? savedCount : 1}
+                {savedCount}
               </div>
             </div>
 
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="text-3xl font-black font-mono text-white mt-3">
-                {highestSim > 0 ? highestSim : 30}%
+                {highestSim}%
               </div>
             </div>
 
@@ -241,39 +241,52 @@ export default function DashboardPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 text-purple-200/70 font-mono text-[10px] uppercase tracking-wider">
-                    <th className="pb-3 pr-4 font-bold">Invention Title</th>
-                    <th className="pb-3 pr-4 font-bold">Domain</th>
-                    <th className="pb-3 pr-4 font-bold">Date</th>
-                    <th className="pb-3 pr-4 text-right font-bold">Highest Sim</th>
-                    <th className="pb-3 text-right font-bold whitespace-nowrap">Risk Level</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.06]">
-                  {displayHistory.slice(0, 5).map((item) => (
-                    <tr key={item.id} className="hover:bg-white/[0.06] transition-colors group">
-                      <td className="py-4 font-bold text-white max-w-[280px] sm:max-w-md truncate pr-4" title={item.invention_title}>
-                        <Link href={`/search/${item.id}`} className="group-hover:text-indigo-300 transition-colors">
-                          {item.invention_title}
-                        </Link>
-                      </td>
-                      <td className="py-4 text-purple-200/90 font-semibold whitespace-nowrap pr-4">{item.domain}</td>
-                      <td className="py-4 text-purple-200/70 font-mono text-[11px] whitespace-nowrap pr-4">{formatDate(item.created_at)}</td>
-                      <td className="py-4 text-right font-mono font-extrabold text-cyan-300 text-sm whitespace-nowrap pr-4">
-                        {item.highest_similarity}%
-                      </td>
-                      <td className="py-4 text-right whitespace-nowrap flex justify-end">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold shadow-sm shadow-emerald-500/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          <span>Low Risk</span>
-                        </span>
-                      </td>
+              {history.length === 0 ? (
+                <div className="py-10 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-300">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs text-purple-200/70 font-medium">No prior-art searches performed yet.</p>
+                  <Link
+                    href="/search"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition-all"
+                  >
+                    <span>Start Your First Search</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10 text-purple-200/70 font-mono text-[10px] uppercase tracking-wider">
+                      <th className="pb-3 pr-4 font-bold">Invention Title</th>
+                      <th className="pb-3 pr-4 font-bold">Domain</th>
+                      <th className="pb-3 pr-4 font-bold">Date</th>
+                      <th className="pb-3 pr-4 text-right font-bold">Highest Sim</th>
+                      <th className="pb-3 text-right font-bold whitespace-nowrap">Risk Level</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.06]">
+                    {history.slice(0, 5).map((item) => (
+                      <tr key={item.id} className="hover:bg-white/[0.06] transition-colors group">
+                        <td className="py-4 font-bold text-white max-w-[280px] sm:max-w-md truncate pr-4" title={item.invention_title}>
+                          <Link href={`/search/${item.id}`} className="group-hover:text-indigo-300 transition-colors">
+                            {item.invention_title}
+                          </Link>
+                        </td>
+                        <td className="py-4 text-purple-200/90 font-semibold whitespace-nowrap pr-4">{item.domain}</td>
+                        <td className="py-4 text-purple-200/70 font-mono text-[11px] whitespace-nowrap pr-4">{formatDate(item.created_at)}</td>
+                        <td className="py-4 text-right font-mono font-extrabold text-cyan-300 text-sm whitespace-nowrap pr-4">
+                          {item.highest_similarity}%
+                        </td>
+                        <td className="py-4 text-right whitespace-nowrap flex justify-end">
+                          <RiskBadge level={item.risk_level} size="sm" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
 
           </div>

@@ -51,7 +51,43 @@ export interface ClaimElementItem {
   explanation: string;
 }
 
+export interface ScoreBreakdown {
+  semantic_similarity: number;
+  technical_features: number;
+  evidence_strength: number;
+  distinctive_concepts: number;
+  domain_cpc_alignment: number;
+  final_score: number;
+  is_gated: boolean;
+  formula_explanation: string;
+}
+
+export interface PatentFamilyMember {
+  patent_number: string;
+  jurisdiction: string;
+  kind?: string;
+  title: string;
+  publication_date: string;
+  document_type: string;
+  source_url: string;
+}
+
+export interface PipelineMetrics {
+  patents_searched: number;
+  patents_retrieved: number;
+  vector_shortlisted: number;
+  unique_families: number;
+  patents_with_claims: number;
+  patents_with_full_text: number;
+  evidence_verified_matches: number;
+}
+
 export interface SearchResultItem {
+  confidence_score: number | undefined;
+  legal_assessment_disclaimer: string;
+  evidence_confidence_conclusion: string;
+  temporal_status_conclusion: string;
+  technical_relevance_conclusion: string | undefined;
   patent: Patent;
   semantic_score: number;
   keyword_score: number;
@@ -73,6 +109,20 @@ export interface SearchResultItem {
   technical_feature_coverage?: number;
   evidence_confidence?: number;
   overall_result?: 'ANTICIPATED' | 'NON_ANTICIPATED';
+  score_breakdown?: ScoreBreakdown;
+  family_members?: PatentFamilyMember[];
+  family_size?: number;
+  is_family_representative?: boolean;
+  family_id?: string;
+  temporal_status?: 'BEFORE_REFERENCE_DATE' | 'AFTER_REFERENCE_DATE' | 'DATE_UNKNOWN';
+  result_status?: string;
+  evidence_status?: 'VERIFIED' | 'PARTIAL' | 'NOT_VERIFIED' | 'NOT_AVAILABLE';
+  raw_feature_coverage?: number;
+  weighted_technical_score?: number;
+  matched_feature_count?: number;
+  total_feature_count?: number;
+  claims_status?: 'AVAILABLE' | 'NOT_AVAILABLE';
+  full_text_status?: 'AVAILABLE' | 'NOT_AVAILABLE';
 }
 
 export interface SearchSummary {
@@ -86,6 +136,8 @@ export interface SearchSummary {
   patents_shortlisted?: number;
   patents_deeply_analyzed?: number;
   highest_semantic_similarity?: number;
+  unique_families_count?: number;
+  pipeline_metrics?: PipelineMetrics;
 }
 
 export interface PriorArtSearchResponse {
@@ -136,4 +188,5 @@ export interface SearchFormData {
   problem_statement: string;
   description: string;
   keywords: string[];
+  reference_date?: string;
 }

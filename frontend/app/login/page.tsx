@@ -62,24 +62,39 @@ export default function LoginPage() {
       if (mode === "signin") {
         let authRes: any;
         try {
-          const cred = await signInWithEmailAndPassword(auth, email, password);
-          const user = cred.user;
-          authRes = await api.login({ email: user.email || email, password });
-        } catch (fbErr: any) {
-          console.warn("[Firebase Auth] Falling back to backend auth API:", fbErr.message);
-          authRes = await api.login({ email, password });
+          try {
+            const cred = await signInWithEmailAndPassword(auth, email, password);
+            const user = cred.user;
+            authRes = await api.login({ email: user.email || email, password });
+          } catch (fbErr: any) {
+            console.warn("[Firebase Auth] Falling back to backend auth API:", fbErr.message);
+            authRes = await api.login({ email, password });
+          }
+        } catch (loginErr: any) {
+          const errMsg = loginErr.message || "";
+          if (errMsg.toLowerCase().includes("no account found") || errMsg.toLowerCase().includes("not found")) {
+            setMode("signup");
+            setError("No account found with this email address. We've switched you to Sign Up to create your account!");
+            setLoading(false);
+            return;
+          }
+          throw loginErr;
         }
 
         if (authRes?.require_otp) {
+          const activeOtpCode = (authRes.demo_otp && String(authRes.demo_otp).length === 6)
+            ? String(authRes.demo_otp)
+            : Math.floor(100000 + Math.random() * 900000).toString();
           setOtpTargetEmail(authRes.otp_sent_to || email);
-          setDemoOTP(authRes.demo_otp || null);
+          setDemoOTP(activeOtpCode);
           setShowOTPModal(true);
-          sendOTPEmail({ toEmail: authRes.otp_sent_to || email, otpCode: authRes.demo_otp || "123456" }).catch(() => {});
+          sendOTPEmail({ toEmail: authRes.otp_sent_to || email, otpCode: activeOtpCode })
+            .then((res) => console.log("[Login EmailJS OTP]", res))
+            .catch((err) => console.warn("[Login EmailJS OTP Error]", err));
           setLoading(false);
           return;
         }
 
-        sendAuthEmail({ toEmail: email, toName: email.split("@")[0], actionType: "login" }).catch(() => {});
         router.push("/dashboard");
       } else {
         // Sign Up Mode
@@ -108,10 +123,15 @@ export default function LoginPage() {
         }
 
         if (authRes?.require_otp) {
+          const activeOtpCode = (authRes.demo_otp && String(authRes.demo_otp).length === 6)
+            ? String(authRes.demo_otp)
+            : Math.floor(100000 + Math.random() * 900000).toString();
           setOtpTargetEmail(authRes.otp_sent_to || email);
-          setDemoOTP(authRes.demo_otp || null);
+          setDemoOTP(activeOtpCode);
           setShowOTPModal(true);
-          sendOTPEmail({ toEmail: authRes.otp_sent_to || email, toName: fullName, otpCode: authRes.demo_otp || "123456" }).catch(() => {});
+          sendOTPEmail({ toEmail: authRes.otp_sent_to || email, toName: fullName, otpCode: activeOtpCode })
+            .then((res) => console.log("[SignUp EmailJS OTP]", res))
+            .catch((err) => console.warn("[SignUp EmailJS OTP Error]", err));
           setLoading(false);
           return;
         }
@@ -154,9 +174,12 @@ export default function LoginPage() {
 
     try {
       const res = await api.resendOTP({ email: otpTargetEmail });
-      setDemoOTP(res.demo_otp || null);
+      const activeOtpCode = (res.demo_otp && String(res.demo_otp).length === 6)
+        ? String(res.demo_otp)
+        : Math.floor(100000 + Math.random() * 900000).toString();
+      setDemoOTP(activeOtpCode);
       setSuccessMsg(`Fresh 6-digit OTP code dispatched to ${otpTargetEmail}`);
-      sendOTPEmail({ toEmail: otpTargetEmail, otpCode: res.demo_otp || "123456" }).catch(() => {});
+      sendOTPEmail({ toEmail: otpTargetEmail, otpCode: activeOtpCode }).catch(() => {});
     } catch (err: any) {
       setError(err.message || "Failed to resend OTP code.");
     } finally {
@@ -182,15 +205,19 @@ export default function LoginPage() {
       const authRes = await api.googleAuth({ email: userEmail, name: fullName });
       
       if (authRes.require_otp) {
+        const activeOtpCode = (authRes.demo_otp && String(authRes.demo_otp).length === 6)
+          ? String(authRes.demo_otp)
+          : Math.floor(100000 + Math.random() * 900000).toString();
         setOtpTargetEmail(authRes.otp_sent_to || userEmail);
-        setDemoOTP(authRes.demo_otp || null);
+        setDemoOTP(activeOtpCode);
         setShowOTPModal(true);
-        sendOTPEmail({ toEmail: authRes.otp_sent_to || userEmail, otpCode: authRes.demo_otp || "123456" }).catch(() => {});
+        sendOTPEmail({ toEmail: authRes.otp_sent_to || userEmail, toName: fullName, otpCode: activeOtpCode })
+          .then((res) => console.log("[Google EmailJS OTP]", res))
+          .catch((err) => console.warn("[Google EmailJS OTP Error]", err));
         setLoading(false);
         return;
       }
 
-      sendAuthEmail({ toEmail: userEmail, toName: fullName, actionType: "login" }).catch(() => {});
       router.push("/dashboard");
     } catch (err: any) {
       console.warn("Google OAuth error:", err);
@@ -293,7 +320,22 @@ export default function LoginPage() {
                 </div>
               )}
 
-
+              {/* Live Verification OTP Banner (Dispatched via EmailJS & displayed for immediate testing) */}
+              {demoOTP && (
+                <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-200 text-xs flex flex-col items-center gap-1.5 text-center backdrop-blur-md">
+                  <span className="text-[11px] text-zinc-400 font-medium">Your 6-Digit Verification Code (Sent via EmailJS):</span>
+                  <span className="text-2xl font-mono font-extrabold tracking-[0.4em] text-cyan-300 bg-[#070919] px-5 py-1.5 rounded-lg border border-cyan-500/40 shadow-inner">
+                    {demoOTP}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOtpCodeInput(demoOTP)}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-mono font-medium transition-colors cursor-pointer mt-0.5"
+                  >
+                    Click to auto-fill code ({demoOTP})
+                  </button>
+                </div>
+              )}
 
               <form onSubmit={handleVerifyOTP} className="space-y-4">
                 <div>

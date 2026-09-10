@@ -35,8 +35,8 @@ def get_user_saved_patents(
 
 @router.get("/{patent_id}", response_model=PatentOut)
 def get_patent_details(patent_id: str, db: Session = Depends(get_db)):
-    """Get single patent details by patent_id."""
-    patent = db.query(Patent).filter(Patent.id == patent_id).first()
+    """Get single patent details by patent_id or patent_number."""
+    patent = db.query(Patent).filter((Patent.id == patent_id) | (Patent.patent_number == patent_id)).first()
     if not patent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patent not found.")
     return PatentOut.model_validate(patent)
@@ -48,14 +48,14 @@ def save_patent(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Save a patent to user's saved list with optional notes."""
-    patent = db.query(Patent).filter(Patent.id == patent_id).first()
+    """Save a patent to authenticated user's saved list under their specific logged-in user_id."""
+    patent = db.query(Patent).filter((Patent.id == patent_id) | (Patent.patent_number == patent_id)).first()
     if not patent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patent not found.")
 
     existing = (
         db.query(SavedPatent)
-        .filter(SavedPatent.user_id == current_user.id, SavedPatent.patent_id == patent_id)
+        .filter(SavedPatent.user_id == current_user.id, SavedPatent.patent_id == patent.id)
         .first()
     )
     if existing:
@@ -67,7 +67,7 @@ def save_patent(
 
     saved = SavedPatent(
         user_id=current_user.id,
-        patent_id=patent_id,
+        patent_id=patent.id,
         notes=request.notes
     )
     db.add(saved)
@@ -81,12 +81,21 @@ def unsave_patent(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Remove a patent from user's saved patents list."""
-    saved = (
-        db.query(SavedPatent)
-        .filter(SavedPatent.user_id == current_user.id, SavedPatent.patent_id == patent_id)
-        .first()
-    )
+    """Remove a patent from authenticated user's saved patents list."""
+    patent = db.query(Patent).filter((Patent.id == patent_id) | (Patent.patent_number == patent_id)).first()
+    if patent:
+        saved = (
+            db.query(SavedPatent)
+            .filter(SavedPatent.user_id == current_user.id, SavedPatent.patent_id == patent.id)
+            .first()
+        )
+    else:
+        saved = (
+            db.query(SavedPatent)
+            .filter(SavedPatent.user_id == current_user.id, SavedPatent.patent_id == patent_id)
+            .first()
+        )
+
     if not saved:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patent not found in saved list.")
 

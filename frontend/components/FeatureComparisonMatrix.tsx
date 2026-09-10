@@ -23,70 +23,89 @@ export default function FeatureComparisonMatrix({
   overallResult,
 }: FeatureComparisonMatrixProps) {
   const getMatchBadge = (level: string) => {
-    switch (level) {
-      case "Strong":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Strong
-          </span>
-        );
-      case "Partial":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-            <AlertCircle className="w-3.5 h-3.5" />
-            Partial
-          </span>
-        );
-      case "Weak":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30">
-            <HelpCircle className="w-3.5 h-3.5" />
-            Weak
-          </span>
-        );
-      case "Not Found":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">
-            <XCircle className="w-3.5 h-3.5" />
-            Not Found
-          </span>
-        );
+    const l = String(level).toUpperCase();
+    if (l.includes("STRONG")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          STRONG MATCH
+        </span>
+      );
+    } else if (l.includes("PARTIAL")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+          <AlertCircle className="w-3.5 h-3.5" />
+          PARTIAL MATCH
+        </span>
+      );
+    } else if (l.includes("WEAK")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30">
+          <HelpCircle className="w-3.5 h-3.5" />
+          WEAK MATCH
+        </span>
+      );
+    } else if (l.includes("UNABLE")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+          <HelpCircle className="w-3.5 h-3.5" />
+          UNVERIFIABLE
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <XCircle className="w-3.5 h-3.5" />
+          NOT FOUND
+        </span>
+      );
     }
   };
 
   const getLimitationBadge = (status: string) => {
-    switch (status) {
-      case "EXPLICIT":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            EXPLICIT
-          </span>
-        );
-      case "INHERENT":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-sky-500/15 text-sky-400 border border-sky-500/40">
-            <FileText className="w-3.5 h-3.5" />
-            INHERENT
-          </span>
-        );
-      case "PARTIAL":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/40">
-            <AlertCircle className="w-3.5 h-3.5" />
-            PARTIAL
-          </span>
-        );
-      case "NOT_DISCLOSED":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/40">
-            <XCircle className="w-3.5 h-3.5" />
-            NOT DISCLOSED
-          </span>
-        );
+    const s = String(status).toUpperCase();
+    if (s.includes("EXPLICIT") || s.includes("STRONG")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          STRONG MATCH
+        </span>
+      );
+    } else if (s.includes("INHERENT")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-sky-500/15 text-sky-400 border border-sky-500/40">
+          <FileText className="w-3.5 h-3.5" />
+          INHERENT
+        </span>
+      );
+    } else if (s.includes("PARTIAL")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/40">
+          <AlertCircle className="w-3.5 h-3.5" />
+          PARTIAL MATCH
+        </span>
+      );
+    } else if (s.includes("WEAK")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-orange-500/15 text-orange-400 border border-orange-500/40">
+          <HelpCircle className="w-3.5 h-3.5" />
+          WEAK MATCH
+        </span>
+      );
+    } else if (s.includes("UNABLE")) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-purple-500/15 text-purple-400 border border-purple-500/40">
+          <HelpCircle className="w-3.5 h-3.5" />
+          UNVERIFIABLE
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/40">
+          <XCircle className="w-3.5 h-3.5" />
+          NOT FOUND
+        </span>
+      );
     }
   };
 
@@ -109,7 +128,7 @@ export default function FeatureComparisonMatrix({
           <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-center">
             <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Technical Coverage</div>
             <div className="text-lg font-bold font-mono text-indigo-400 mt-0.5">
-              {technicalFeatureCoverage !== undefined ? `${Math.round(technicalFeatureCoverage)}%` : "N/A"}
+              {technicalFeatureCoverage !== undefined ? `${Number(technicalFeatureCoverage).toFixed(1)}%` : "N/A"}
             </div>
           </div>
           <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-center">

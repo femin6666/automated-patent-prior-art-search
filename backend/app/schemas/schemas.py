@@ -80,6 +80,9 @@ class PatentOut(BaseModel):
     inventors: str
     assignee: str
     publication_date: str
+    priority_date: Optional[str] = None
+    filing_date: Optional[str] = None
+    grant_date: Optional[str] = None
     domain: str
     source_url: Optional[str] = None
     source_type: Optional[str] = "THE LENS"
@@ -106,12 +109,13 @@ class PriorArtSearchRequest(BaseModel):
     problem_statement: str = Field(..., min_length=10, max_length=2000)
     description: str = Field(..., min_length=20, max_length=10000)
     keywords: List[str] = Field(default_factory=list, max_length=20)
+    reference_date: Optional[str] = Field(default=None, description="Optional user-supplied invention/reference date (YYYY-MM-DD)")
 
 
 class FeatureComparisonItem(BaseModel):
     target_feature: str
     prior_art_feature: str
-    match_level: str  # Strong, Partial, Weak, Not Found
+    match_level: str  # STRONG_MATCH, PARTIAL_MATCH, WEAK_MATCH, NOT_FOUND, UNABLE_TO_VERIFY
     explanation: str
     evidence_quote: Optional[str] = "Disclosed in prior-art technical specification."
     confidence: Optional[float] = 90.0
@@ -119,16 +123,50 @@ class FeatureComparisonItem(BaseModel):
 
 class MatchedFeatureItem(BaseModel):
     feature: str
-    match_level: str  # strong, partial, weak, none
+    match_level: str  # STRONG_MATCH, PARTIAL_MATCH, WEAK_MATCH, NOT_FOUND, UNABLE_TO_VERIFY
     evidence: str
 
 
 class ClaimElementItem(BaseModel):
     limitation_number: int
     element_text: str
-    status: str  # EXPLICIT, INHERENT, PARTIAL, NOT_DISCLOSED
+    status: str  # STRONG_MATCH, PARTIAL_MATCH, WEAK_MATCH, NOT_FOUND, UNABLE_TO_VERIFY
     evidence_quote: str
     explanation: str
+
+
+class ScoreBreakdown(BaseModel):
+    semantic_similarity: float = 0.0  # 25% weight
+    technical_features: float = 0.0   # 40% weight
+    evidence_strength: float = 0.0    # 15% weight
+    distinctive_concepts: float = 0.0 # 10% weight
+    domain_cpc_alignment: float = 0.0 # 10% weight
+    final_score: float = 0.0
+    confidence_score: float = 0.0
+    is_gated: bool = False
+    formula_explanation: str = "Final Score = (25% Semantic) + (40% Technical Features) + (15% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
+
+
+class PatentFamilyMember(BaseModel):
+    patent_number: str
+    jurisdiction: str = "US"
+    kind: Optional[str] = "A1"
+    title: str = ""
+    publication_date: str = "2024-01-01"
+    document_type: str = "PATENT"
+    source_url: str = ""
+
+
+class PipelineMetrics(BaseModel):
+    patents_searched: int = 0
+    patents_retrieved: int = 0
+    vector_shortlisted: int = 0
+    unique_families: int = 0
+    patents_with_claims: int = 0
+    patents_with_full_text: int = 0
+    evidence_verified_matches: int = 0
+    iterative_wave_retrieved: int = 0
+    citation_expansions_found: int = 0
 
 
 class SearchResultItem(BaseModel):
@@ -137,6 +175,7 @@ class SearchResultItem(BaseModel):
     keyword_score: float
     domain_score: float
     final_score: float
+    confidence_score: float = 85.0
     matched_concepts: List[str]
     rank: int
     semantic_similarity_label: Optional[str] = "Moderate"
@@ -144,9 +183,16 @@ class SearchResultItem(BaseModel):
     feature_comparison: List[FeatureComparisonItem] = Field(default_factory=list)
     patent_specific_insights: List[str] = Field(default_factory=list)
     technical_features: List[str] = Field(default_factory=list)
+    essential_features: List[str] = Field(default_factory=list)
+    optional_features: List[str] = Field(default_factory=list)
+    structured_quadruplets: List[Dict[str, Any]] = Field(default_factory=list)
     distinctive_features: List[str] = Field(default_factory=list)
     matched_features: List[MatchedFeatureItem] = Field(default_factory=list)
+    strong_matches: List[str] = Field(default_factory=list)
+    partial_matches: List[str] = Field(default_factory=list)
+    weak_matches: List[str] = Field(default_factory=list)
     unmatched_features: List[str] = Field(default_factory=list)
+    unverifiable_features: List[str] = Field(default_factory=list)
     overlap_summary: Optional[str] = None
     claim_elements: List[ClaimElementItem] = Field(default_factory=list)
     single_document_anticipation: Optional[str] = "NO"
@@ -154,6 +200,28 @@ class SearchResultItem(BaseModel):
     technical_feature_coverage: Optional[float] = 0.0
     evidence_confidence: Optional[float] = 0.0
     overall_result: Optional[str] = "NON_ANTICIPATED"
+    score_breakdown: Optional[ScoreBreakdown] = None
+    family_members: List[PatentFamilyMember] = Field(default_factory=list)
+    family_size: int = 1
+    is_family_representative: bool = True
+    family_id: Optional[str] = None
+    temporal_status: str = "BEFORE_REFERENCE_DATE"
+    result_status: str = "TECHNICALLY_RELEVANT"
+    evidence_status: str = "VERIFIED"
+    raw_feature_coverage: float = 0.0
+    weighted_technical_score: float = 0.0
+    matched_feature_count: int = 0
+    total_feature_count: int = 0
+    claims_status: str = "AVAILABLE"
+    full_text_status: str = "AVAILABLE"
+
+    # 4 Separated Conclusions
+    technical_relevance_conclusion: str = "Evaluated technical feature disclosure overlap against prior art."
+    evidence_confidence_conclusion: str = "Evidence confidence based on text quote verification."
+    temporal_status_conclusion: str = "Timeline status relative to user reference date."
+    legal_assessment_disclaimer: str = (
+        "Preliminary AI screening only. Legal patentability is not determined by AI and requires formal patent attorney examination."
+    )
 
 
 
@@ -168,6 +236,8 @@ class SearchSummary(BaseModel):
     patents_shortlisted: Optional[int] = 0
     patents_deeply_analyzed: Optional[int] = 0
     highest_semantic_similarity: Optional[float] = 0.0
+    unique_families_count: Optional[int] = 0
+    pipeline_metrics: Optional[PipelineMetrics] = None
 
 
 class PriorArtSearchResponse(BaseModel):
@@ -186,9 +256,9 @@ class PriorArtSearchResponse(BaseModel):
     data_source: Optional[str] = "Live arXiv Feed"
     ai_model_used: Optional[str] = "Gemini 2.5 Flash"
     disclaimer: str = (
-        "PatentLens AI provides AI-assisted preliminary prior-art search results "
-        "for informational and research purposes only. The results do not constitute "
-        "legal advice, a patentability determination, or a professional patent opinion."
+        "PatentLens AI provides AI-assisted preliminary technical prior-art relevance analysis. "
+        "Results are intended for research and screening purposes and do not constitute a legal opinion "
+        "or definitive patentability determination. Professional patent review is recommended before filing or making legal decisions."
     )
 
 

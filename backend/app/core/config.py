@@ -1,11 +1,15 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_FILE_PATH = BASE_DIR / ".env"
 
 
 class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
-        env_file=".env",
+        env_file=ENV_FILE_PATH if ENV_FILE_PATH.exists() else ".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -33,7 +37,7 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"
     MODEL_NAME: str = "all-MiniLM-L6-v2"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 

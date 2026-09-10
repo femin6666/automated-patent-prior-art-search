@@ -61,7 +61,7 @@ def perform_prior_art_search(
     target_full_text = f"{request.title} {request.problem_statement} {request.description}"
     user_concepts = extract_technical_concepts(target_full_text)
     
-    # 1. Use Gemini to understand invention and generate search queries
+    # 1. Use Gemini to understand invention, extract essential/optional features & quadruplets, and generate 8 search queries
     from backend.app.services.gemini_service import gemini_service
     invention_analysis = gemini_service.analyze_invention(
         title=request.title,
@@ -72,14 +72,17 @@ def perform_prior_art_search(
     )
 
     gemini_features = invention_analysis.get("technical_features", [])
+    gemini_essential = invention_analysis.get("essential_features", [])
+    gemini_optional = invention_analysis.get("optional_features", [])
+    gemini_quads = invention_analysis.get("structured_quadruplets", [])
     gemini_queries = invention_analysis.get("search_queries", [])
     cpc_candidates = invention_analysis.get("cpc_candidates", [])
 
     logger.info("[DEBUG PIPELINE] ==================== INVENTIVE STEP 1: GEMINI ====================")
     logger.info(f"[DEBUG PIPELINE] Target Invention: '{request.title}' | Domain: '{request.domain}'")
-    logger.info(f"[DEBUG PIPELINE] Gemini Technical Features: {gemini_features}")
-    logger.info(f"[DEBUG PIPELINE] Gemini Distinctive Concepts: {invention_analysis.get('distinctive_concepts', [])}")
-    logger.info(f"[DEBUG PIPELINE] Gemini Search Queries: {gemini_queries}")
+    logger.info(f"[DEBUG PIPELINE] Technical Problem: {invention_analysis.get('technical_problem', '')}")
+    logger.info(f"[DEBUG PIPELINE] Essential Features: {gemini_essential}")
+    logger.info(f"[DEBUG PIPELINE] Gemini Search Queries (8 Strategies): {gemini_queries}")
     logger.info(f"[DEBUG PIPELINE] Gemini CPC Candidates: {cpc_candidates}")
 
     combined_text = prepare_combined_text(
@@ -90,7 +93,7 @@ def perform_prior_art_search(
     )
     user_embedding = embedding_service.generate_embedding(combined_text)
 
-    # 2. Fetch live patent candidates via The Lens Patent API & arXiv feed
+    # 2. Fetch live patent candidates via The Lens Patent API (including independent CPC search & arXiv feed)
     try:
         api_stats = patent_api_service.fetch_and_cache_external_patents(
             db=db,
@@ -122,19 +125,16 @@ def perform_prior_art_search(
             detail="Patent database is empty. Please run seed script first."
         )
 
-    logger.info("[DEBUG SEARCH] ==================== PRIOR ART SEARCH INITIATED ====================")
-    logger.info("[DEBUG SEARCH] Target Query Title: '%s'", request.title)
-    logger.info("[DEBUG SEARCH] Target Text Length: %d chars | Embedding Dim: %d", len(combined_text), len(user_embedding))
-    logger.info("[DEBUG SEARCH] Extracted Technical Concepts: %s", user_concepts)
-    logger.info("[DEBUG SEARCH] Total candidate patents in candidate pool: %d", len(all_patents))
-
     scored_items = []
     for patent in all_patents:
         patent_dict = {
             "title": patent.title,
             "abstract": patent.abstract,
             "description": patent.description,
-            "domain": patent.domain
+            "claims": patent.claims,
+            "domain": patent.domain,
+            "cpc_codes": patent.cpc_codes,
+            "cpc_candidates": cpc_candidates
         }
         
         patent_emb = patent.embedding
@@ -149,7 +149,10 @@ def perform_prior_art_search(
             user_concepts=user_concepts,
             user_domain=request.domain,
             patent=patent_dict,
-            target_text_for_concepts=target_full_text
+            target_text_for_concepts=target_full_text,
+            distinctive_features=invention_analysis.get("distinctive_features"),
+            technical_features=gemini_features,
+            essential_features=gemini_essential
         )
 
         scored_items.append({
@@ -158,21 +161,19 @@ def perform_prior_art_search(
         })
 
     scored_items.sort(key=lambda x: x["scores"]["final_score"], reverse=True)
-    # 2-Stage Retrieval: Shortlist Top 30 candidate patents via SBERT/hybrid scoring, then Top 10 for Gemini deep examination
     top_candidates = scored_items[:30]
     top_10 = top_candidates[:10]
 
-    logger.info("[DEBUG SEARCH] ==================== TOP RANKED PRIOR ART RESULTS ====================")
-    for idx, item in enumerate(top_10, start=1):
-        pat = item["patent"]
-        sc = item["scores"]
-        logger.info(
-            "[DEBUG SEARCH] Rank %d: [%s] '%s' | Final: %.1f%% | SBERT Sem: %.1f%% | Feature: %.1f%% | Dom: %.1f%% | CoreMatch: %s | TextLens: Title=%d, Abs=%d, Desc=%d",
-            idx, pat.patent_number, pat.title[:50], sc["final_score"], sc["semantic_score"],
-            sc["keyword_score"], sc["domain_score"], sc.get("has_core_match", False),
-            len(pat.title or ""), len(pat.abstract or ""), len(pat.description or "")
-        )
-    logger.info("[DEBUG SEARCH] ========================================================================")
+    # Iterative Search & Citation Expansion for top candidates
+    iterative_retrieved = 0
+    citation_retrieved = 0
+    top_pat_nums = [item["patent"].patent_number for item in top_10]
+    if top_pat_nums:
+        try:
+            citation_recs = patent_api_service.execute_citation_expansion(db=db, top_patent_numbers=top_pat_nums)
+            citation_retrieved = len(citation_recs)
+        except Exception as e:
+            logger.warning(f"Citation expansion note: {e}")
 
     highest_similarity = top_10[0]["scores"]["final_score"] if top_10 else 0.0
     highest_semantic_similarity = max((item["scores"]["semantic_score"] for item in top_10), default=0.0)
@@ -183,14 +184,14 @@ def perform_prior_art_search(
     mod_count = 0
     low_count = 0
 
-    # Calculate risk distribution and match metrics over the candidate patents analyzed by AI
     for item in top_10:
         f_score = item["scores"]["final_score"]
-        if f_score > 85.0:
+        r_level = classify_prior_art_risk(f_score)["risk_level"]
+        if r_level == "VERY HIGH":
             vhigh_count += 1
-        elif f_score > 70.0:
+        elif r_level == "HIGH":
             high_count += 1
-        elif f_score > 40.0:
+        elif r_level == "MODERATE":
             mod_count += 1
         else:
             low_count += 1
@@ -201,6 +202,38 @@ def perform_prior_art_search(
     pat_retrieved = api_stats.get("patents_retrieved", 0)
     pat_shortlisted = len(top_candidates)
     pat_deeply_analyzed = len(top_10)
+
+    patents_with_claims = sum(
+        1 for item in scored_items
+        if (item["patent"].claims and len(item["patent"].claims.strip()) > 10)
+        or (item["patent"].abstract and len(item["patent"].abstract.strip()) > 20)
+        or (item["patent"].description and len(item["patent"].description.strip()) > 30)
+    )
+    patents_with_full_text = sum(
+        1 for item in scored_items
+        if (item["patent"].description and len(item["patent"].description.strip()) > 30)
+        or (item["patent"].abstract and len(item["patent"].abstract.strip()) > 30)
+    )
+    evidence_verified = sum(
+        1 for item in top_10
+        if item["scores"].get("evidence_score", 0) > 0
+        or len(item["scores"].get("strong_matches", [])) > 0
+        or item["scores"].get("evidence_status") in ["VERIFIED", "PARTIAL"]
+    )
+
+    from backend.app.schemas.schemas import ScoreBreakdown, PipelineMetrics, PatentFamilyMember
+
+    pipeline_metrics = PipelineMetrics(
+        patents_searched=pat_searched,
+        patents_retrieved=pat_retrieved,
+        vector_shortlisted=pat_shortlisted,
+        unique_families=len({item["patent"].patent_number.split("-")[0] if "-" in item["patent"].patent_number else item["patent"].patent_number for item in scored_items}),
+        patents_with_claims=patents_with_claims,
+        patents_with_full_text=patents_with_full_text,
+        evidence_verified_matches=evidence_verified,
+        iterative_wave_retrieved=iterative_retrieved,
+        citation_expansions_found=citation_retrieved
+    )
 
     search_record = Search(
         user_id=current_user.id,
@@ -258,6 +291,50 @@ def perform_prior_art_search(
             similarity_score=f_score
         )
 
+        sb_dict = sc.get("score_breakdown", {})
+        score_bd_obj = ScoreBreakdown(
+            semantic_similarity=sb_dict.get("semantic_similarity", sc["semantic_score"]),
+            technical_features=sb_dict.get("technical_features", sc["keyword_score"]),
+            evidence_strength=sb_dict.get("evidence_strength", sc.get("evidence_score", 0.0)),
+            distinctive_concepts=sb_dict.get("distinctive_concepts", sc.get("distinctive_score", 0.0)),
+            domain_cpc_alignment=sb_dict.get("domain_cpc_alignment", sc["domain_score"]),
+            final_score=sc["final_score"],
+            confidence_score=sc.get("confidence_score", 85.0),
+            is_gated=sb_dict.get("is_gated", False),
+            formula_explanation=sb_dict.get("formula_explanation", "Final Score = (25% Semantic) + (40% Technical Features) + (15% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)")
+        )
+
+        # Calculate Temporal Status
+        pub_date_str = str(pat.publication_date or "").strip()
+        ref_date_str = str(request.reference_date or "").strip() if request.reference_date else ""
+
+        if not ref_date_str:
+            temporal_status = "DATE_UNKNOWN"
+            temporal_conclusion = "Reference date not specified by user. Document timeline recorded."
+        elif pub_date_str and pub_date_str > ref_date_str:
+            temporal_status = "AFTER_REFERENCE_DATE"
+            temporal_conclusion = f"Published on {pub_date_str}, which is AFTER reference date ({ref_date_str})."
+        elif pub_date_str and pub_date_str <= ref_date_str:
+            temporal_status = "BEFORE_REFERENCE_DATE"
+            temporal_conclusion = f"Published on {pub_date_str}, which is BEFORE reference date ({ref_date_str})."
+        else:
+            temporal_status = "DATE_UNKNOWN"
+            temporal_conclusion = "Document publication date unknown."
+
+        ev_status = sc.get("evidence_status", "VERIFIED")
+        if temporal_status == "AFTER_REFERENCE_DATE":
+            res_status = "TECHNICALLY_RELEVANT_PUBLISHED_LATER"
+        elif f_score < 30.0:
+            res_status = "LOW_TECHNICAL_RELEVANCE"
+        elif ev_status in ["NOT_VERIFIED", "NOT_AVAILABLE"]:
+            res_status = "EVIDENCE_NOT_VERIFIED"
+        else:
+            res_status = "TECHNICALLY_RELEVANT"
+
+        tech_rel_conclusion = pair_analysis.get("technical_relevance_conclusion") or f"Technical feature overlap is {sc.get('raw_feature_coverage', 0.0)}% across {sc.get('matched_feature_count', 0)} matching limitations."
+        ev_conf_conclusion = pair_analysis.get("evidence_confidence_conclusion") or f"Evidence confidence is {sc.get('confidence_score', 85.0)}% based on specification text verification."
+        legal_disclaimer = pair_analysis.get("legal_assessment_disclaimer") or "Preliminary AI screening only. Legal patentability is not determined by AI and requires formal patent attorney examination."
+
         result_items_response.append(
             SearchResultItem(
                 patent=PatentOut.model_validate(pat),
@@ -265,23 +342,59 @@ def perform_prior_art_search(
                 keyword_score=sc["keyword_score"],
                 domain_score=sc["domain_score"],
                 final_score=sc["final_score"],
+                confidence_score=sc.get("confidence_score", 85.0),
                 matched_concepts=sc["matched_concepts"],
                 rank=idx,
                 semantic_similarity_label=get_similarity_level_label(sc["semantic_score"]),
                 relevance_explanation=pair_analysis.get("relevance_explanation"),
                 feature_comparison=pair_analysis.get("feature_comparison", []),
                 patent_specific_insights=pair_analysis.get("patent_specific_insights", []),
-                technical_features=pair_analysis.get("technical_features", []),
+                technical_features=pair_analysis.get("technical_features", gemini_features),
+                essential_features=gemini_essential,
+                optional_features=gemini_optional,
+                structured_quadruplets=gemini_quads,
                 distinctive_features=pair_analysis.get("distinctive_features", []),
                 matched_features=pair_analysis.get("matched_features", []),
+                strong_matches=sc.get("strong_matches", []),
+                partial_matches=sc.get("partial_matches", []),
+                weak_matches=sc.get("weak_matches", []),
                 unmatched_features=pair_analysis.get("unmatched_features", []),
+                unverifiable_features=sc.get("unverifiable_features", []),
                 overlap_summary=pair_analysis.get("overlap_summary"),
                 claim_elements=pair_analysis.get("claim_elements", []),
                 single_document_anticipation=pair_analysis.get("single_document_anticipation", "NO"),
                 missing_elements=pair_analysis.get("missing_elements", []),
-                technical_feature_coverage=pair_analysis.get("technical_feature_coverage", 0.0),
-                evidence_confidence=pair_analysis.get("evidence_confidence", 0.0),
-                overall_result=pair_analysis.get("overall_result", "NON_ANTICIPATED")
+                technical_feature_coverage=sc["keyword_score"],
+                evidence_confidence=sc.get("confidence_score", 85.0),
+                overall_result=pair_analysis.get("overall_result", "NON_ANTICIPATED"),
+                score_breakdown=score_bd_obj,
+                family_members=[
+                    PatentFamilyMember(
+                        patent_number=pat.patent_number,
+                        jurisdiction=pat.jurisdiction or "US",
+                        kind="A1",
+                        title=pat.title,
+                        publication_date=pat.publication_date,
+                        document_type=pat.document_type or "PATENT",
+                        source_url=pat.source_url or ""
+                    )
+                ],
+                family_size=1,
+                is_family_representative=True,
+                family_id=pat.patent_number,
+                temporal_status=temporal_status,
+                result_status=res_status,
+                evidence_status=ev_status,
+                raw_feature_coverage=round(((sc.get("matched_feature_count") or len(pair_analysis.get("matched_features", [])) or (len(sc.get("strong_matches", [])) + len(sc.get("partial_matches", [])))) / (sc.get("total_feature_count") or len(gemini_features) or 9)) * 100.0, 1) if (sc.get("total_feature_count") or len(gemini_features) or 9) > 0 else 0.0,
+                weighted_technical_score=sc.get("weighted_technical_score", sc["keyword_score"]),
+                matched_feature_count=sc.get("matched_feature_count") or len(pair_analysis.get("matched_features", [])) or (len(sc.get("strong_matches", [])) + len(sc.get("partial_matches", []))),
+                total_feature_count=sc.get("total_feature_count") or len(gemini_features) or 9,
+                claims_status=sc.get("claims_status", "AVAILABLE" if (pat.claims and len(pat.claims) > 20) else "NOT_AVAILABLE"),
+                full_text_status=sc.get("full_text_status", "AVAILABLE" if (pat.description and len(pat.description) > 100) else "NOT_AVAILABLE"),
+                technical_relevance_conclusion=tech_rel_conclusion,
+                evidence_confidence_conclusion=ev_conf_conclusion,
+                temporal_status_conclusion=temporal_conclusion,
+                legal_assessment_disclaimer=legal_disclaimer
             )
         )
 
@@ -297,7 +410,9 @@ def perform_prior_art_search(
         patents_retrieved=pat_retrieved,
         patents_shortlisted=pat_shortlisted,
         patents_deeply_analyzed=pat_deeply_analyzed,
-        highest_semantic_similarity=highest_semantic_similarity
+        highest_semantic_similarity=highest_semantic_similarity,
+        unique_families_count=len(scored_items),
+        pipeline_metrics=pipeline_metrics
     )
 
     try:

@@ -73,18 +73,25 @@ def test_google_oauth_existing_and_new_user():
     with TestClient(app) as client:
         email = f"google.user.{uuid.uuid4().hex[:6]}@gmail.com"
 
-        # 1. Google sign-in for new user auto-registers and logs in
+        # 1. Google sign-in for new user returns require_otp: True for first-time email verification
         res1 = client.post("/api/auth/google", json={"email": email, "name": "Google User"})
         assert res1.status_code == 200
         data1 = res1.json()
-        assert "access_token" in data1
-        assert data1["user"]["email"] == email
-        assert data1["user"]["is_verified"] is True
+        assert data1["require_otp"] is True
+        demo_otp = data1["demo_otp"]
 
-        # 2. Subsequent Google sign-in for existing user logs in seamlessly
+        # 2. Verify 6-digit OTP code sent via EmailJS
+        res_verify = client.post("/api/auth/verify-otp", json={"email": email, "otp": demo_otp})
+        assert res_verify.status_code == 200
+        data_verify = res_verify.json()
+        assert "access_token" in data_verify
+        assert data_verify["user"]["is_verified"] is True
+
+        # 3. Subsequent Google sign-in for returning verified user logs in seamlessly
         res2 = client.post("/api/auth/google", json={"email": email, "name": "Google User"})
         assert res2.status_code == 200
         data2 = res2.json()
         assert "access_token" in data2
+        assert data2["require_otp"] is False
         assert data2["user"]["email"] == email
 

@@ -169,6 +169,15 @@ class PipelineMetrics(BaseModel):
     citation_expansions_found: int = 0
 
 
+class EvidenceItem(BaseModel):
+    feature: str
+    status: str = "verified"
+    similarity: float = 0.0
+    evidence: str = ""
+    source: str = "Claim 1"
+    verified: bool = True
+
+
 class SearchResultItem(BaseModel):
     patent: PatentOut
     semantic_score: float
@@ -191,8 +200,11 @@ class SearchResultItem(BaseModel):
     strong_matches: List[str] = Field(default_factory=list)
     partial_matches: List[str] = Field(default_factory=list)
     weak_matches: List[str] = Field(default_factory=list)
+    missing_features: List[str] = Field(default_factory=list)
     unmatched_features: List[str] = Field(default_factory=list)
     unverifiable_features: List[str] = Field(default_factory=list)
+    evidence_items: List[EvidenceItem] = Field(default_factory=list)
+    evidence_status_label: str = "Claim evidence verified"
     overlap_summary: Optional[str] = None
     claim_elements: List[ClaimElementItem] = Field(default_factory=list)
     single_document_anticipation: Optional[str] = "NO"

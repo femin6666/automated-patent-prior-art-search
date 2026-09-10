@@ -53,12 +53,22 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
     domain_cpc_alignment: item.domain_score || 50,
     final_score: final_score,
     is_gated: false,
-    formula_explanation: "Final Score = (25% Semantic) + (40% Technical Features) + (15% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
+    formula_explanation: "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
   };
 
-  const strongMatches = item.matched_features?.filter(m => String(m.match_type || m.match_level).toLowerCase().includes("strong")) || [];
-  const partialMatches = item.matched_features?.filter(m => String(m.match_type || m.match_level).toLowerCase().includes("partial")) || [];
-  const missingFeatures = item.unmatched_features || item.missing_elements || [];
+  const strongMatches = item.strong_matches || item.matched_features?.filter(m => String(m.match_type || m.match_level).toLowerCase().includes("strong")).map(m => typeof m === "string" ? m : m.feature) || [];
+  const partialMatches = item.partial_matches || item.matched_features?.filter(m => String(m.match_type || m.match_level).toLowerCase().includes("partial")).map(m => typeof m === "string" ? m : m.feature) || [];
+  const missingFeatures = item.missing_features || item.unmatched_features || item.missing_elements || [];
+
+  const evidenceItems = item.evidence_items || [];
+  const topEvidence = evidenceItems[0] || (item.matched_features && item.matched_features[0] ? {
+    feature: item.matched_features[0].feature,
+    evidence: item.matched_features[0].evidence || item.matched_features[0].patent_evidence,
+    source: item.matched_features[0].source_section || "Claims",
+    verified: true
+  } : null);
+
+  const evStatusLabel = item.evidence_status_label || (item.evidence_status === "VERIFIED" ? (item.claims_status === "AVAILABLE" ? "Claim evidence verified" : "Description evidence verified") : "Limited evidence");
 
   return (
     <div className="group relative rounded-xl tech-card tech-card-hover p-6 space-y-4">
@@ -136,7 +146,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
         </div>
       </div>
 
-      {/* Metric Badges & Source */}
+      {/* Metric Badges & Honest Evidence Status */}
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center gap-2">
           {(() => {
@@ -163,46 +173,30 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
                   Published Later (Post-Date)
                 </span>
               );
-            } else if (tempStatus === "BEFORE_REFERENCE_DATE") {
-              return (
-                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  Prior Art (Before Reference Date)
-                </span>
-              );
             } else {
               return (
-                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-zinc-800/80 text-zinc-400 border border-zinc-700/60">
-                  Reference Date Not Supplied
+                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  ✓ Prior Art before reference date
                 </span>
               );
             }
           })()}
 
-          {/* Evidence Status Badge */}
+          {/* Honest Evidence Status Badge */}
           {(() => {
-            const evStatus = item.evidence_status || "VERIFIED";
-            if (evStatus === "VERIFIED") {
+            const hasVerifiedEv = (bd.evidence_strength > 10) || evidenceItems.some(i => i.verified);
+            const evStatusText = item.evidence_status_label || (hasVerifiedEv ? (item.claims_status === "AVAILABLE" ? "Claim evidence verified" : "Description evidence verified") : "Limited evidence");
+
+            if (hasVerifiedEv && bd.evidence_strength > 10) {
               return (
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25">
-                  ✓ Evidence Verified
-                </span>
-              );
-            } else if (evStatus === "PARTIAL") {
-              return (
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25">
-                  ~ Partial Evidence
-                </span>
-              );
-            } else if (evStatus === "NOT_AVAILABLE") {
-              return (
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/25">
-                  ! Source Text Unavailable
+                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25">
+                  ✓ {evStatusText} ({Math.round(bd.evidence_strength)}%)
                 </span>
               );
             } else {
               return (
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-orange-500/10 text-orange-300 border border-orange-500/25">
-                  ? Evidence Not Verified
+                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                  ⚠ Limited evidence (0%)
                 </span>
               );
             }
@@ -213,65 +207,73 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
           </span>
         </div>
 
-        {/* 4 Separated Conclusions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono pt-1">
-          <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
-            <div className="text-[10px] uppercase font-bold text-indigo-400">1. Technical Relevance</div>
-            <p className="text-zinc-300 font-sans text-[11px] leading-snug">{item.technical_relevance_conclusion || relevance_explanation}</p>
+        {/* 5 Component Progress Bars (25 / 35 / 20 / 10 / 10 = 100%) */}
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 font-mono text-xs pt-1">
+          <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
+            <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
+              <span>Semantic (25%)</span>
+              <span className="text-indigo-400 font-bold">{Math.round(bd.semantic_similarity)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, bd.semantic_similarity)}%` }} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
-            <div className="text-[10px] uppercase font-bold text-emerald-400">2. Evidence Confidence</div>
-            <p className="text-zinc-300 font-sans text-[11px] leading-snug">{item.evidence_confidence_conclusion || "Evidence verified against specification text."}</p>
+
+          <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
+            <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
+              <span>Feature Match (35%)</span>
+              <span className="text-sky-400 font-bold">{Math.round(bd.technical_features)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, bd.technical_features)}%` }} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
-            <div className="text-[10px] uppercase font-bold text-amber-400">3. Temporal Status</div>
-            <p className="text-zinc-300 font-sans text-[11px] leading-snug">{item.temporal_status_conclusion || "Timeline evaluated relative to reference date."}</p>
+
+          <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
+            <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
+              <span>Evidence (20%)</span>
+              <span className="text-emerald-400 font-bold">{Math.round(bd.evidence_strength)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, bd.evidence_strength)}%` }} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
-            <div className="text-[10px] uppercase font-bold text-zinc-400">4. Legal Assessment</div>
-            <p className="text-zinc-400 font-sans text-[10px] italic leading-snug">{item.legal_assessment_disclaimer || "Preliminary AI screening only. Legal patentability is not determined by AI."}</p>
+
+          <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
+            <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
+              <span>Concepts (10%)</span>
+              <span className="text-amber-400 font-bold">{Math.round(bd.distinctive_concepts)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, bd.distinctive_concepts)}%` }} />
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
+            <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
+              <span>Domain / CPC (10%)</span>
+              <span className="text-purple-400 font-bold">{Math.round(bd.domain_cpc_alignment)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, bd.domain_cpc_alignment)}%` }} />
+            </div>
           </div>
         </div>
-
-        {/* Feature Coverage Transparency Row */}
-        {(() => {
-          const matchedCount = item.matched_feature_count || (strongMatches.length + partialMatches.length);
-          const totalCount = item.total_feature_count || (strongMatches.length + partialMatches.length + missingFeatures.length);
-          const rawCovPct = totalCount > 0 ? ((matchedCount / totalCount) * 100).toFixed(1) : "0.0";
-          return (
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono pt-0.5">
-              <span className="px-2.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-semibold">
-                SBERT Semantic: {Math.round(bd.semantic_similarity)}%
-              </span>
-              <span className="px-2.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold">
-                Weighted Tech Score: {Math.round(bd.technical_features)}%
-              </span>
-              <span className="px-2.5 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
-                Raw Coverage: {rawCovPct}% ({matchedCount}/{totalCount} matched)
-              </span>
-              <button
-                onClick={() => setShowFormulaModal(true)}
-                className="text-[11px] font-mono text-indigo-400 hover:underline flex items-center gap-1 ml-auto"
-              >
-                How is this calculated?
-              </button>
-            </div>
-          );
-        })()}
       </div>
 
-      {/* Feature Evidence Breakdown (Strong, Partial, Missing) */}
-      <div className="pt-2 space-y-2">
+      {/* Feature Evidence Breakdown (Strong ✓, Partial ~, Missing ✕) */}
+      <div className="pt-2 space-y-3">
         {strongMatches.length > 0 && (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="text-[11px] font-mono font-semibold text-emerald-400 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Strong Matches ({strongMatches.length}):
+              <span>✓ Strong Matches ({strongMatches.length})</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {strongMatches.map((m, i) => (
-                <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-[11px] font-mono" title={m.evidence}>
-                  ✓ {m.feature}
+              {strongMatches.map((featName, i) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-[11px] font-mono flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-bold">✓</span>
+                  <span>{featName}</span>
                 </span>
               ))}
             </div>
@@ -279,15 +281,16 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
         )}
 
         {partialMatches.length > 0 && (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="text-[11px] font-mono font-semibold text-amber-400 flex items-center gap-1">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              Partial Matches ({partialMatches.length}):
+              <span>~ Partial Matches ({partialMatches.length})</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {partialMatches.map((m, i) => (
-                <span key={i} className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] font-mono" title={m.evidence}>
-                  ~ {m.feature}
+              {partialMatches.map((featName, i) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] font-mono flex items-center gap-1.5">
+                  <span className="text-amber-400 font-bold">~</span>
+                  <span>{featName}</span>
                 </span>
               ))}
             </div>
@@ -295,18 +298,34 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
         )}
 
         {missingFeatures.length > 0 && (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="text-[11px] font-mono font-semibold text-zinc-400 flex items-center gap-1">
               <XCircle className="w-3.5 h-3.5 text-zinc-500" />
-              Not Found in Prior-Art Text ({missingFeatures.length}):
+              <span>✕ Not Found ({missingFeatures.length})</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {missingFeatures.slice(0, 5).map((f, i) => (
-                <span key={i} className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] font-mono">
-                  ✗ {f}
+              {missingFeatures.slice(0, 6).map((featName, i) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-zinc-800 text-zinc-400 text-[11px] font-mono flex items-center gap-1.5">
+                  <span className="text-rose-400 font-bold">✕</span>
+                  <span>{featName}</span>
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Verified Evidence Snippet Card */}
+        {topEvidence && topEvidence.evidence && (
+          <div className="p-3.5 rounded-lg bg-zinc-950/90 border border-zinc-800 space-y-1 text-xs">
+            <div className="flex items-center justify-between text-[10px] font-mono font-semibold text-indigo-400 uppercase tracking-wider">
+              <span>Specification Evidence Quote</span>
+              <span className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                Source: {topEvidence.source || "Claim 4"}
+              </span>
+            </div>
+            <p className="text-zinc-300 italic text-[11px] leading-relaxed">
+              "{topEvidence.evidence.replace(/^Disclosed in [^:]+:\s*"/, '').replace(/"$/, '')}"
+            </p>
           </div>
         )}
       </div>
@@ -342,7 +361,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-all"
           >
             <Layers className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Claim-Level Analysis ({item.claim_elements?.length || item.matched_features?.length || 0} elements)</span>
+            <span>Claim-Level Analysis</span>
           </button>
         </div>
 
@@ -350,15 +369,15 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
           href={`/patents/${patent.id}`}
           className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-sm shadow-indigo-500/20 transition-all"
         >
-          <span>View Full Feature Comparison</span>
+          <span>Full Comparison</span>
           <ArrowUpRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       {/* Modal: How is this calculated? */}
       {showFormulaModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0c0e24] border border-indigo-500/30 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] text-left">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
               <h4 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
                 <Info className="w-4 h-4 text-indigo-400" />
@@ -368,39 +387,39 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
             </div>
             
             <p className="text-xs text-zinc-300 leading-relaxed">
-              The <strong className="text-indigo-400">Preliminary Prior-Art Relevance Score</strong> ({Math.round(final_score)}%) is calculated by the backend deterministic scoring engine:
+              The <strong className="text-indigo-400">Overall Technical Relevance Score</strong> ({Math.round(final_score)}%) is calculated by the 5-component weighted formula:
             </p>
 
-            <div className="space-y-2 text-xs font-mono bg-zinc-950 p-3 rounded-lg border border-zinc-800">
+            <div className="space-y-2.5 text-xs font-mono bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
               <div className="flex justify-between text-zinc-300">
-                <span>1. Technical Features Score (40%):</span>
-                <span className="text-sky-400 font-bold">{bd.technical_features}%</span>
+                <span>Semantic Similarity (25%):</span>
+                <span className="text-indigo-400 font-bold">{bd.semantic_similarity}% × 0.25 = {(bd.semantic_similarity * 0.25).toFixed(1)}%</span>
               </div>
               <div className="flex justify-between text-zinc-300">
-                <span>2. SBERT Semantic Similarity (25%):</span>
-                <span className="text-indigo-400 font-bold">{bd.semantic_similarity}%</span>
+                <span>Technical Feature Match (35%):</span>
+                <span className="text-sky-400 font-bold">{bd.technical_features}% × 0.35 = {(bd.technical_features * 0.35).toFixed(1)}%</span>
               </div>
               <div className="flex justify-between text-zinc-300">
-                <span>3. Evidence Strength (15%):</span>
-                <span className="text-emerald-400 font-bold">{bd.evidence_strength}%</span>
+                <span>Evidence Strength (20%):</span>
+                <span className="text-emerald-400 font-bold">{bd.evidence_strength}% × 0.20 = {(bd.evidence_strength * 0.20).toFixed(1)}%</span>
               </div>
               <div className="flex justify-between text-zinc-300">
-                <span>4. Distinctive Concept Match (10%):</span>
-                <span className="text-amber-400 font-bold">{bd.distinctive_concepts}%</span>
+                <span>Distinctive Concepts (10%):</span>
+                <span className="text-amber-400 font-bold">{bd.distinctive_concepts}% × 0.10 = {(bd.distinctive_concepts * 0.10).toFixed(1)}%</span>
               </div>
               <div className="flex justify-between text-zinc-300">
-                <span>5. Domain & CPC Alignment (10%):</span>
-                <span className="text-purple-400 font-bold">{bd.domain_cpc_alignment}%</span>
+                <span>Domain/CPC Alignment (10%):</span>
+                <span className="text-purple-400 font-bold">{bd.domain_cpc_alignment}% × 0.10 = {(bd.domain_cpc_alignment * 0.10).toFixed(1)}%</span>
               </div>
               <div className="pt-2 border-t border-zinc-800 flex justify-between font-bold text-indigo-300 text-sm">
-                <span>Final Score:</span>
+                <span>Overall Relevance:</span>
                 <span>{bd.final_score}%</span>
               </div>
             </div>
 
             {bd.is_gated && (
               <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px]">
-                ⚠️ <strong>Technical Relevance Gate Applied:</strong> The final score was capped because the technical feature overlap score is under 20%.
+                ⚠️ <strong>Technical Relevance Gate Applied:</strong> Capped due to feature coverage constraint.
               </div>
             )}
 

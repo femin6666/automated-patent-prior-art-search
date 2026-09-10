@@ -82,6 +82,15 @@ export interface PipelineMetrics {
   evidence_verified_matches: number;
 }
 
+export interface EvidenceItem {
+  feature: string;
+  status: 'verified' | 'unverified' | 'limited';
+  similarity: number;
+  evidence: string;
+  source: string;
+  verified: boolean;
+}
+
 export interface SearchResultItem {
   confidence_score: number | undefined;
   legal_assessment_disclaimer: string;
@@ -102,7 +111,12 @@ export interface SearchResultItem {
   technical_features?: string[];
   distinctive_features?: string[];
   matched_features?: any[];
+  strong_matches?: string[];
+  partial_matches?: string[];
+  missing_features?: string[];
   unmatched_features?: string[];
+  evidence_items?: EvidenceItem[];
+  evidence_status_label?: string;
   claim_elements?: ClaimElementItem[];
   single_document_anticipation?: 'YES' | 'NO';
   missing_elements?: string[];

@@ -98,8 +98,8 @@ def test_section_weighted_matching():
         essential_features=["wireless power transfer"]
     )
 
-    assert score_claims["matched_features"][0]["source_section"] == "claims"
-    assert score_desc["matched_features"][0]["source_section"] == "description"
+    assert score_claims["matched_features"][0]["source_section"].lower() in ["claims", "claim 1"]
+    assert "description" in score_desc["matched_features"][0]["source_section"].lower()
     assert score_claims["weighted_technical_score"] >= score_desc["weighted_technical_score"]
 
 

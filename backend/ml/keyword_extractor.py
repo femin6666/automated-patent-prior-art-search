@@ -9,7 +9,9 @@ GENERIC_DOMAIN_NOISE = {
     "controlling", "data", "algorithm", "algorithms", "application", "applications",
     "process", "processing", "unit", "units", "module", "modules", "operation",
     "operating", "user", "time", "real", "high", "low", "new", "improved",
-    "mechanism", "component", "feature", "information", "technology"
+    "mechanism", "component", "feature", "information", "technology",
+    "medical", "image", "images", "ai", "deep", "learning", "detection", "analysis",
+    "technique", "model", "result", "smart", "type", "mode"
 }
 
 TECHNICAL_STOP_WORDS = {

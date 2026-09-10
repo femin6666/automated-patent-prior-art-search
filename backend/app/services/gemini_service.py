@@ -180,7 +180,8 @@ Return ONLY valid JSON matching this exact structure:
         GENERIC_NOISE = {
             "system", "device", "technology", "signal", "ai", "electronics",
             "method", "apparatus", "process", "mechanism", "unit", "module",
-            "component", "feature", "data", "information", "operation"
+            "component", "feature", "data", "information", "operation",
+            "medical", "image", "images", "deep", "learning", "detection", "analysis"
         }
         
         raw_feats = parsed.get("technical_features", [])

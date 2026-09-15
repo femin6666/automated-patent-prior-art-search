@@ -88,6 +88,9 @@ class PatentOut(BaseModel):
     domain: str
     source_url: Optional[str] = None
     source_type: Optional[str] = "THE LENS"
+    source_status: Optional[str] = "LIVE_API"
+    source_name: Optional[str] = "The Lens Patent API"
+    retrieval_status: Optional[str] = "SUCCESS"
     document_type: Optional[str] = "PATENT"
     cpc_codes: Optional[str] = None
     ipc_codes: Optional[str] = None
@@ -129,8 +132,11 @@ class FeatureComparisonItem(BaseModel):
     prior_art_feature: str
     match_level: str  # STRONG_MATCH, PARTIAL_MATCH, WEAK_MATCH, NOT_FOUND, UNABLE_TO_VERIFY
     explanation: str
-    evidence_quote: Optional[str] = "Disclosed in prior-art technical specification."
-    confidence: Optional[float] = 90.0
+    evidence_quote: Optional[str] = None
+    evidence_source: Optional[str] = None
+    evidence_text_origin: Optional[str] = None
+    verification_status: str = "UNVERIFIED"
+    confidence: Optional[float] = None
 
 
 class MatchedFeatureItem(BaseModel):
@@ -143,7 +149,7 @@ class ClaimElementItem(BaseModel):
     limitation_number: int
     element_text: str
     status: str  # STRONG_MATCH, PARTIAL_MATCH, WEAK_MATCH, NOT_FOUND, UNABLE_TO_VERIFY
-    evidence_quote: str
+    evidence_quote: Optional[str] = None
     explanation: str
 
 
@@ -174,26 +180,40 @@ class PatentFamilyMember(BaseModel):
 class PipelineMetrics(BaseModel):
     patents_searched: int = 0
     patents_retrieved: int = 0
+    lens_records_retrieved: int = 0
+    database_fallback_candidates: int = 0
+    final_shortlisted: int = 0
+    total_candidates_evaluated: int = 0
+    raw_candidates: int = 0
+    candidates_with_family_ids: int = 0
+    post_dedup_candidates: int = 0
     vector_shortlisted: int = 0
     unique_families: int = 0
+    semantic_candidates: int = 0
+    technical_candidates: int = 0
     patents_with_claims: int = 0
     patents_with_full_text: int = 0
     evidence_verified_matches: int = 0
     iterative_wave_retrieved: int = 0
     citation_expansions_found: int = 0
+    lens_api_status: Optional[str] = "LENS_OK"
+
 
 
 class EvidenceItem(BaseModel):
     feature: str
-    status: str = "verified"
+    status: str = "unverified"
     similarity: float = 0.0
     evidence: str = ""
     evidence_text: Optional[str] = ""
-    source: str = "Claim 1"
-    source_section: str = "CLAIMS"
-    match_status: str = "MATCHED"
-    verification_status: str = "VERIFIED"
-    verified: bool = True
+    evidence_quote: Optional[str] = None
+    evidence_source: Optional[str] = "NOT_AVAILABLE"
+    evidence_text_origin: Optional[str] = "NOT_AVAILABLE"
+    source: str = "NOT_AVAILABLE"
+    source_section: str = "NOT_AVAILABLE"
+    match_status: str = "UNVERIFIED"
+    verification_status: str = "UNVERIFIED"
+    verified: bool = False
 
 
 class SearchResultItem(BaseModel):
@@ -202,7 +222,7 @@ class SearchResultItem(BaseModel):
     keyword_score: float
     domain_score: float
     final_score: float
-    confidence_score: float = 85.0
+    confidence_score: float = 0.0
     matched_concepts: List[str]
     rank: int
     semantic_similarity_label: Optional[str] = "Moderate"
@@ -222,7 +242,7 @@ class SearchResultItem(BaseModel):
     unmatched_features: List[str] = Field(default_factory=list)
     unverifiable_features: List[str] = Field(default_factory=list)
     evidence_items: List[EvidenceItem] = Field(default_factory=list)
-    evidence_status_label: str = "Claim evidence verified"
+    evidence_status_label: str = "Limited evidence (0% verified)"
     overlap_summary: Optional[str] = None
     claim_elements: List[ClaimElementItem] = Field(default_factory=list)
     single_document_anticipation: Optional[str] = "NO"
@@ -236,15 +256,22 @@ class SearchResultItem(BaseModel):
     is_family_representative: bool = True
     family_id: Optional[str] = None
     temporal_status: str = "BEFORE_REFERENCE_DATE"
-    result_status: str = "TECHNICALLY_RELEVANT"
-    relevance_level: str = "MODERATE TECHNICAL RELEVANCE"
-    evidence_status: str = "VERIFIED"
+    result_status: Optional[str] = None
+    relevance_level: Optional[str] = None
+    evidence_status: Optional[str] = None
+    evidence_availability_level: Optional[str] = "NOT_VERIFIABLE"
+    source_status: Optional[str] = "LIVE_API"
+    source_name: Optional[str] = "The Lens Patent API"
+    retrieval_status: Optional[str] = "SUCCESS"
+    feature_match_status: Optional[str] = "NOT_VERIFIABLE"
+    feature_match_source: Optional[str] = "ABSTRACT/TITLE"
+
     raw_feature_coverage: float = 0.0
     weighted_technical_score: float = 0.0
     matched_feature_count: int = 0
     total_feature_count: int = 0
-    claims_status: str = "AVAILABLE"
-    full_text_status: str = "AVAILABLE"
+    claims_status: str = "NOT_AVAILABLE"
+    full_text_status: str = "NOT_AVAILABLE"
     has_abstract: bool = True
     has_claims: bool = False
     has_description: bool = False

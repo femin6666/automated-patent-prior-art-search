@@ -36,27 +36,37 @@ def classify_prior_art_risk(highest_similarity_score: float) -> Dict[str, Any]:
     if score < 30.0:
         level = "LOW"
         label = "Low Technical Relevance"
+        overall_result = "NON_ANTICIPATED"
+        result_status = "TECHNICALLY_DISTINCT"
         color = "green"
         description = "Low prior-art technical relevance detected. Target invention shows low technical feature overlap with retrieved patents."
     elif score < 50.0:
         level = "MODERATE"
         label = "Moderate Technical Relevance"
+        overall_result = "PARTIALLY_DISCLOSED"
+        result_status = "PARTIALLY_RELEVANT"
         color = "yellow"
         description = "Moderate technical relevance detected. Overlap identified in general concepts; claim-level limitation analysis recommended."
     elif score < 70.0:
         level = "HIGH"
         label = "High Technical Relevance"
+        overall_result = "HIGH_SIMILARITY"
+        result_status = "TECHNICALLY_RELEVANT"
         color = "orange"
         description = "High technical relevance detected. Strong overlap in core technical mechanisms and component disclosures."
     else:
         level = "VERY HIGH"
         label = "Very High Technical Relevance"
+        overall_result = "ANTICIPATED"
+        result_status = "TECHNICALLY_RELEVANT"
         color = "red"
         description = "Very high technical relevance detected. Prior-art documents explicitly disclose multiple core technical limitations."
 
     return {
         "risk_level": level,
         "label": label,
+        "overall_result": overall_result,
+        "result_status": result_status,
         "color": color,
         "score": round(score, 1),
         "description": description,

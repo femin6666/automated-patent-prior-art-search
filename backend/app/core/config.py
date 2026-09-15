@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
     DEMO_MODE: bool = True
+    TESTING: bool = False
+    LIVE_BENCHMARK: bool = False
 
     # Database
     DATABASE_URL: str = "postgresql://postgres:femin12345@localhost:5432/Patentartpro"
@@ -37,9 +39,10 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "groq"
     MODEL_NAME: str = "all-MiniLM-L6-v2"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
 
     # External Patent APIs Configuration
     PATENTS_API_KEY: str = ""

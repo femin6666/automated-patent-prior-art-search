@@ -61,6 +61,7 @@ def ensure_columns_exist(engine_instance):
     cols_patents = [
         ("claims", "TEXT"),
         ("source_type", "VARCHAR(50) DEFAULT 'THE LENS'"),
+        ("source_status", "VARCHAR(50) DEFAULT 'LIVE_API'"),
         ("document_type", "VARCHAR(50) DEFAULT 'PATENT'"),
         ("lens_id", "VARCHAR(100)"),
         ("filing_date", "VARCHAR(50)"),

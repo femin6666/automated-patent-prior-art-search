@@ -38,42 +38,42 @@ RELATED_DOMAINS_MAP = {
     "Biotechnology": {"Healthcare", "Agriculture", "Artificial Intelligence", "Software", "Medical Imaging"}
 }
 
+MECHANICAL_MOTION_TERMS = {
+    "geneva drive", "geneva wheel", "indexing motion", "indexing gearbox",
+    "ratchet and pawl", "globoidal cam", "roller follower", "intermittent motion",
+    "cam-driven", "pawl mechanism", "cam mechanism", "step-by-step rotary",
+    "intermittent rotary", "indexing mechanism"
+}
+
+def is_technical_mismatch(
+    user_domain: str,
+    user_text: str,
+    patent_title: str,
+    patent_abstract: str,
+    patent_domain: str = ""
+) -> bool:
+    """
+    Stage 3 Funnel Gate: Filter out obvious technical mismatches.
+    If target disclosure contains zero mechanical motion concepts, filter out mechanical gear / cam / ratchet
+    motion apparatuses to prevent false positive retrieval.
+    """
+    u_text_lower = user_text.lower()
+    p_text_lower = f"{patent_title} {patent_abstract}".lower()
+
+    # Check mechanical motion mismatch
+    target_has_mech_motion = any(term in u_text_lower for term in MECHANICAL_MOTION_TERMS)
+    patent_has_mech_motion = any(term in p_text_lower for term in MECHANICAL_MOTION_TERMS)
+
+    if patent_has_mech_motion and not target_has_mech_motion:
+        return True
+
+    return False
+
 def infer_patent_domain(title: str, abstract: str, existing_domain: str = "") -> str:
-    """Dynamically infer patent technical domain if unset or generic."""
-    text = f"{title} {abstract}".lower()
-    
-    if any(term in text for term in ["medical image", "disease detection", "image identifying", "clinical image", "radiology", "pathology image", "medical imaging"]):
-        return "Healthcare"
-
-    if any(term in text for term in ["patient", "genomic", "biomedical", "medical", "clinical", "pathology", "diagnosis"]):
-        return "Healthcare"
-
-    if any(term in text for term in ["neural network", "deep learning", "machine learning", "computer vision", "model training", "artificial intelligence"]):
-        return "Artificial Intelligence"
-
-    if any(term in text for term in [
-        "gear", "gears", "rotary", "intermittent motion", "indexing", "cam", "follower",
-        "dwell", "linkage", "ratchet", "pawl", "shaft", "clutch", "sprocket", "pinion",
-        "gearing", "step-by-step rotary", "mechanism"
-    ]):
-        return "Mechanical Engineering"
-
-    if any(term in text for term in [
-        "wireless power", "impedance", "charging coil", "inductive", "resonant",
-        "electromagnetic", "transmitter coil", "receiver coil", "foreign object"
-    ]):
-        return "Electrical Engineering"
-        
-    if any(term in text for term in ["circuit", "semiconductor", "voltage", "current", "inverter", "signal"]):
-        return "Electronics"
-
-    if any(term in text for term in ["crop", "soil", "irrigation", "agricultural", "farming", "weed"]):
-        return "Agriculture"
-
-    if any(term in text for term in ["robot", "quadrupedal", "gait", "locomotion", "kinematic", "manipulator"]):
-        return "Robotics"
-
-    return existing_domain or "Artificial Intelligence"
+    """Dynamically infer patent technical domain without domain-specific hardcoded keyword lists."""
+    if existing_domain and existing_domain.strip() and existing_domain.lower() not in ["technology", "general", "other", "unknown"]:
+        return existing_domain.strip()
+    return "Technology"
 
 def calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     """Calculate cosine similarity between two float vectors (0.0 to 1.0)."""
@@ -137,24 +137,24 @@ def calculate_keyword_similarity(
     return keyword_score, unique_matched
 
 def calculate_domain_similarity(user_domain: str, patent_domain: str) -> float:
-    """Calculate domain similarity score (0.0 to 1.0). Requires actual domain/application alignment."""
+    """Calculate domain similarity score (0.0 to 1.0) dynamically and domain-independently."""
     if not user_domain or not patent_domain:
         return 0.40
         
     u_dom = user_domain.strip()
     p_dom = patent_domain.strip()
-    
-    if u_dom.lower() == p_dom.lower():
-        return 1.0
-
     u_lower = u_dom.lower()
     p_lower = p_dom.lower()
 
-    # Generic AI/Software/System terms do NOT grant 0.90 domain similarity across different domains!
-    if ("medical" in u_lower and "medical" in p_lower) or ("health" in u_lower and "health" in p_lower):
-        return 0.90
-    if ("waste" in u_lower or "recycle" in u_lower or "sorting" in u_lower) and ("waste" in p_lower or "recycle" in p_lower or "sorting" in p_lower):
+    if u_lower == p_lower:
         return 1.0
+
+    # Dynamic sub-word token overlap
+    u_tokens = set(re.findall(r'\b\w{3,}\b', u_lower))
+    p_tokens = set(re.findall(r'\b\w{3,}\b', p_lower))
+    common_tokens = u_tokens.intersection(p_tokens)
+    if common_tokens:
+        return 0.85
 
     related = RELATED_DOMAINS_MAP.get(u_dom, set())
     if p_dom in related or any(r.lower() == p_lower for r in related):
@@ -221,20 +221,20 @@ def calculate_deterministic_final_score(
         is_gated = True
         gate_reason = score_cap_reason
         final_pct = round(min(raw_weighted, 45.0) + 1e-9, 1)
-    # Gate 1: Essential feature overlap cap
+    # Gate 1: Zero distinctive feature combination cap
+    elif has_target_features and distinctive_score == 0.0:
+        score_cap = 40.0
+        score_cap_reason = "Cap applied due to zero overlap with the invention's distinctive technical feature combinations (Max 40%)."
+        is_gated = True
+        gate_reason = score_cap_reason
+        final_pct = round(min(raw_weighted, 40.0) + 1e-9, 1)
+    # Gate 2: Essential feature overlap cap
     elif has_target_features and (feature_score < 0.25 or essential_feature_coverage < 0.30):
         score_cap = 45.0
         score_cap_reason = "Cap applied due to low technical feature / essential feature overlap (Max 45%)."
         is_gated = True
         gate_reason = score_cap_reason
         final_pct = round(min(raw_weighted, 45.0) + 1e-9, 1)
-    # Gate 2: Generic domain match cap
-    elif has_target_features and distinctive_score == 0.0 and feature_score < 0.40:
-        score_cap = 40.0
-        score_cap_reason = "Cap applied due to generic domain term matching only (Max 40%)."
-        is_gated = True
-        gate_reason = score_cap_reason
-        final_pct = round(min(raw_weighted, 40.0) + 1e-9, 1)
     # Gate 3: Missing evidence & partial feature match cap
     elif evidence_strength == 0.0 and feature_score < 0.50:
         score_cap = 58.0
@@ -248,9 +248,11 @@ def calculate_deterministic_final_score(
     # Calculate Evidence Confidence Score (0.0 to 100.0) with hard ceiling when evidence is unavailable
     if not has_text_evidence or evidence_strength == 0.0:
         # Hard ceiling: Confidence cannot exceed 25% (LOW / UNVERIFIED) when specification evidence is unavailable or 0%
-        confidence_score = round(min(25.0, (sbert_sim * 15.0) + (feature_score * 10.0)) + 1e-9, 1)
+        # Clamp between 10.0 and 25.0 so a non-zero float is sent to the frontend, preventing JS '0 || 85' falsy fallback
+        confidence_score = round(max(10.0, min(25.0, (sbert_sim * 15.0) + (feature_score * 10.0))) + 1e-9, 1)
     else:
         confidence_score = round(min(95.0, (evidence_strength * 45.0) + (feature_score * 35.0) + (sbert_sim * 20.0)) + 1e-9, 1)
+
 
     breakdown = {
         "semantic_similarity": round(sbert_sim * 100.0, 1),
@@ -309,32 +311,6 @@ def compute_hybrid_score(
     inferred_domain = infer_patent_domain(patent_title, patent_abstract, existing_domain)
     semantic_sim = calculate_cosine_similarity(user_embedding, patent_embedding)
 
-    # False-Positive Protection Layer (Problem 1 & Problem 6)
-    target_all_text = f"{target_text_for_concepts} {user_domain} {' '.join(user_keywords or [])}".lower()
-    patent_all_text = f"{patent_title} {patent_abstract} {patent_desc}".lower()
-
-    false_positive_penalty = 1.0
-
-    # Waste Segregation & Sorting Protection
-    if any(term in target_all_text for term in ["waste", "recycl", "trash", "garbage", "refuse", "sorting container"]):
-        has_waste_concept = any(term in patent_all_text for term in ["waste", "recycl", "trash", "garbage", "refuse", "sorting"])
-        if not has_waste_concept:
-            false_positive_penalty = 0.15
-
-    # Soil Moisture & Agriculture Protection
-    if any(term in target_all_text for term in ["soil moisture", "irrigation", "crop", "farming"]):
-        has_agri_concept = any(term in patent_all_text for term in ["soil", "moisture", "irrigation", "crop", "farm", "agricultur"])
-        if not has_agri_concept:
-            false_positive_penalty = 0.15
-
-    # Wireless Power Transfer Protection
-    if any(term in target_all_text for term in ["wireless power", "foreign object", "charging coil", "inductive power"]):
-        has_wpt_concept = any(term in patent_all_text for term in ["wireless power", "charging coil", "inductive", "foreign object", "wpt"])
-        if not has_wpt_concept:
-            false_positive_penalty = 0.15
-
-    effective_semantic_sim = semantic_sim * false_positive_penalty
-
     # 1. Target Features & Distinctive Concepts Preparation
     target_features = technical_features or extract_atomic_technical_features(target_text_for_concepts, top_n=9)
     clean_target_features = [f for f in target_features if f.strip().lower() not in GENERIC_NOISE]
@@ -344,6 +320,7 @@ def compute_hybrid_score(
     clean_essential = essential_features or clean_target_features[:4]
     distinctive_concepts = distinctive_features or [f for f in clean_target_features if len(f.split()) >= 2] or clean_target_features[:4]
 
+    # Domain-Independent False-Positive Protection Layer & Distinctive Concept Co-Occurrence Verification
     has_claims = bool(patent_claims and len(patent_claims.strip()) > 10 and not patent_claims.lower().startswith("main patent claim:"))
     has_desc = bool(patent_desc and len(patent_desc.strip()) > 10 and not patent_desc.lower().startswith("specification for") and not patent_desc.lower().startswith("patent specification"))
     has_text_evidence = has_claims or (patent_abstract and len(patent_abstract) > 10 and not patent_abstract.lower().startswith("prior art publication")) or has_desc
@@ -356,6 +333,39 @@ def compute_hybrid_score(
     # Pre-extract specification sentences for sentence-level semantic & evidence matching
     full_patent_text = f"{claims_text} {abstract_text} {desc_text} {title_text}".strip()
     sentences = [s.strip() for s in re.split(r'[\.\;\n]', full_patent_text) if len(s.strip()) > 15]
+
+    false_positive_penalty = 1.0
+    distinctive_matched_count = 0
+
+    if distinctive_concepts and len(clean_target_features) >= 1:
+        for d_term in distinctive_concepts:
+            d_lower = d_term.lower()
+            if not d_lower or d_lower in GENERIC_NOISE:
+                continue
+            # Check 1: Exact phrase match in full patent text
+            p_exact = r'\b' + re.escape(d_lower) + r'\b' if len(d_lower.split()) == 1 else re.escape(d_lower)
+            if re.search(p_exact, full_patent_text):
+                distinctive_matched_count += 1
+            else:
+                # Check 2: Sentence-level token co-occurrence for multi-word distinctive terms
+                d_words = [w for w in re.findall(r'\b\w+\b', d_lower) if w not in {"the", "a", "an", "and", "or", "for", "of", "to", "in", "on", "with", "by", "at", "from", "using", "used", "which"} and len(w) > 2]
+                if len(d_words) >= 2 and sentences:
+                    for sent in sentences:
+                        s_low = sent.lower()
+                        c_num = sum(1 for w in d_words if re.search(r'\b' + re.escape(w[:4]), s_low))
+                        if c_num / len(d_words) >= 0.75:
+                            distinctive_matched_count += 1
+                            break
+
+        distinctive_score = distinctive_matched_count / len(distinctive_concepts) if distinctive_concepts else 1.0
+
+        # If invention has multi-word distinctive concepts but prior-art matches 0 of them, severely penalize semantic similarity
+        if distinctive_matched_count == 0:
+            false_positive_penalty = 0.25
+    else:
+        distinctive_score = 1.0
+
+    effective_semantic_sim = semantic_sim * false_positive_penalty
 
     # Precompute sentence embeddings if embedding_service is available
     try:
@@ -370,9 +380,8 @@ def compute_hybrid_score(
     if embedding_service and sentences:
         # Cap at top 25 candidate sentences for fast vector computation
         sample_sentences = sentences[:25]
-        for sent in sample_sentences:
-            emb = embedding_service.generate_embedding(sent)
-            sentence_embeddings.append((sent, emb))
+        embs = embedding_service.generate_embeddings(sample_sentences)
+        sentence_embeddings = list(zip(sample_sentences, embs))
 
     # 2. 3-Level Hybrid Matcher (Keyword + Semantic + Evidence)
     matched_features = []
@@ -414,11 +423,14 @@ def compute_hybrid_score(
                 "feature": feat,
                 "status": "NOT_VERIFIABLE",
                 "match_status": "NOT_VERIFIABLE",
-                "verification_status": "NOT_VERIFIED",
+                "verification_status": "UNVERIFIED",
                 "similarity": 0.0,
-                "evidence": "Unable to verify: Document specification text unavailable.",
-                "evidence_text": "Unable to verify: Document specification text unavailable.",
-                "source": "None",
+                "evidence": "",
+                "evidence_text": "",
+                "evidence_quote": None,
+                "evidence_source": "NOT_AVAILABLE",
+                "evidence_text_origin": "NOT_AVAILABLE",
+                "source": "NOT_AVAILABLE",
                 "source_section": "NOT_AVAILABLE",
                 "verified": False
             })
@@ -479,17 +491,27 @@ def compute_hybrid_score(
                         quote_snippet = full_patent_text[start:end].replace("\n", " ").strip()
                     break
 
-        # Check Stem Token Coverage
+        # Check Stem Token Coverage (Must co-occur in the SAME SENTENCE or tight 35-word window!)
         if s_kw < 0.60:
             feat_words = [w for w in re.findall(r'\b\w+\b', feat_lower) if w not in STOPWORDS and len(w) > 2]
-            if len(feat_words) >= 2:
-                w_count = sum(1 for w in feat_words if re.search(r'\b' + re.escape(w[:4]), full_patent_text))
-                coverage_ratio = w_count / len(feat_words)
-                if coverage_ratio >= 0.50:
-                    s_kw = max(s_kw, 0.65 if coverage_ratio < 0.80 else 0.80)
+            if len(feat_words) >= 2 and sentences:
+                best_sent_coverage = 0.0
+                best_sent_match = ""
+                for sent in sentences:
+                    sent_lower = sent.lower()
+                    w_count = sum(1 for w in feat_words if re.search(r'\b' + re.escape(w[:4]), sent_lower))
+                    ratio = w_count / len(feat_words)
+                    if ratio > best_sent_coverage:
+                        best_sent_coverage = ratio
+                        best_sent_match = sent
+
+                # Require high sentence-level co-occurrence (100% for 2 words, >= 70% for 3+ words)
+                req_ratio = 1.0 if len(feat_words) == 2 else 0.70
+                if best_sent_coverage >= req_ratio:
+                    s_kw = max(s_kw, 0.70 if best_sent_coverage < 0.85 else 0.85)
                     if not quote_snippet:
                         source_sec = "Description"
-                        quote_snippet = f"Specification text matching terms: {', '.join(feat_words)}"
+                        quote_snippet = best_sent_match[:150]
 
         # --- LEVEL 2 & 3: Semantic SBERT & Evidence Similarity (S_sem, S_ev) ---
         s_sem = 0.0
@@ -537,29 +559,37 @@ def compute_hybrid_score(
             missing_features.append(feat)
 
         if m_level != "NOT_FOUND":
-            quote_text = best_sentence_quote or quote_snippet or f"Specification discloses {feat.lower()} functionality."
+            quote_text = (best_sentence_quote or quote_snippet or "").strip()
+            has_real_quote = bool(quote_text and len(quote_text) > 5)
+            is_ver = bool(s_match >= 0.70 and has_real_quote)
+
             matched_features.append({
                 "feature": feat,
                 "target_feature": feat,
                 "match_type": m_level,
                 "match_level": m_level,
-                "evidence": f"Disclosed in {source_sec}: \"{quote_text}\"",
-                "patent_evidence": f"Disclosed in {source_sec}: \"{quote_text}\"",
-                "source_section": source_sec,
+                "evidence": quote_text if has_real_quote else "",
+                "patent_evidence": quote_text if has_real_quote else "",
+                "evidence_quote": quote_text if has_real_quote else None,
+                "evidence_source": source_sec if has_real_quote else "NOT_AVAILABLE",
+                "evidence_text_origin": source_sec if has_real_quote else "NOT_AVAILABLE",
+                "source_section": source_sec if has_real_quote else "NOT_AVAILABLE",
                 "confidence": round(s_match * 100.0, 1)
             })
 
-            is_ver = bool(s_match >= 0.75 and (has_claims or has_desc))
             evidence_items.append({
                 "feature": feat,
                 "status": match_status_name,
                 "match_status": match_status_name,
-                "verification_status": "VERIFIED" if is_ver else "NOT_VERIFIED",
+                "verification_status": "VERIFIED" if is_ver else "UNVERIFIED",
                 "similarity": round(s_match * 100.0, 1),
-                "evidence": quote_text,
-                "evidence_text": quote_text,
-                "source": source_sec,
-                "source_section": source_sec,
+                "evidence": quote_text if has_real_quote else "",
+                "evidence_text": quote_text if has_real_quote else "",
+                "evidence_quote": quote_text if has_real_quote else None,
+                "evidence_source": source_sec if has_real_quote else "NOT_AVAILABLE",
+                "evidence_text_origin": source_sec if has_real_quote else "NOT_AVAILABLE",
+                "source": source_sec if has_real_quote else "NOT_AVAILABLE",
+                "source_section": source_sec if has_real_quote else "NOT_AVAILABLE",
                 "verified": is_ver
             })
 
@@ -570,19 +600,10 @@ def compute_hybrid_score(
     else:
         feature_score = 0.0
 
-    # Distinctive Concept Overlap (verified against matching technical features)
-    if distinctive_concepts and matched_features:
-        matched_distinctive = [
-            d for d in distinctive_concepts 
-            if any(
-                (d.lower() in m["feature"].lower() or m["feature"].lower() in d.lower())
-                and m.get("match_level") in ["STRONG_MATCH", "PARTIAL_MATCH"]
-                for m in matched_features
-            )
-        ]
-        distinctive_score = len(matched_distinctive) / len(distinctive_concepts)
-    elif distinctive_concepts and not matched_features:
-        distinctive_score = 0.0
+    # Distinctive Concept Overlap (verified against patent specification and matching technical features)
+    if distinctive_concepts and len(clean_target_features) >= 1:
+        if 'distinctive_score' not in locals():
+            distinctive_score = distinctive_matched_count / len(distinctive_concepts) if distinctive_concepts else 1.0
     else:
         distinctive_score = feature_score
 
@@ -619,6 +640,9 @@ def compute_hybrid_score(
     domain_cpc_score = (0.7 * base_domain_sim) + (0.3 * cpc_overlap)
 
     # Final Score & Confidence Score via Authoritative Engine (25/35/20/10/10) with False-Positive Penalty
+    has_full_spec_text = bool(has_claims or has_desc)
+    has_any_spec_text = bool(has_claims or has_desc or (abstract_text and len(abstract_text) > 10) or (title_text and len(title_text) > 5))
+
     final_score, confidence_score, breakdown = calculate_deterministic_final_score(
         sbert_sim=effective_semantic_sim,
         feature_score=feature_score,
@@ -629,23 +653,46 @@ def compute_hybrid_score(
         cpc_match_score=cpc_overlap,
         has_target_features=bool(clean_target_features),
         essential_feature_coverage=essential_coverage,
-        has_text_evidence=(has_claims or has_desc)
+        has_text_evidence=has_full_spec_text
     )
 
     display_concepts = [m["feature"] for m in matched_features] if matched_features else [feat for feat in clean_target_features if feat not in missing_features]
     raw_coverage_pct = round((len(matched_features) / total_feats_count) * 100.0, 1) if total_feats_count > 0 else 0.0
 
-    # Honest Evidence Status Labeling
+    # Honest Evidence Availability & Verification Level Tagging
     has_verified_item = any(item.get("verified") for item in evidence_items)
+
+    # Feature Match Status & Source Hierarchy
+    if has_claims or has_desc:
+        feature_match_source = "CLAIMS/DESCRIPTION"
+        feature_match_status = "VERIFIED" if has_verified_item else "PARTIAL"
+    elif abstract_text or title_text:
+        feature_match_source = "ABSTRACT/TITLE"
+        feature_match_status = "PARTIAL"
+    else:
+        feature_match_source = "NOT_AVAILABLE"
+        feature_match_status = "NOT_VERIFIABLE"
+
     if evidence_strength > 0.10 and has_claims and has_verified_item:
         evidence_status_label = "Claim evidence verified"
         evidence_status = "VERIFIED"
+        evidence_availability_level = "CLAIM_VERIFIED"
     elif evidence_strength > 0.10 and has_desc and has_verified_item:
         evidence_status_label = "Description evidence verified"
         evidence_status = "VERIFIED"
+        evidence_availability_level = "DESCRIPTION_VERIFIED"
+    elif abstract_text and has_verified_item:
+        evidence_status_label = "Abstract evidence verified"
+        evidence_status = "VERIFIED"
+        evidence_availability_level = "ABSTRACT_ONLY"
+    elif title_text and has_verified_item:
+        evidence_status_label = "Title evidence verified"
+        evidence_status = "VERIFIED"
+        evidence_availability_level = "TITLE_ONLY"
     else:
-        evidence_status_label = "Limited evidence"
-        evidence_status = "NOT_AVAILABLE" if not has_text_evidence else "PARTIAL"
+        evidence_status_label = "Limited evidence (0% verified)"
+        evidence_status = "NOT_AVAILABLE" if not has_any_spec_text else "PARTIAL"
+        evidence_availability_level = "NOT_VERIFIABLE"
 
     return {
         "final_score": final_score,
@@ -671,13 +718,12 @@ def compute_hybrid_score(
         "missing_features": missing_features,
         "evidence_items": evidence_items,
         "evidence_status_label": evidence_status_label,
+        "evidence_availability_level": evidence_availability_level,
+        "feature_match_status": feature_match_status,
+        "feature_match_source": feature_match_source,
         "inferred_domain": inferred_domain,
         "has_core_match": bool(matched_features),
         "evidence_status": evidence_status,
         "claims_status": "AVAILABLE" if has_claims else "NOT_AVAILABLE",
         "full_text_status": "AVAILABLE" if has_desc else "NOT_AVAILABLE"
     }
-
-
-
-

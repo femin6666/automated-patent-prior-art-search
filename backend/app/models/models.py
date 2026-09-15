@@ -49,6 +49,7 @@ class Patent(Base):
     domain = Column(String(100), index=True, nullable=False)
     source_url = Column(String(500), nullable=True)
     source_type = Column(String(50), default="THE LENS", nullable=True)
+    source_status = Column(String(50), default="LIVE_API", nullable=True)  # LIVE_API, CACHE, DATABASE, FALLBACK
     document_type = Column(String(50), default="PATENT", nullable=True)
     lens_id = Column(String(100), nullable=True)
     filing_date = Column(String(50), nullable=True)

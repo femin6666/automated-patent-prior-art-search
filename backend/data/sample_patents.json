@@ -9,6 +9,8 @@
     "assignee": "Cognitive AI Systems Inc.",
     "publication_date": "2024-03-15",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023000000B2/en"
   },
   {
@@ -21,6 +23,8 @@
     "assignee": "EdgeGen Technologies LLC",
     "publication_date": "2023-11-20",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023012347B2/en"
   },
   {
@@ -33,6 +37,8 @@
     "assignee": "Aegis Analytics Corp.",
     "publication_date": "2024-01-10",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023024694B2/en"
   },
   {
@@ -45,6 +51,8 @@
     "assignee": "RoboKinematics Labs",
     "publication_date": "2023-08-05",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023037041B2/en"
   },
   {
@@ -57,6 +65,8 @@
     "assignee": "BioSyn AI Corp.",
     "publication_date": "2024-05-12",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023049388B2/en"
   },
   {
@@ -69,6 +79,8 @@
     "assignee": "AgriTech Innovators Ltd.",
     "publication_date": "2023-09-12",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023061735B2/en"
   },
   {
@@ -81,6 +93,8 @@
     "assignee": "TerraPulse Robotics",
     "publication_date": "2024-02-28",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023074082B2/en"
   },
   {
@@ -93,6 +107,8 @@
     "assignee": "Verdant Crop Systems",
     "publication_date": "2023-12-04",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023086429B2/en"
   },
   {
@@ -105,6 +121,8 @@
     "assignee": "CropShield AI",
     "publication_date": "2024-04-18",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023098776B2/en"
   },
   {
@@ -117,6 +135,8 @@
     "assignee": "PulseCare Medical Technologies",
     "publication_date": "2024-01-22",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023111123B2/en"
   },
   {
@@ -129,6 +149,8 @@
     "assignee": "GlucoOptics Corp.",
     "publication_date": "2023-10-14",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023123470B2/en"
   },
   {
@@ -141,6 +163,8 @@
     "assignee": "PrecisionSurgical Inc.",
     "publication_date": "2024-06-01",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023135817B2/en"
   },
   {
@@ -153,6 +177,8 @@
     "assignee": "OmniSense Networks",
     "publication_date": "2023-07-30",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023148164B2/en"
   },
   {
@@ -165,6 +191,8 @@
     "assignee": "GridLock IoT Solutions",
     "publication_date": "2024-04-05",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023160511B2/en"
   },
   {
@@ -177,6 +205,8 @@
     "assignee": "KineTech Robotics",
     "publication_date": "2023-12-19",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023172858B2/en"
   },
   {
@@ -189,6 +219,8 @@
     "assignee": "LogiBot Mobility",
     "publication_date": "2024-02-14",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023185205B2/en"
   },
   {
@@ -201,6 +233,8 @@
     "assignee": "SolidVolt Energy Inc.",
     "publication_date": "2024-03-02",
     "domain": "Energy",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023197552B2/en"
   },
   {
@@ -213,6 +247,8 @@
     "assignee": "HelioTech Photovoltaics",
     "publication_date": "2023-09-25",
     "domain": "Energy",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023209899B2/en"
   },
   {
@@ -225,6 +261,8 @@
     "assignee": "AeroAdditives Corp.",
     "publication_date": "2024-05-08",
     "domain": "Manufacturing",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023222246B2/en"
   },
   {
@@ -237,6 +275,8 @@
     "assignee": "SteelTech Industrial Systems",
     "publication_date": "2023-11-03",
     "domain": "Manufacturing",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023234593B2/en"
   },
   {
@@ -249,6 +289,8 @@
     "assignee": "StreamCore Systems",
     "publication_date": "2024-01-30",
     "domain": "Software",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023246940B2/en"
   },
   {
@@ -261,6 +303,8 @@
     "assignee": "CryptaIdentity Labs",
     "publication_date": "2023-08-18",
     "domain": "Software",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023259287B2/en"
   },
   {
@@ -273,6 +317,8 @@
     "assignee": "GaNPower Semiconductor",
     "publication_date": "2024-04-12",
     "domain": "Electronics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023271634B2/en"
   },
   {
@@ -285,6 +331,8 @@
     "assignee": "NanoDiagnostics Inc.",
     "publication_date": "2024-02-05",
     "domain": "Biotechnology",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023283981B2/en"
   },
   {
@@ -297,6 +345,8 @@
     "assignee": "General Electric Company",
     "publication_date": "1958-11-04",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2858719A/en"
   },
   {
@@ -309,6 +359,8 @@
     "assignee": "Precision Kinematics Corp.",
     "publication_date": "1968-11-26",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US3412624A/en"
   },
   {
@@ -321,6 +373,8 @@
     "assignee": "Ferguson Drive Systems",
     "publication_date": "1978-08-29",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US4109546A/en"
   },
   {
@@ -333,6 +387,8 @@
     "assignee": "Industrial Drive Technologies",
     "publication_date": "1961-06-13",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2987932A/en"
   },
   {
@@ -345,6 +401,8 @@
     "assignee": "Cognitive AI Systems Inc.",
     "publication_date": "2024-03-15",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023345716B2/en"
   },
   {
@@ -357,6 +415,8 @@
     "assignee": "EdgeGen Technologies LLC",
     "publication_date": "2023-11-20",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023358063B2/en"
   },
   {
@@ -369,6 +429,8 @@
     "assignee": "Aegis Analytics Corp.",
     "publication_date": "2024-01-10",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023370410B2/en"
   },
   {
@@ -381,6 +443,8 @@
     "assignee": "RoboKinematics Labs",
     "publication_date": "2023-08-05",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023382757B2/en"
   },
   {
@@ -393,6 +457,8 @@
     "assignee": "BioSyn AI Corp.",
     "publication_date": "2024-05-12",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023395104B2/en"
   },
   {
@@ -405,6 +471,8 @@
     "assignee": "AgriTech Innovators Ltd.",
     "publication_date": "2023-09-12",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023407451B2/en"
   },
   {
@@ -417,6 +485,8 @@
     "assignee": "TerraPulse Robotics",
     "publication_date": "2024-02-28",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023419798B2/en"
   },
   {
@@ -429,6 +499,8 @@
     "assignee": "Verdant Crop Systems",
     "publication_date": "2023-12-04",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023432145B2/en"
   },
   {
@@ -441,6 +513,8 @@
     "assignee": "CropShield AI",
     "publication_date": "2024-04-18",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023444492B2/en"
   },
   {
@@ -453,6 +527,8 @@
     "assignee": "PulseCare Medical Technologies",
     "publication_date": "2024-01-22",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023456839B2/en"
   },
   {
@@ -465,6 +541,8 @@
     "assignee": "GlucoOptics Corp.",
     "publication_date": "2023-10-14",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023469186B2/en"
   },
   {
@@ -477,6 +555,8 @@
     "assignee": "PrecisionSurgical Inc.",
     "publication_date": "2024-06-01",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023481533B2/en"
   },
   {
@@ -489,6 +569,8 @@
     "assignee": "OmniSense Networks",
     "publication_date": "2023-07-30",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023493880B2/en"
   },
   {
@@ -501,6 +583,8 @@
     "assignee": "GridLock IoT Solutions",
     "publication_date": "2024-04-05",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023506227B2/en"
   },
   {
@@ -513,6 +597,8 @@
     "assignee": "KineTech Robotics",
     "publication_date": "2023-12-19",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023518574B2/en"
   },
   {
@@ -525,6 +611,8 @@
     "assignee": "LogiBot Mobility",
     "publication_date": "2024-02-14",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023530921B2/en"
   },
   {
@@ -537,6 +625,8 @@
     "assignee": "SolidVolt Energy Inc.",
     "publication_date": "2024-03-02",
     "domain": "Energy",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023543268B2/en"
   },
   {
@@ -549,6 +639,8 @@
     "assignee": "HelioTech Photovoltaics",
     "publication_date": "2023-09-25",
     "domain": "Energy",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023555615B2/en"
   },
   {
@@ -561,6 +653,8 @@
     "assignee": "AeroAdditives Corp.",
     "publication_date": "2024-05-08",
     "domain": "Manufacturing",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023567962B2/en"
   },
   {
@@ -573,6 +667,8 @@
     "assignee": "SteelTech Industrial Systems",
     "publication_date": "2023-11-03",
     "domain": "Manufacturing",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023580309B2/en"
   },
   {
@@ -585,6 +681,8 @@
     "assignee": "StreamCore Systems",
     "publication_date": "2024-01-30",
     "domain": "Software",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023592656B2/en"
   },
   {
@@ -597,6 +695,8 @@
     "assignee": "CryptaIdentity Labs",
     "publication_date": "2023-08-18",
     "domain": "Software",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023605003B2/en"
   },
   {
@@ -609,6 +709,8 @@
     "assignee": "GaNPower Semiconductor",
     "publication_date": "2024-04-12",
     "domain": "Electronics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023617350B2/en"
   },
   {
@@ -621,6 +723,8 @@
     "assignee": "NanoDiagnostics Inc.",
     "publication_date": "2024-02-05",
     "domain": "Biotechnology",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023629697B2/en"
   },
   {
@@ -633,6 +737,8 @@
     "assignee": "General Electric Company",
     "publication_date": "1958-11-04",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023642044B2/en"
   },
   {
@@ -645,6 +751,8 @@
     "assignee": "Precision Kinematics Corp.",
     "publication_date": "1968-11-26",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023654391B2/en"
   },
   {
@@ -657,6 +765,8 @@
     "assignee": "Ferguson Drive Systems",
     "publication_date": "1978-08-29",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023666738B2/en"
   },
   {
@@ -669,6 +779,8 @@
     "assignee": "Industrial Drive Technologies",
     "publication_date": "1961-06-13",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023679085B2/en"
   },
   {
@@ -681,6 +793,8 @@
     "assignee": "Cognitive AI Systems Inc.",
     "publication_date": "2024-03-15",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023691432B2/en"
   },
   {
@@ -693,6 +807,8 @@
     "assignee": "EdgeGen Technologies LLC",
     "publication_date": "2023-11-20",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023703779B2/en"
   },
   {
@@ -705,6 +821,8 @@
     "assignee": "Aegis Analytics Corp.",
     "publication_date": "2024-01-10",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023716126B2/en"
   },
   {
@@ -717,6 +835,8 @@
     "assignee": "RoboKinematics Labs",
     "publication_date": "2023-08-05",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023728473B2/en"
   },
   {
@@ -729,6 +849,8 @@
     "assignee": "BioSyn AI Corp.",
     "publication_date": "2024-05-12",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023740820B2/en"
   },
   {
@@ -741,6 +863,8 @@
     "assignee": "AgriTech Innovators Ltd.",
     "publication_date": "2023-09-12",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023753167B2/en"
   },
   {
@@ -753,6 +877,8 @@
     "assignee": "TerraPulse Robotics",
     "publication_date": "2024-02-28",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023765514B2/en"
   },
   {
@@ -765,6 +891,8 @@
     "assignee": "Verdant Crop Systems",
     "publication_date": "2023-12-04",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023777861B2/en"
   },
   {
@@ -777,6 +905,8 @@
     "assignee": "CropShield AI",
     "publication_date": "2024-04-18",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023790208B2/en"
   },
   {
@@ -789,6 +919,8 @@
     "assignee": "PulseCare Medical Technologies",
     "publication_date": "2024-01-22",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023802555B2/en"
   },
   {
@@ -801,6 +933,8 @@
     "assignee": "GlucoOptics Corp.",
     "publication_date": "2023-10-14",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023814902B2/en"
   },
   {
@@ -813,6 +947,8 @@
     "assignee": "PrecisionSurgical Inc.",
     "publication_date": "2024-06-01",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023827249B2/en"
   },
   {
@@ -825,6 +961,8 @@
     "assignee": "OmniSense Networks",
     "publication_date": "2023-07-30",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023839596B2/en"
   },
   {
@@ -837,6 +975,8 @@
     "assignee": "GridLock IoT Solutions",
     "publication_date": "2024-04-05",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023851943B2/en"
   },
   {
@@ -849,6 +989,8 @@
     "assignee": "KineTech Robotics",
     "publication_date": "2023-12-19",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023864290B2/en"
   },
   {
@@ -861,6 +1003,8 @@
     "assignee": "LogiBot Mobility",
     "publication_date": "2024-02-14",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023876637B2/en"
   },
   {
@@ -873,6 +1017,8 @@
     "assignee": "SolidVolt Energy Inc.",
     "publication_date": "2024-03-02",
     "domain": "Energy",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023888984B2/en"
   },
   {
@@ -885,6 +1031,8 @@
     "assignee": "HelioTech Photovoltaics",
     "publication_date": "2023-09-25",
     "domain": "Energy",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023901331B2/en"
   },
   {
@@ -897,6 +1045,8 @@
     "assignee": "AeroAdditives Corp.",
     "publication_date": "2024-05-08",
     "domain": "Manufacturing",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023913678B2/en"
   },
   {
@@ -909,6 +1059,8 @@
     "assignee": "SteelTech Industrial Systems",
     "publication_date": "2023-11-03",
     "domain": "Manufacturing",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023926025B2/en"
   },
   {
@@ -921,6 +1073,8 @@
     "assignee": "StreamCore Systems",
     "publication_date": "2024-01-30",
     "domain": "Software",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023938372B2/en"
   },
   {
@@ -933,6 +1087,8 @@
     "assignee": "CryptaIdentity Labs",
     "publication_date": "2023-08-18",
     "domain": "Software",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023950719B2/en"
   },
   {
@@ -945,6 +1101,8 @@
     "assignee": "GaNPower Semiconductor",
     "publication_date": "2024-04-12",
     "domain": "Electronics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023963066B2/en"
   },
   {
@@ -957,6 +1115,8 @@
     "assignee": "NanoDiagnostics Inc.",
     "publication_date": "2024-02-05",
     "domain": "Biotechnology",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023975413B2/en"
   },
   {
@@ -969,6 +1129,8 @@
     "assignee": "General Electric Company",
     "publication_date": "1958-11-04",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023987760B2/en"
   },
   {
@@ -981,6 +1143,8 @@
     "assignee": "Precision Kinematics Corp.",
     "publication_date": "1968-11-26",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023000108B2/en"
   },
   {
@@ -993,6 +1157,8 @@
     "assignee": "Ferguson Drive Systems",
     "publication_date": "1978-08-29",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023012455B2/en"
   },
   {
@@ -1005,6 +1171,8 @@
     "assignee": "Industrial Drive Technologies",
     "publication_date": "1961-06-13",
     "domain": "Mechanical Engineering",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023024802B2/en"
   },
   {
@@ -1017,6 +1185,8 @@
     "assignee": "Cognitive AI Systems Inc.",
     "publication_date": "2024-03-15",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023037149B2/en"
   },
   {
@@ -1029,6 +1199,8 @@
     "assignee": "EdgeGen Technologies LLC",
     "publication_date": "2023-11-20",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023049496B2/en"
   },
   {
@@ -1041,6 +1213,8 @@
     "assignee": "Aegis Analytics Corp.",
     "publication_date": "2024-01-10",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023061843B2/en"
   },
   {
@@ -1053,6 +1227,8 @@
     "assignee": "RoboKinematics Labs",
     "publication_date": "2023-08-05",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023074190B2/en"
   },
   {
@@ -1065,6 +1241,8 @@
     "assignee": "BioSyn AI Corp.",
     "publication_date": "2024-05-12",
     "domain": "Artificial Intelligence",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023086537B2/en"
   },
   {
@@ -1077,6 +1255,8 @@
     "assignee": "AgriTech Innovators Ltd.",
     "publication_date": "2023-09-12",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023098884B2/en"
   },
   {
@@ -1089,6 +1269,8 @@
     "assignee": "TerraPulse Robotics",
     "publication_date": "2024-02-28",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023111231B2/en"
   },
   {
@@ -1101,6 +1283,8 @@
     "assignee": "Verdant Crop Systems",
     "publication_date": "2023-12-04",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023123578B2/en"
   },
   {
@@ -1113,6 +1297,8 @@
     "assignee": "CropShield AI",
     "publication_date": "2024-04-18",
     "domain": "Agriculture",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023135925B2/en"
   },
   {
@@ -1125,6 +1311,8 @@
     "assignee": "PulseCare Medical Technologies",
     "publication_date": "2024-01-22",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023148272B2/en"
   },
   {
@@ -1137,6 +1325,8 @@
     "assignee": "GlucoOptics Corp.",
     "publication_date": "2023-10-14",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023160619B2/en"
   },
   {
@@ -1149,6 +1339,8 @@
     "assignee": "PrecisionSurgical Inc.",
     "publication_date": "2024-06-01",
     "domain": "Healthcare",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023172966B2/en"
   },
   {
@@ -1161,6 +1353,8 @@
     "assignee": "OmniSense Networks",
     "publication_date": "2023-07-30",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023185313B2/en"
   },
   {
@@ -1173,6 +1367,8 @@
     "assignee": "GridLock IoT Solutions",
     "publication_date": "2024-04-05",
     "domain": "IoT",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023197660B2/en"
   },
   {
@@ -1185,6 +1381,8 @@
     "assignee": "KineTech Robotics",
     "publication_date": "2023-12-19",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023210007B2/en"
   },
   {
@@ -1197,6 +1395,8 @@
     "assignee": "LogiBot Mobility",
     "publication_date": "2024-02-14",
     "domain": "Robotics",
+    "source_type": "DATABASE REPOSITORY",
+    "source_status": "DATABASE",
     "source_url": "https://patents.google.com/patent/US2023222354B2/en"
   }
 ]

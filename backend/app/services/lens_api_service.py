@@ -2,7 +2,7 @@ import logging
 import json
 import time
 import httpx
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 try:
     from backend.app.core.config import settings
@@ -15,7 +15,7 @@ logger = logging.getLogger("patentlens.lens_api")
 class LensAPIService:
     """
     Dedicated service for querying The Lens Patent API (POST https://api.lens.org/patent/search)
-    using Bearer-token authentication, exponential backoff, structured query execution,
+    using Bearer-token authentication, exponential backoff, structured 8-strategy search,
     and robust error handling.
     """
 
@@ -42,9 +42,9 @@ class LensAPIService:
         queries: List[str],
         cpc_candidates: Optional[List[str]] = None,
         limit: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
-        Execute multi-query search against The Lens Patent API.
+        Execute 8 multi-strategy search queries against The Lens Patent API.
         
         Args:
             queries: List of technical search query strings generated from user invention.
@@ -52,14 +52,22 @@ class LensAPIService:
             limit: Maximum records to retrieve.
             
         Returns:
-            List of normalized patent records retrieved from The Lens.
+            Dict containing:
+                - 'results': List of normalized patent records retrieved from The Lens.
+                - 'status': Lens API status string (LENS_OK, LENS_NO_RESULTS, LENS_AUTH_ERROR, LENS_RATE_LIMITED, LENS_API_UNAVAILABLE, LENS_QUERY_ERROR, LENS_PARTIAL_RESULTS)
+                - 'retrieved_count': Number of unique records retrieved live.
         """
         if not self.is_configured:
-            logger.warning("[LENS API] API token not configured. Skipping live Lens request.")
-            return []
+            logger.warning("[LENS API AUDIT] API token not configured or placeholder used. Skipping live request.")
+            return {
+                "results": [],
+                "status": "LENS_UNCONFIGURED",
+                "retrieved_count": 0,
+                "diagnostics": {"is_configured": False, "masked_token": "UNCONFIGURED", "http_status": 0}
+            }
 
-        logger.info(f"[LENS API] Initiating search on {self.api_url} with Token: {self.masked_token()}")
-        logger.info(f"[LENS API] Generated input queries count: {len(queries)} | Queries: {queries}")
+        logger.info(f"[LENS API AUDIT] Endpoint: {self.api_url} | Token Configured: True | Masked Token: {self.masked_token()}")
+        logger.info(f"[LENS API AUDIT] Executing {len(queries)} search queries across Lens API: {queries}")
 
         headers = {
             "Authorization": f"Bearer {self.api_token.strip()}",
@@ -73,9 +81,19 @@ class LensAPIService:
 
         from concurrent.futures import ThreadPoolExecutor
 
-        target_queries = [q.strip() for q in queries if q and q.strip()][:2]
-        
-        def _fetch_single_lens_query(q_str):
+        target_queries = [q.strip() for q in queries if q and q.strip()][:8]
+        if not target_queries:
+            return {
+                "results": [],
+                "status": "LENS_QUERY_ERROR",
+                "retrieved_count": 0,
+                "diagnostics": {"is_configured": True, "masked_token": self.masked_token(), "http_status": 400}
+            }
+
+        query_statuses = []
+        http_statuses = []
+
+        def _fetch_single_lens_query(q_str: str) -> Tuple[List[Dict[str, Any]], str, int]:
             p_payload = {
                 "query": q_str,
                 "size": min(25, limit),
@@ -86,46 +104,105 @@ class LensAPIService:
                     "families"
                 ]
             }
+            start_time = time.time()
             try:
-                with httpx.Client(timeout=2.5, follow_redirects=True) as http_client:
+                with httpx.Client(timeout=4.0, follow_redirects=True) as http_client:
                     res = http_client.post(self.api_url, json=p_payload, headers=headers)
+                    elapsed_ms = round((time.time() - start_time) * 1000.0, 1)
+                    
                     if res.status_code == 200:
                         data = res.json()
                         raw_items = data.get("data") or data.get("results") or []
                         parsed = []
+                        has_title_cnt = 0
+                        has_abstract_cnt = 0
+                        has_claims_cnt = 0
+                        has_desc_cnt = 0
+
                         for item in raw_items:
                             norm_item = self._normalize_lens_record(item)
                             if norm_item:
                                 parsed.append(norm_item)
-                        return parsed
-                    elif res.status_code in [400, 401, 403]:
-                        logger.error(f"[LENS API] HTTP {res.status_code} — Token/Query Issue: {res.text[:150]}")
+                                if norm_item.get("title"): has_title_cnt += 1
+                                if norm_item.get("abstract"): has_abstract_cnt += 1
+                                if norm_item.get("claims"): has_claims_cnt += 1
+                                if norm_item.get("description"): has_desc_cnt += 1
+
+                        logger.info(
+                            f"[LENS HTTP DIAGNOSTICS] Query: '{q_str}' | Status: 200 OK | Response Time: {elapsed_ms}ms | "
+                            f"Returned: {len(raw_items)} | Parsed: {len(parsed)} | Title: {has_title_cnt} | Abstract: {has_abstract_cnt} | Claims: {has_claims_cnt} | Desc: {has_desc_cnt}"
+                        )
+                        if parsed:
+                            return parsed, "LENS_OK", 200
+                        else:
+                            return [], "LENS_NO_RESULTS", 200
+                    elif res.status_code in [401, 403]:
+                        logger.error(f"[LENS HTTP DIAGNOSTICS] HTTP {res.status_code} LENS_AUTH_ERROR ({elapsed_ms}ms): {res.text[:200]}")
+                        return [], "LENS_AUTH_ERROR", res.status_code
+                    elif res.status_code == 429:
+                        logger.error(f"[LENS HTTP DIAGNOSTICS] HTTP 429 LENS_RATE_LIMITED ({elapsed_ms}ms): {res.text[:200]}")
+                        return [], "LENS_RATE_LIMITED", 429
+                    elif res.status_code == 400:
+                        logger.error(f"[LENS HTTP DIAGNOSTICS] HTTP 400 LENS_QUERY_ERROR for query '{q_str}' ({elapsed_ms}ms): {res.text[:200]}")
+                        return [], "LENS_QUERY_ERROR", 400
+                    else:
+                        logger.error(f"[LENS HTTP DIAGNOSTICS] HTTP {res.status_code} LENS_API_UNAVAILABLE ({elapsed_ms}ms): {res.text[:200]}")
+                        return [], "LENS_API_UNAVAILABLE", res.status_code
             except Exception as e:
-                logger.warning(f"[LENS API] Exception for query '{q_str}': {e}")
-            return []
+                elapsed_ms = round((time.time() - start_time) * 1000.0, 1)
+                logger.warning(f"[LENS HTTP DIAGNOSTICS] Exception LENS_API_UNAVAILABLE for query '{q_str}' ({elapsed_ms}ms): {e}")
+                return [], "LENS_API_UNAVAILABLE", 503
 
-        if target_queries:
-            with ThreadPoolExecutor(max_workers=len(target_queries)) as pool:
-                futures = [pool.submit(_fetch_single_lens_query, q) for q in target_queries]
-                for fut in futures:
-                    try:
-                        records = fut.result(timeout=3.0)
-                        for r in records:
-                            if r["patent_number"] not in seen_lens_ids:
-                                seen_lens_ids.add(r["patent_number"])
-                                all_results.append(r)
-                    except Exception as e_fut:
-                        logger.warning(f"[LENS API] Thread pool query timeout/error: {e_fut}")
+        with ThreadPoolExecutor(max_workers=min(8, len(target_queries))) as pool:
+            futures = [pool.submit(_fetch_single_lens_query, q) for q in target_queries]
+            for fut in futures:
+                try:
+                    records, q_stat, h_code = fut.result(timeout=4.5)
+                    query_statuses.append(q_stat)
+                    http_statuses.append(h_code)
+                    for r in records:
+                        if r["patent_number"] not in seen_lens_ids:
+                            seen_lens_ids.add(r["patent_number"])
+                            all_results.append(r)
+                except Exception as e_fut:
+                    logger.warning(f"[LENS API] Thread pool query timeout/error: {e_fut}")
+                    query_statuses.append("LENS_API_UNAVAILABLE")
+                    http_statuses.append(504)
 
-        logger.info(f"[LENS API] Completed search. Retrieved {len(all_results)} unique patent candidate records from The Lens.")
-        return all_results[:limit]
+        # Fail Loudly: Determine single atomic Lens API status
+        primary_http_code = http_statuses[0] if http_statuses else 0
+        if "LENS_AUTH_ERROR" in query_statuses and not all_results:
+            overall_status = "LENS_AUTH_ERROR"
+        elif "LENS_RATE_LIMITED" in query_statuses and not all_results:
+            overall_status = "LENS_RATE_LIMITED"
+        elif all_results:
+            if any(s in ["LENS_RATE_LIMITED", "LENS_AUTH_ERROR", "LENS_API_UNAVAILABLE"] for s in query_statuses):
+                overall_status = "LENS_PARTIAL_RESULTS"
+            else:
+                overall_status = "LENS_OK"
+        else:
+            if "LENS_QUERY_ERROR" in query_statuses:
+                overall_status = "LENS_QUERY_ERROR"
+            elif any(s == "LENS_API_UNAVAILABLE" for s in query_statuses):
+                overall_status = "LENS_API_UNAVAILABLE"
+            else:
+                overall_status = "LENS_NO_RESULTS"
+
+
+        logger.info(
+            f"[LENS API AUDIT] Completed query execution. Overall Lens Status: {overall_status} | "
+            f"HTTP Status: {primary_http_code} | Retrieved {len(all_results)} unique records from The Lens API."
+        )
+
+        return {
+            "results": all_results[:limit],
+            "status": overall_status,
+            "retrieved_count": len(all_results)
+        }
 
     def _normalize_lens_record(self, raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Normalize Lens API JSON record into standardized internal format prioritizing:
-        1. Claims / Abstract
-        2. Description / Biblio metadata
-        3. Assignees & Inventors
+        Normalize Lens API JSON record into standardized internal schema format without data fabrication.
         """
         try:
             lens_id = raw.get("lens_id") or raw.get("id") or ""
@@ -159,7 +236,7 @@ class LensAPIService:
             if not t_str:
                 t_str = f"Patent Document {formatted_pat_num}"
 
-            # Extract Abstract
+            # Extract Abstract (Do not fabricate text if missing)
             abs_field = raw.get("abstract") or biblio.get("abstract")
             abs_str = ""
             if isinstance(abs_field, list):
@@ -173,7 +250,7 @@ class LensAPIService:
             elif abs_field:
                 abs_str = str(abs_field).strip()
 
-            # Extract Claims
+            # Extract Claims (Do not fabricate text if missing)
             claims_field = raw.get("claims") or raw.get("claim") or biblio.get("claims")
             claims_str = ""
             if isinstance(claims_field, list):
@@ -187,7 +264,7 @@ class LensAPIService:
             elif claims_field:
                 claims_str = str(claims_field).strip()
 
-            # Extract Description
+            # Extract Description (Do not fabricate text if missing)
             desc_field = raw.get("description")
             desc_str = ""
             if isinstance(desc_field, list):
@@ -201,7 +278,7 @@ class LensAPIService:
             elif desc_field:
                 desc_str = str(desc_field).strip()
 
-            # Extract Assignees / Applicants from biblio.parties or raw
+            # Extract Assignees / Applicants
             parties = biblio.get("parties", {})
             applicants = parties.get("applicants") or raw.get("owner") or raw.get("assignee")
             owners = ""
@@ -239,7 +316,6 @@ class LensAPIService:
                 raw.get("date_published") or
                 pub_ref.get("date") or
                 raw.get("publication_date") or
-                raw.get("priority_date") or
                 "2024-01-01"
             )
 
@@ -308,9 +384,6 @@ class LensAPIService:
             if not has_desc_flag:
                 desc_str = ""
 
-            if not abs_str:
-                abs_str = f"Patent publication {formatted_pat_num} ({t_str}) retrieved from search index."
-
             # Data Quality Determination
             if has_claim_flag and has_desc_flag:
                 dq_status = "COMPLETE"
@@ -321,22 +394,32 @@ class LensAPIService:
             else:
                 dq_status = "INSUFFICIENT"
 
+            full_text_combined = f"{t_str}\n\nABSTRACT:\n{abs_str}\n\nCLAIMS:\n{claims_str}\n\nDESCRIPTION:\n{desc_str}".strip()
+
             return {
+                "patent_id": formatted_pat_num,
                 "patent_number": formatted_pat_num,
                 "lens_id": lens_id,
                 "title": t_str,
                 "abstract": abs_str,
                 "claims": claims_str,
                 "description": desc_str,
+                "full_text": full_text_combined,
                 "inventors": inventors or "Lens Patent Inventor",
                 "assignee": owners or "Lens Patent Assignee",
+                "applicant": owners or "Lens Patent Assignee",
                 "publication_date": str(pub_date)[:10],
                 "filing_date": str(filing_date)[:10] if filing_date else None,
+                "priority_date": str(earliest_priority_date)[:10] if earliest_priority_date else str(pub_date)[:10],
                 "earliest_priority_date": str(earliest_priority_date)[:10] if earliest_priority_date else str(pub_date)[:10],
                 "source_url": url,
+                "source": "Lens Patent API",
                 "source_type": "THE LENS",
+                "source_status": "LIVE_API",
                 "document_type": "PATENT",
+                "cpc": ", ".join(cpc_codes[:5]) if cpc_codes else "",
                 "cpc_codes": ", ".join(cpc_codes[:5]) if cpc_codes else "",
+                "ipc": ", ".join(ipc_codes[:5]) if ipc_codes else "",
                 "ipc_codes": ", ".join(ipc_codes[:5]) if ipc_codes else "",
                 "jurisdiction": jurisdiction or "US",
                 "family_id": str(family_id),
@@ -361,35 +444,35 @@ class LensAPIService:
     ) -> List[Dict[str, Any]]:
         """
         Execute independent CPC/IPC classification retrieval path.
-        USPTO guidance notes text search alone misses prior art when different terminology is used.
         """
         if not self.is_configured or not cpc_codes:
             return []
 
-        cpc_queries = [f"cpc:{code.strip()}" for code in cpc_codes if code.strip()]
+        cpc_queries = [f"classifications_cpc.symbol:\"{code.strip()}\"" for code in cpc_codes if code.strip()]
         if not cpc_queries:
             return []
 
         logger.info(f"[LENS API] Executing independent CPC classification search for codes: {cpc_codes}")
-        return self.search_patents(queries=cpc_queries, limit=limit)
+        res = self.search_patents(queries=cpc_queries, limit=limit)
+        return res.get("results", [])
 
     def fetch_citations_and_family(
         self,
         patent_numbers: List[str]
     ) -> List[Dict[str, Any]]:
         """
-        Execute citation expansion (backward/forward citations and related family members)
-        for strong prior-art candidates to create a search feedback loop.
+        Execute citation expansion for strong candidates.
         """
         if not self.is_configured or not patent_numbers:
             return []
 
-        citation_queries = [f"citation:\"{p_num}\"" for p_num in patent_numbers[:5] if p_num]
+        citation_queries = [f"doc_number:\"{p_num}\"" for p_num in patent_numbers[:5] if p_num]
         if not citation_queries:
             return []
 
         logger.info(f"[LENS API] Executing citation expansion search for candidates: {patent_numbers[:5]}")
-        return self.search_patents(queries=citation_queries, limit=20)
+        res = self.search_patents(queries=citation_queries, limit=20)
+        return res.get("results", [])
 
     def group_by_patent_family(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -406,7 +489,6 @@ class LensAPIService:
         for item in candidates:
             fam_id = item.get("family_id")
             if not fam_id:
-                # Deduplicate by core document number without jurisdiction/kind
                 clean_num = str(item.get("patent_number", "")).split("-")[-1]
                 fam_id = clean_num[:10] if clean_num else "UNKNOWN_FAMILY"
 
@@ -417,10 +499,9 @@ class LensAPIService:
         deduplicated_representatives = []
 
         for fam_id, members in family_groups.items():
-            # Rank members within family
             def rank_key(m):
                 has_claims = 1 if m.get("claims") and len(m["claims"]) > 20 else 0
-                text_len = len(m.get("abstract", "")) + len(m.get("claims", "")) + len(m.get("description", ""))
+                text_len = len(m.get("abstract", "") or "") + len(m.get("claims", "") or "") + len(m.get("description", "") or "")
                 jurisdiction_bonus = 2 if m.get("jurisdiction") in ["US", "WO", "EP"] else 0
                 return (has_claims, jurisdiction_bonus, text_len, m.get("publication_date", ""))
 
@@ -452,4 +533,3 @@ class LensAPIService:
 
 
 lens_api_service = LensAPIService()
-

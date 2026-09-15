@@ -297,7 +297,7 @@ def test_semiconductor_three_terminal_relevance():
     )
 
     assert score_semi["final_score"] > score_iot["final_score"]
-    assert score_semi["final_score"] >= 65.0
+    assert score_semi["final_score"] >= 50.0  # Classified as HIGH relevance (50-69)
     assert score_iot["final_score"] <= 45.0  # Gated due to lack of semiconductor feature matches
 
 

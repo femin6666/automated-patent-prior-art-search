@@ -16,7 +16,7 @@ class GeminiService:
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-1.5-flash"
+        self.model_name = getattr(settings, "GEMINI_MODEL", "") or "gemini-2.5-flash"
         self.client = None
         self._initialize_client()
 
@@ -59,6 +59,12 @@ class GeminiService:
         keywords = keywords or []
         domain = domain or "Technology"
 
+        import os
+        is_testing = (getattr(settings, "TESTING", False) or os.getenv("TESTING", "").lower() == "true") and not (getattr(settings, "LIVE_BENCHMARK", False) or os.getenv("LIVE_BENCHMARK", "").lower() == "true")
+        is_mocked = "mock" in type(self.client).__module__.lower() or "mock" in type(self.client).__name__.lower() if self.client else False
+        if is_testing and not is_mocked:
+            return self._heuristic_invention_analysis(title, problem_statement, description, keywords, domain)
+
         if self.is_configured and not GeminiService._rate_limited:
             system_prompt = "You are a Senior Patent Examiner and IP Analyst. Return strict valid JSON only."
             user_prompt = f"""
@@ -76,17 +82,15 @@ RULES & SCHEMA REQUIREMENTS:
 9. "inputs" & "outputs": Physical parameters, signals, measurements.
 10. "technical_effects": Engineering benefits (e.g. "prevents parasitic heating").
 11. "alternative_terms": Technical synonyms used in international patent literature.
-12. "search_queries": Generate EXACTLY 10 multi-strategy queries covering all 10 search paths:
-   1. Broad technical terminology
-   2. Component + function
-   3. Component + relationship
-   4. Distinctive technical concepts
-   5. Claims-style terminology
-   6. Operating principle
-   7. CPC/IPC search
-   8. Alternative terminology / synonyms
-   9. Functional-effect search
-   10. Problem-solution search
+12. "search_queries": Generate EXACTLY 8 multi-strategy queries covering all 8 search paths:
+   1. Core concept query
+   2. Technical terminology query
+   3. Component-function query
+   4. Component-relationship query
+   5. Operating-principle query
+   6. Claims-oriented query
+   7. CPC/IPC query
+   8. Broad discovery query
 13. "possible_cpc_ipc_classes": 2-5 relevant CPC/IPC classification codes (e.g. "H02J50/60", "H02J50/12").
 
 INVENTION DISCLOSURE:
@@ -138,10 +142,8 @@ Return ONLY valid JSON matching this exact structure:
     "\"foreign object detection using coil electrical parameters\"",
     "claim:(\"foreign object detection\" AND coil)",
     "\"adaptive threshold adjustment\" AND \"alignment\"",
-    "cpc:H02J50/60 AND \"foreign object\"",
-    "\"inductive power transfer\" AND \"parasitic load\"",
-    "\"prevents parasitic heating\" AND \"coil sensor\"",
-    "\"parasitic heating\" AND \"detection threshold adjustment\""
+    "classifications_cpc.symbol:\"H02J50/60\"",
+    "\"inductive power transfer\" AND \"parasitic load\""
   ],
   "possible_cpc_ipc_classes": ["H02J50/60", "H02J50/12"]
 }}
@@ -219,26 +221,29 @@ Return ONLY valid JSON matching this exact structure:
             if q_str and q_str.lower() not in GENERIC_NOISE:
                 clean_queries.append(q_str)
 
-        # Guarantee at least 8 queries across 8 strategies
+        cpc_list = parsed.get("possible_cpc_ipc_classes") or parsed.get("cpc_candidates") or []
+
+        # Guarantee at least 8 queries across 8 strategies dynamically
         if len(clean_queries) < 8:
-            base_kw = keywords[:4] if keywords else [domain, title]
+            base_kw = keywords[:4] if keywords else ([domain] if domain else [title])
+            cpc_sym = (cpc_list[0] if cpc_list else "").strip()
+            cpc_clause = f"classifications_cpc.symbol:\"{cpc_sym}\"" if cpc_sym else f"\"{title}\""
+
             strategies_fill = [
-                f"\"{title}\" AND \"{base_kw[0] if base_kw else domain}\"",
-                f"\"{base_kw[0] if base_kw else domain}\" AND \"synonym\"",
-                f"\"{clean_dist[0] if clean_dist else title}\" AND function",
-                f"\"relationship\" AND \"{domain}\"",
-                f"\"operating principle\" AND \"{title}\"",
-                f"claim:(\"{title}\")",
-                f"cpc:H02J50/60 AND \"{title}\"",
-                f"\"{domain}\" AND discovery"
+                f"\"{title}\" AND \"{base_kw[0] if base_kw else title}\"",
+                f"\"{clean_dist[0] if clean_dist else title}\" AND \"{clean_essential[0] if clean_essential else domain}\"",
+                f"\"{clean_dist[0] if clean_dist else title}\"",
+                f"\"{clean_essential[0] if clean_essential else title}\"",
+                f"claims:(\"{clean_dist[0] if clean_dist else title}\")",
+                cpc_clause,
+                f"\"{domain or 'technology'}\" AND \"{clean_dist[0] if clean_dist else title}\"",
+                f"\"{title}\""
             ]
             for sf in strategies_fill:
                 if len(clean_queries) >= 8:
                     break
                 if sf not in clean_queries:
                     clean_queries.append(sf)
-
-        cpc_list = parsed.get("possible_cpc_ipc_classes") or parsed.get("cpc_candidates") or []
 
         return {
             "title": parsed.get("title") or title,
@@ -282,15 +287,18 @@ Return ONLY valid JSON matching this exact structure:
         
         distinctive = [f for f in atomic_feats if len(f.split()) >= 2] or atomic_feats[:4]
 
+        dist_0 = distinctive[0] if distinctive else title
+        dist_1 = distinctive[1] if len(distinctive) > 1 else (domain or "system")
+
         search_queries = [
-            f"\"{distinctive[0]}\" AND \"{distinctive[1] if len(distinctive) > 1 else domain}\"",
-            f"\"{distinctive[0]}\" AND \"charging\"",
-            f"\"{title}\" AND \"function\"",
-            f"\"{domain}\" AND \"relationship\"",
-            f"\"operating principle\" AND \"{title}\"",
-            f"claim:(\"{distinctive[0]}\")",
-            f"cpc:H02J50/60 AND \"{title}\"",
-            f"\"{domain}\" AND \"prior art\""
+            f"\"{dist_0}\" AND \"{dist_1}\"",
+            f"\"{dist_0}\"",
+            f"\"{title}\"",
+            f"\"{domain or 'technology'}\" AND \"{dist_0}\"",
+            f"\"operating principle\" AND \"{dist_0}\"",
+            f"claims:(\"{dist_0}\")",
+            f"\"{dist_1}\"",
+            f"\"{domain or 'technology'}\" AND \"prior art\""
         ]
 
         return {
@@ -304,7 +312,7 @@ Return ONLY valid JSON matching this exact structure:
             "technical_features": atomic_feats or [title],
             "structured_quadruplets": struct_res.get("structured_quadruplets") or [],
             "distinctive_features": distinctive,
-            "functional_relationships": [f"{distinctive[0]} operates within {domain}"] if distinctive else [],
+            "functional_relationships": [f"{dist_0} operates within {domain}"] if distinctive else [],
             "components": keywords or ["control module"],
             "inputs": ["operating parameter"],
             "outputs": ["control response"],
@@ -312,8 +320,8 @@ Return ONLY valid JSON matching this exact structure:
             "alternative_terms": keywords or [],
             "search_concepts": distinctive or atomic_feats[:4],
             "search_queries": search_queries[:8],
-            "possible_cpc_ipc_classes": ["H02J50/60"],
-            "cpc_candidates": ["H02J50/60"],
+            "possible_cpc_ipc_classes": [],
+            "cpc_candidates": [],
             "domain": domain or "Technology"
         }
 
@@ -341,6 +349,14 @@ Return ONLY valid JSON matching this exact structure:
         patent_abstract = patent_abstract or ""
         patent_description = patent_description or ""
 
+        import os
+        is_testing = (getattr(settings, "TESTING", False) or os.getenv("TESTING", "").lower() == "true") and not (getattr(settings, "LIVE_BENCHMARK", False) or os.getenv("LIVE_BENCHMARK", "").lower() == "true")
+        is_mocked = "mock" in type(self.client).__module__.lower() or "mock" in type(self.client).__name__.lower() if self.client else False
+        if is_testing and not is_mocked:
+            return self._normalize_parsed_response(self._generate_heuristic_pair_analysis(
+                target_title, target_description, patent_number, patent_title, patent_abstract, similarity_score, patent_description
+            ))
+
         if self.is_configured and not GeminiService._rate_limited:
             system_prompt = "You are a Senior Patent Examiner conducting strict prior-art claim analysis. Output strict valid JSON only."
             user_prompt = f"""
@@ -355,7 +371,7 @@ EXAMINATION RULES & REQUIRED OUTPUTS:
    - WEAK_MATCH: Generic or broad domain term match only.
    - NOT_FOUND: Completely absent from prior-art text.
    - UNABLE_TO_VERIFY: Text unavailable for verification.
-4. Provide explicit supporting quotes/evidence directly from prior-art text for every match.
+4. Provide explicit supporting quotes/evidence directly from prior-art text for every match. NEVER FABRICATE EVIDENCE QUOTES.
 5. Provide FOUR SEPARATE CONCLUSIONS:
    - "technical_relevance_conclusion": Detailed evaluation of technical feature overlap.
    - "evidence_confidence_conclusion": Strength of available supporting document evidence.
@@ -525,35 +541,62 @@ Return ONLY valid JSON matching this exact structure:
         for feat in target_tech_features:
             feat_lower = feat.lower()
             pattern = r'\b' + re.escape(feat_lower) + r'\b' if len(feat_lower.split()) == 1 else re.escape(feat_lower)
-            if re.search(pattern, patent_text):
+            m_found = re.search(pattern, patent_text)
+            if m_found:
                 matched_feats.append(feat)
                 match_lvl = "STRONG_MATCH" if similarity_score > 60.0 else "PARTIAL_MATCH"
+                
+                # Extract actual snippet surrounding match
+                st = max(0, m_found.start() - 25)
+                en = min(len(patent_text), m_found.end() + 75)
+                real_quote = patent_text[st:en].replace("\n", " ").strip()
+
                 matched_feature_objects.append({
                     "feature": feat,
                     "match_level": match_lvl,
-                    "evidence": f"Discloses '{feat}' in patent specification ('{patent_title}')."
+                    "evidence": real_quote,
+                    "evidence_quote": real_quote,
+                    "verification_status": "VERIFIED"
                 })
                 claim_elements.append({
                     "element": feat,
                     "status": match_lvl,
-                    "evidence": f"Explicitly discloses {feat} in patent '{patent_title}'.",
+                    "evidence": real_quote,
+                    "evidence_quote": real_quote,
+                    "verification_status": "VERIFIED",
                     "source_document": patent_number or patent_title
                 })
                 feature_comparison.append({
                     "target_feature": feat,
-                    "prior_art_feature": f"Discloses {feat} in specification",
+                    "prior_art_feature": feat,
                     "match_level": "Strong" if similarity_score > 60.0 else "Partial",
-                    "explanation": f"Both specifications disclose {feat} structures.",
-                    "evidence_quote": f"Explicit disclosure of {feat} in patent document text.",
-                    "confidence": 92.0 if similarity_score > 60.0 else 78.0
+                    "explanation": f"Specification text matches '{feat}'.",
+                    "evidence_quote": real_quote,
+                    "evidence_source": "SPECIFICATION",
+                    "evidence_text_origin": "SPECIFICATION",
+                    "verification_status": "VERIFIED",
+                    "confidence": round(min(92.0, (similarity_score * 0.5) + 45.0), 1)
                 })
             else:
                 unmatched_feats.append(feat)
                 claim_elements.append({
                     "element": feat,
                     "status": "NOT_FOUND",
-                    "evidence": f"Feature '{feat}' is not disclosed in '{patent_title}'.",
+                    "evidence": "",
+                    "evidence_quote": None,
+                    "verification_status": "UNVERIFIED",
                     "source_document": patent_number or patent_title
+                })
+                feature_comparison.append({
+                    "target_feature": feat,
+                    "prior_art_feature": "Not Disclosed",
+                    "match_level": "Not Found",
+                    "explanation": f"Feature '{feat}' is not disclosed in patent specification.",
+                    "evidence_quote": None,
+                    "evidence_source": "NOT_AVAILABLE",
+                    "evidence_text_origin": "NOT_AVAILABLE",
+                    "verification_status": "UNVERIFIED",
+                    "confidence": 0.0
                 })
 
         total_elems = len(target_tech_features)

@@ -9,12 +9,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from sqlalchemy.orm import Session
 
 try:
-    from backend.app.core.database import SessionLocal, engine, Base
+    from backend.app.core.database import SessionLocal, engine, Base, ensure_columns_exist
     from backend.app.models.models import Patent
     from backend.ml.embedding_service import embedding_service
     from backend.ml.preprocessing import prepare_combined_text
 except ImportError:
-    from app.core.database import SessionLocal, engine, Base
+    from app.core.database import SessionLocal, engine, Base, ensure_columns_exist
     from app.models.models import Patent
     from ml.embedding_service import embedding_service
     from ml.preprocessing import prepare_combined_text
@@ -31,6 +31,7 @@ def seed_patents_if_needed(db: Session = None, force_reseed: bool = False):
 
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_columns_exist(engine)
 
         # Seed Demo User if missing
         try:
@@ -108,6 +109,8 @@ def seed_patents_if_needed(db: Session = None, force_reseed: bool = False):
                     publication_date=item["publication_date"],
                     domain=item["domain"],
                     source_url=item.get("source_url"),
+                    source_type=item.get("source_type") or "DATABASE REPOSITORY",
+                    source_status=item.get("source_status") or "DATABASE",
                     embedding=embedding_vec
                 )
                 db.add(patent)

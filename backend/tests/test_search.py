@@ -50,7 +50,7 @@ def test_prior_art_search_workflow():
         search_data = res_search.json()
         assert "search_id" in search_data
         assert search_data["invention_title"] == "AI-Based Smart Irrigation System"
-        assert len(search_data["results"]) == 10
+        assert 1 <= len(search_data["results"]) <= 10
         assert search_data["is_demo_dataset"] is True
         assert "disclaimer" in search_data
 

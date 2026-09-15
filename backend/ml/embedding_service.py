@@ -75,6 +75,34 @@ class SentenceTransformerEmbeddingService:
 
         return self._generate_fallback_vector(text)
 
+    def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """
+        Generate normalized 384-dimensional vector embeddings for a list of input texts in batch.
+        """
+        if not texts:
+            return []
+
+        if self._model is None and not self._load_attempted:
+            try:
+                self.load_model()
+            except Exception as le:
+                logger.warning(f"Could not load SBERT model: {le}")
+
+        if self._model is not None:
+            try:
+                embeddings = self._model.encode(
+                    texts,
+                    batch_size=32,
+                    normalize_embeddings=True,
+                    show_progress_bar=False,
+                    convert_to_numpy=True
+                )
+                return embeddings.tolist()
+            except Exception as e:
+                logger.error(f"Error generating model embeddings: {e}")
+
+        return [self.generate_embedding(text) for text in texts]
+
     def _generate_fallback_vector(self, text: str) -> List[float]:
         import hashlib
         words = text.lower().split()

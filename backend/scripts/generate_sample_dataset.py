@@ -323,6 +323,8 @@ def generate_full_dataset(target_count=100):
             "assignee": template["assignee"],
             "publication_date": template["pub_date"],
             "domain": domain,
+            "source_type": "DATABASE REPOSITORY",
+            "source_status": "DATABASE",
             "source_url": f"https://patents.google.com/patent/{patent_number.replace('-', '')}/en"
         }
         patents.append(patent_entry)

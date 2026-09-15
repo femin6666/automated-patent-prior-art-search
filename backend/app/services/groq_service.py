@@ -14,6 +14,7 @@ class GroqService:
     def __init__(self):
         self.api_key = settings.GROQ_API_KEY
         self.model_name = settings.GROQ_MODEL or "llama-3.3-70b-versatile"
+
         self.client = None
         self._initialize_client()
 
@@ -49,6 +50,13 @@ class GroqService:
         description = description or ""
         keywords = keywords or []
         domain = domain or "Technology"
+
+        import os
+        is_testing = (getattr(settings, "TESTING", False) or os.getenv("TESTING", "").lower() == "true") and not (getattr(settings, "LIVE_BENCHMARK", False) or os.getenv("LIVE_BENCHMARK", "").lower() == "true")
+        is_mocked = "mock" in type(self.client).__module__.lower() or "mock" in type(self.client).__name__.lower() if self.client else False
+        if is_testing and not is_mocked:
+            from backend.app.services.gemini_service import gemini_service
+            return gemini_service._heuristic_invention_analysis(title, problem_statement, description, keywords, domain)
 
         if self.is_configured and self.client is not None:
             try:
@@ -91,7 +99,7 @@ Return ONLY valid JSON matching this exact structure:
     "query strategy 7",
     "query strategy 8"
   ],
-  "possible_cpc_ipc_classes": ["H02J50/60"]
+  "possible_cpc_ipc_classes": ["CPC_CODE_1"]
 }}
 """
                 import concurrent.futures
@@ -140,6 +148,14 @@ Return ONLY valid JSON matching this exact structure:
         patent_title = patent_title or ""
         patent_abstract = patent_abstract or ""
         patent_description = patent_description or ""
+
+        import os
+        is_testing = (getattr(settings, "TESTING", False) or os.getenv("TESTING", "").lower() == "true") and not (getattr(settings, "LIVE_BENCHMARK", False) or os.getenv("LIVE_BENCHMARK", "").lower() == "true")
+        is_mocked = "mock" in type(self.client).__module__.lower() or "mock" in type(self.client).__name__.lower() if self.client else False
+        if is_testing and not is_mocked:
+            return self._generate_heuristic_pair_analysis(
+                target_title, target_description, patent_number, patent_title, patent_abstract, similarity_score, patent_description
+            )
 
         if self.is_configured and self.client is not None:
             try:

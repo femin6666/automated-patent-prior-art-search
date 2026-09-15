@@ -90,4 +90,26 @@ def test_adaptive_hybrid_scoring():
     assert result["final_score"] >= 50.0
     assert result["semantic_score"] == 100.0
 
+def test_sbert_batching_numerical_equivalence():
+    import numpy as np
+    from backend.ml.embedding_service import embedding_service
+
+    sample_sentences = [
+        "A wireless power transfer system employing adaptive resonance for charging.",
+        "The primary transmitter coil generates a magnetic field at a target frequency.",
+        "A secondary receiver coil converts inductive coupling into electrical current.",
+        "Battery management circuit monitors state of health and state of charge.",
+        "Foreign object detection circuit senses parasitic load disruptions."
+    ]
+
+    single_embs = [embedding_service.generate_embedding(s) for s in sample_sentences]
+    batch_embs = embedding_service.generate_embeddings(sample_sentences)
+
+    assert len(single_embs) == len(batch_embs)
+    for single, batch in zip(single_embs, batch_embs):
+        assert len(single) == len(batch) == 384
+        max_diff = float(np.max(np.abs(np.array(single) - np.array(batch))))
+        assert max_diff < 1e-5, f"Batched embedding differed from single embedding by {max_diff}"
+
+
 

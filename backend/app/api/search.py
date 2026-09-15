@@ -17,6 +17,7 @@ try:
     from backend.ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
     from backend.app.services.llm_factory import get_llm_service
     from backend.app.services.patent_api_service import patent_api_service
+    from backend.app.services.lens_api_service import lens_api_service
 except ImportError:
     from ..core.database import get_db, IS_POSTGRES
     from ..core.security import get_current_user
@@ -32,6 +33,7 @@ except ImportError:
     from ...ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
     from ..services.llm_factory import get_llm_service
     from ..services.patent_api_service import patent_api_service
+    from ..services.lens_api_service import lens_api_service
 
 router = APIRouter(prefix="/search", tags=["Prior-Art Search"])
 
@@ -125,7 +127,9 @@ def perform_prior_art_search(
         logger.info(f"[DEBUG PIPELINE] Step 2 Lens/arXiv Search Stats: {api_stats}")
     except Exception as e:
         logger.warning(f"[PATENT API] External search timeout/note ({e}). Proceeding immediately with local dataset candidates.")
-        api_stats = {"patents_retrieved": 0, "patents_searched": 0}
+        fallback_lens_status = "LENS_RATE_LIMITED" if lens_api_service.is_configured else "LENS_UNCONFIGURED"
+        api_stats = {"patents_retrieved": 0, "patents_searched": 0, "lens_api_status": fallback_lens_status}
+
 
     from backend.app.core.database import IS_POSTGRES, HAS_PGVECTOR
     import numpy as np
@@ -134,9 +138,10 @@ def perform_prior_art_search(
         try:
             all_patents = db.query(Patent).order_by(Patent.embedding.l2_distance(user_embedding)).limit(150).all()
         except Exception:
-            all_patents = db.query(Patent).all()
+            all_patents = db.query(Patent).limit(200).all()
     else:
-        all_patents = db.query(Patent).all()
+        all_patents = db.query(Patent).limit(200).all()
+
 
     if not all_patents:
         raise HTTPException(
@@ -177,8 +182,21 @@ def perform_prior_art_search(
             logger.warning(f"Vector pre-filtering fallback: {e_pref}")
             candidate_patents = all_patents[:100]
 
+    from backend.ml.similarity_engine import is_technical_mismatch
+
     scored_items = []
     for patent in candidate_patents:
+        # Stage 3 Funnel Gate: Technical Mismatch Filter (Kill false positives)
+        if is_technical_mismatch(
+            user_domain=request.domain,
+            user_text=target_full_text,
+            patent_title=patent.title,
+            patent_abstract=patent.abstract,
+            patent_domain=patent.domain
+        ):
+            logger.info(f"[STAGE 3 FUNNEL] Disqualified technical mismatch candidate: '{patent.title}'")
+            continue
+
         patent_dict = {
             "title": patent.title,
             "abstract": patent.abstract,
@@ -212,12 +230,25 @@ def perform_prior_art_search(
             "scores": scores
         })
 
-    # Simple patent family deduplication before ranking
+    # Robust patent family deduplication & metric tracking
+    import re
+    def _get_fam_key(pat_obj: Any) -> str:
+        fam_id = getattr(pat_obj, "simple_family_id", None) or getattr(pat_obj, "family_id", None)
+        if fam_id and str(fam_id).strip() and str(fam_id).strip() != "None":
+            return str(fam_id).strip().upper()
+        p_num = (pat_obj.patent_number or "").strip().upper()
+        clean = p_num.split("-")[-1] if "-" in p_num else p_num
+        clean = re.sub(r'[A-Z]\d?$', '', clean)
+        return clean if clean else p_num
+
+    candidates_with_family_ids_cnt = sum(
+        1 for item in scored_items
+        if (getattr(item["patent"], "simple_family_id", None) or getattr(item["patent"], "family_id", None))
+    )
+
     family_grouped: Dict[str, Any] = {}
     for item in scored_items:
-        p_num = item["patent"].patent_number
-        clean_num = p_num.split("-")[-1] if "-" in p_num else p_num
-        fam_key = clean_num[:10].upper() if clean_num else p_num
+        fam_key = _get_fam_key(item["patent"])
 
         if fam_key not in family_grouped:
             family_grouped[fam_key] = item
@@ -228,9 +259,25 @@ def perform_prior_art_search(
             if item["scores"]["final_score"] > prev["scores"]["final_score"] or (item["scores"]["final_score"] == prev["scores"]["final_score"] and curr_claims_len > prev_claims_len):
                 family_grouped[fam_key] = item
 
+    # Stage 4 Technical Relevance Gate (Non-forced Top N): Reject candidates with score < 30% and 0 feature matches
     deduped_scored_items = list(family_grouped.values())
     deduped_scored_items.sort(key=lambda x: x["scores"]["final_score"], reverse=True)
-    top_candidates = deduped_scored_items[:30]
+
+    gated_candidates = []
+    rejected_count = 0
+    for item in deduped_scored_items:
+        sc = item["scores"]
+        has_matched_feat = sc.get("matched_feature_count", 0) > 0 or len(sc.get("strong_matches", [])) > 0 or len(sc.get("partial_matches", [])) > 0
+        has_dist_match = sc.get("distinctive_score", 0.0) > 0.0
+        
+        # Only retain candidates passing technical relevance gate (Score >= 30% or matching features)
+        if sc["final_score"] < 30.0 and not has_matched_feat and not has_dist_match:
+            rejected_count += 1
+            logger.info(f"[STAGE 4 REJECTION] Rejected candidate '{item['patent'].title}' (Score: {sc['final_score']}%) Reason: IRRELEVANT_NO_TECHNICAL_OVERLAP")
+        else:
+            gated_candidates.append(item)
+
+    top_candidates = [item for item in gated_candidates if item["scores"]["final_score"] >= 30.0 or item["scores"]["matched_feature_count"] > 0]
     top_10 = top_candidates[:10]
 
     # Iterative Search & Citation Expansion for top candidates
@@ -273,10 +320,23 @@ def perform_prior_art_search(
 
     pat_searched = api_stats.get("patents_searched") or (len(all_patents) + api_stats.get("patents_retrieved", 0))
     pat_retrieved = api_stats.get("patents_retrieved", 0)
-    if pat_retrieved == 0 and len(candidate_patents) > 0:
-        pat_retrieved = len(candidate_patents)
-    pat_shortlisted = len(top_candidates)
+    pat_shortlisted = len(top_10)
     pat_deeply_analyzed = len(top_10)
+
+    lens_status = api_stats.get("lens_api_status", "LENS_OK")
+
+    # Structured Stage-by-Stage Retrieval Quality Logging & Single Search Trace
+    logger.info("==================================================")
+    logger.info(f"[END-TO-END SEARCH TRACE] User Invention: '{request.title}' | Domain: '{request.domain}'")
+    logger.info(f"[END-TO-END SEARCH TRACE] Extracted Essential Features: {gemini_essential}")
+    logger.info(f"[END-TO-END SEARCH TRACE] Generated Queries: {gemini_queries}")
+    logger.info(f"[END-TO-END SEARCH TRACE] Lens API Endpoint: https://api.lens.org/patent/search | Method: POST")
+    logger.info(f"[END-TO-END SEARCH TRACE] Lens API Status: {lens_status} | Live Records Returned: {pat_retrieved}")
+    logger.info(f"[END-TO-END SEARCH TRACE] DB Candidates Evaluated: {len(candidate_patents)} | Deduplicated Families: {len(family_grouped)}")
+    logger.info(f"[END-TO-END SEARCH TRACE] Stage 4 Rejected Irrelevant Candidates: {rejected_count}")
+    logger.info(f"[END-TO-END SEARCH TRACE] Final Shortlisted Technically Relevant Candidates: {len(top_10)}")
+    logger.info(f"[END-TO-END SEARCH TRACE] Highest Similarity Score: {highest_similarity}% | Risk: {risk_info['risk_level']}")
+    logger.info("==================================================")
 
     patents_with_claims = sum(
         1 for item in scored_items
@@ -291,9 +351,7 @@ def perform_prior_art_search(
     )
     evidence_verified = sum(
         1 for item in top_10
-        if item["scores"].get("evidence_score", 0) > 0
-        or len(item["scores"].get("strong_matches", [])) > 0
-        or item["scores"].get("evidence_status") in ["VERIFIED", "PARTIAL"]
+        if any(e.get("verified") for e in item["scores"].get("evidence_items", []))
     )
 
     from backend.app.schemas.schemas import ScoreBreakdown, PipelineMetrics, PatentFamilyMember
@@ -301,13 +359,23 @@ def perform_prior_art_search(
     pipeline_metrics = PipelineMetrics(
         patents_searched=pat_searched,
         patents_retrieved=pat_retrieved,
+        lens_records_retrieved=pat_retrieved,
+        database_fallback_candidates=len(candidate_patents) if pat_retrieved == 0 else 0,
+        final_shortlisted=len(top_10),
+        total_candidates_evaluated=len(candidate_patents) + pat_retrieved,
+        raw_candidates=len(candidate_patents),
+        candidates_with_family_ids=candidates_with_family_ids_cnt,
+        post_dedup_candidates=len(deduped_scored_items),
         vector_shortlisted=pat_shortlisted,
-        unique_families=len({item["patent"].patent_number.split("-")[0] if "-" in item["patent"].patent_number else item["patent"].patent_number for item in scored_items}),
+        unique_families=len(family_grouped),
+        semantic_candidates=len(candidate_patents),
+        technical_candidates=len(top_10),
         patents_with_claims=patents_with_claims,
         patents_with_full_text=patents_with_full_text,
         evidence_verified_matches=evidence_verified,
         iterative_wave_retrieved=iterative_retrieved,
-        citation_expansions_found=citation_retrieved
+        citation_expansions_found=citation_retrieved,
+        lens_api_status=lens_status
     )
 
     search_record = Search(
@@ -356,24 +424,27 @@ def perform_prior_art_search(
             )
         except Exception as e_pair:
             logger.warning(f"Pair analysis thread fallback for {p_obj.patent_number}: {e_pair}")
-            res_analysis = llm_service._generate_heuristic_pair_analysis(
-                target_title=request.title,
-                target_description=request.description,
-                patent_number=p_obj.patent_number,
-                patent_title=p_obj.title,
-                patent_abstract=p_obj.abstract,
-                similarity_score=s_obj["final_score"],
-                patent_description=p_obj.description
+            res_analysis = llm_service._normalize_parsed_response(
+                llm_service._generate_heuristic_pair_analysis(
+                    target_title=request.title,
+                    target_description=request.description,
+                    patent_number=p_obj.patent_number,
+                    patent_title=p_obj.title,
+                    patent_abstract=p_obj.abstract,
+                    similarity_score=s_obj["final_score"],
+                    patent_description=p_obj.description
+                )
             )
         return i_idx, res_analysis
 
     pair_analysis_map = {}
     if top_10:
+        pair_timeout = 1.0 if (not llm_service.is_configured or lens_status == "LENS_RATE_LIMITED") else 4.0
         with ThreadPoolExecutor(max_workers=min(10, len(top_10))) as pool:
             futures = [pool.submit(_execute_pair_analysis, item_tuple) for item_tuple in enumerate(top_10, start=1)]
             for fut in futures:
                 try:
-                    i_idx, res_analysis = fut.result(timeout=4.0)
+                    i_idx, res_analysis = fut.result(timeout=pair_timeout)
                     pair_analysis_map[i_idx] = res_analysis
                 except Exception as e_fut:
                     logger.warning(f"Thread pool task timeout/error: {e_fut}")
@@ -381,6 +452,7 @@ def perform_prior_art_search(
     for idx, item in enumerate(top_10, start=1):
         pat = item["patent"]
         sc = item["scores"]
+        res_status = "TECHNICALLY_RELEVANT"
 
         sr = SearchResult(
             search_id=search_record.id,
@@ -397,7 +469,7 @@ def perform_prior_art_search(
         f_score = sc["final_score"]
 
         # Retrieve grounded patent pair feature comparison and limitation analysis
-        pair_analysis = pair_analysis_map.get(idx) or llm_service._generate_heuristic_pair_analysis(
+        raw_pair = pair_analysis_map.get(idx) or llm_service._generate_heuristic_pair_analysis(
             target_title=request.title,
             target_description=request.description,
             patent_number=pat.patent_number,
@@ -406,6 +478,7 @@ def perform_prior_art_search(
             similarity_score=f_score,
             patent_description=pat.description
         )
+        pair_analysis = llm_service._normalize_parsed_response(raw_pair)
 
         sb_dict = sc.get("score_breakdown", {})
         conf_score = sc.get("confidence_score") if sc.get("confidence_score") is not None else 45.0
@@ -449,13 +522,28 @@ def perform_prior_art_search(
         rel_info = classify_prior_art_risk(f_score)
         relevance_level = rel_info["label"]
 
+        if f_score < 30.0:
+            res_status = "TECHNICALLY_DISTINCT"
+            overall_res = "NON_ANTICIPATED"
+        elif f_score < 50.0:
+            res_status = "PARTIALLY_RELEVANT"
+            overall_res = "PARTIALLY_DISCLOSED"
+        elif f_score < 70.0:
+            res_status = "TECHNICALLY_RELEVANT"
+            overall_res = "HIGH_SIMILARITY"
+        else:
+            res_status = "TECHNICALLY_RELEVANT"
+            overall_res = "ANTICIPATED"
+
         if temporal_status in ["PUBLISHED_AFTER_REFERENCE", "EARLIER_PRIORITY_BUT_PUBLISHED_AFTER"]:
-            res_status = "TECHNICALLY_RELEVANT_PUBLISHED_LATER"
+            res_status = f"{res_status}_PUBLISHED_LATER"
+
         has_verified_ev = sc.get("evidence_score", 0.0) > 0.0 and any(item.get("verified") for item in sc.get("evidence_items", []))
         if not has_verified_ev:
             ev_conf_conclusion = "NOT VERIFIED — Specification text unavailable or 0 evidence quotes verified."
             ev_status_lbl = "Limited evidence (0% verified)"
-            ev_conf_val = round(min(25.0, sc.get("confidence_score", 20.0)), 1)
+            # Clamp unverified evidence confidence between 10.0 and 25.0 so a valid non-zero float is sent to the frontend
+            ev_conf_val = round(max(10.0, min(25.0, sc.get("confidence_score", 20.0))), 1)
         else:
             ev_conf_conclusion = pair_analysis.get("evidence_confidence_conclusion") or f"Evidence confidence is {conf_score}% based on specification text verification."
             ev_status_lbl = sc.get("evidence_status_label", "Claim evidence verified")
@@ -464,9 +552,27 @@ def perform_prior_art_search(
         tech_rel_conclusion = pair_analysis.get("technical_relevance_conclusion") or f"Technical feature overlap is {sc.get('raw_feature_coverage', 0.0)}% across {sc.get('matched_feature_count', 0)} matching limitations."
         legal_disclaimer = pair_analysis.get("legal_assessment_disclaimer") or "Preliminary AI screening only. Legal patentability is not determined by AI and requires formal patent attorney examination."
 
+        if pat_retrieved > 0:
+            item_source_status = "LIVE_API"
+            item_source_name = "The Lens Patent API"
+            item_retrieval_status = "LIVE_API_SUCCESS"
+            doc_type_val = pat.document_type or "PATENT"
+        else:
+            item_source_status = "DATABASE"
+            item_source_name = "Database Repository"
+            item_retrieval_status = "DATABASE_REPOSITORY_FALLBACK"
+            doc_type_val = "DATABASE RECORD"
+
+        pat_out_obj = PatentOut.model_validate(pat)
+        pat_out_obj.source_status = item_source_status
+        pat_out_obj.source_name = item_source_name
+        pat_out_obj.retrieval_status = item_retrieval_status
+        pat_out_obj.source_type = item_source_name.upper()
+        pat_out_obj.document_type = doc_type_val
+
         result_items_response.append(
             SearchResultItem(
-                patent=PatentOut.model_validate(pat),
+                patent=pat_out_obj,
                 semantic_score=sc["semantic_score"],
                 keyword_score=sc["keyword_score"],
                 domain_score=sc["domain_score"],
@@ -498,7 +604,7 @@ def perform_prior_art_search(
                 missing_elements=pair_analysis.get("missing_elements", []),
                 technical_feature_coverage=sc["keyword_score"],
                 evidence_confidence=ev_conf_val,
-                overall_result=pair_analysis.get("overall_result", "NON_ANTICIPATED"),
+                overall_result=overall_res,
                 score_breakdown=score_bd_obj,
                 family_members=[
                     PatentFamilyMember(
@@ -507,7 +613,7 @@ def perform_prior_art_search(
                         kind="A1",
                         title=pat.title,
                         publication_date=pat.publication_date,
-                        document_type=pat.document_type or "PATENT",
+                        document_type=doc_type_val,
                         source_url=pat.source_url or ""
                     )
                 ],
@@ -518,6 +624,12 @@ def perform_prior_art_search(
                 result_status=res_status,
                 relevance_level=relevance_level,
                 evidence_status=ev_status,
+                evidence_availability_level=sc.get("evidence_availability_level", "NOT_VERIFIABLE"),
+                source_status=item_source_status,
+                source_name=item_source_name,
+                retrieval_status=item_retrieval_status,
+                feature_match_status=sc.get("feature_match_status", "PARTIAL"),
+                feature_match_source=sc.get("feature_match_source", "ABSTRACT/TITLE"),
                 raw_feature_coverage=round(((sc.get("matched_feature_count") or len(pair_analysis.get("matched_features", [])) or (len(sc.get("strong_matches", [])) + len(sc.get("partial_matches", [])))) / (sc.get("total_feature_count") or len(gemini_features) or 9)) * 100.0, 1) if (sc.get("total_feature_count") or len(gemini_features) or 9) > 0 else 0.0,
                 weighted_technical_score=sc.get("weighted_technical_score", sc["keyword_score"]),
                 matched_feature_count=sc.get("matched_feature_count") or len(pair_analysis.get("matched_features", [])) or (len(sc.get("strong_matches", [])) + len(sc.get("partial_matches", []))),
@@ -552,7 +664,7 @@ def perform_prior_art_search(
         patents_shortlisted=pat_shortlisted,
         patents_deeply_analyzed=pat_deeply_analyzed,
         highest_semantic_similarity=highest_semantic_similarity,
-        unique_families_count=len(scored_items),
+        unique_families_count=len(family_grouped),
         pipeline_metrics=pipeline_metrics
     )
 
@@ -584,9 +696,19 @@ def perform_prior_art_search(
             matched_patents=[{"title": item["patent"].title} for item in top_10]
         )
 
-    from backend.app.services.lens_api_service import lens_api_service
-    active_data_source = "The Lens Patent API & arXiv Feed" if (pat_retrieved > 0 or lens_api_service.is_configured) else "Cached Patent Repository"
-    active_ai_model = getattr(llm_service, "model_name", "Gemini 2.5 Flash")
+    if pat_retrieved > 0:
+        active_data_source = "The Lens Patent API (Live API)"
+    elif lens_status == "LENS_RATE_LIMITED":
+        active_data_source = "Database Repository (Lens API HTTP 429 Rate Limited / Monthly Quota Exceeded)"
+    elif lens_status == "LENS_AUTH_ERROR":
+        active_data_source = "Database Repository (Lens API HTTP Authorization Error)"
+    elif lens_status == "LENS_API_UNAVAILABLE":
+        active_data_source = "Database Repository (Lens API Unavailable / Network Timeout)"
+    elif lens_api_service.is_configured:
+        active_data_source = "Database Repository (Lens API 0 Live Records)"
+    else:
+        active_data_source = "Database Repository"
+    active_ai_model = getattr(llm_service, "model_name", "Gemini 3.6 Flash")
 
     return PriorArtSearchResponse(
         search_id=search_record.id,

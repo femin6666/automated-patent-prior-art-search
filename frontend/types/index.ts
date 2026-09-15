@@ -29,6 +29,7 @@ export interface Patent {
   domain: string;
   source_url?: string;
   source_type?: string;
+  source_status?: string;
   document_type?: string;
   cpc_codes?: string;
   jurisdiction?: string;
@@ -79,9 +80,12 @@ export interface PipelineMetrics {
   patents_retrieved: number;
   vector_shortlisted: number;
   unique_families: number;
+  semantic_candidates?: number;
+  technical_candidates?: number;
   patents_with_claims: number;
   patents_with_full_text: number;
   evidence_verified_matches: number;
+  lens_api_status?: string;
 }
 
 export interface EvidenceItem {

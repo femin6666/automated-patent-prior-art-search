@@ -23,6 +23,8 @@ class LensAPIService:
         self.api_token = getattr(settings, "LENS_API_TOKEN", "")
         self.api_url = getattr(settings, "LENS_API_URL", "https://api.lens.org/patent/search")
         self.max_results = getattr(settings, "MAX_EXTERNAL_API_RESULTS", 100)
+        self.http_timeout = getattr(settings, "LENS_HTTP_TIMEOUT", 20.0)
+        self.thread_timeout = getattr(settings, "LENS_THREAD_TIMEOUT", 22.0)
 
     @property
     def is_configured(self) -> bool:
@@ -106,7 +108,7 @@ class LensAPIService:
             }
             start_time = time.time()
             try:
-                with httpx.Client(timeout=4.0, follow_redirects=True) as http_client:
+                with httpx.Client(timeout=self.http_timeout, follow_redirects=True) as http_client:
                     res = http_client.post(self.api_url, json=p_payload, headers=headers)
                     elapsed_ms = round((time.time() - start_time) * 1000.0, 1)
                     
@@ -157,7 +159,7 @@ class LensAPIService:
             futures = [pool.submit(_fetch_single_lens_query, q) for q in target_queries]
             for fut in futures:
                 try:
-                    records, q_stat, h_code = fut.result(timeout=4.5)
+                    records, q_stat, h_code = fut.result(timeout=self.thread_timeout)
                     query_statuses.append(q_stat)
                     http_statuses.append(h_code)
                     for r in records:

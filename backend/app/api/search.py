@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 try:
+    from backend.app.core.config import settings
     from backend.app.core.database import get_db, IS_POSTGRES
     from backend.app.core.security import get_current_user
     from backend.app.models.models import User, Patent, Search, SearchResult
@@ -19,6 +20,7 @@ try:
     from backend.app.services.patent_api_service import patent_api_service
     from backend.app.services.lens_api_service import lens_api_service
 except ImportError:
+    from ..core.config import settings
     from ..core.database import get_db, IS_POSTGRES
     from ..core.security import get_current_user
     from ..models.models import User, Patent, Search, SearchResult
@@ -108,7 +110,7 @@ def perform_prior_art_search(
     )
     user_embedding = embedding_service.generate_embedding(combined_text)
 
-    # 2. Fetch live patent candidates via The Lens Patent API with strict 3.0s deadline
+    # 2. Fetch live patent candidates via The Lens Patent API with configurable pipeline timeout
     import concurrent.futures
     try:
         def _do_external_fetch():
@@ -121,13 +123,14 @@ def perform_prior_art_search(
                 cpc_candidates=cpc_candidates,
                 limit=50
             )
+        pipeline_timeout = getattr(settings, "EXTERNAL_API_PIPELINE_TIMEOUT", 25.0)
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ext_pool:
             ext_fut = ext_pool.submit(_do_external_fetch)
-            api_stats = ext_fut.result(timeout=3.0)
+            api_stats = ext_fut.result(timeout=pipeline_timeout)
         logger.info(f"[DEBUG PIPELINE] Step 2 Lens/arXiv Search Stats: {api_stats}")
     except Exception as e:
         logger.warning(f"[PATENT API] External search timeout/note ({e}). Proceeding immediately with local dataset candidates.")
-        fallback_lens_status = "LENS_RATE_LIMITED" if lens_api_service.is_configured else "LENS_UNCONFIGURED"
+        fallback_lens_status = "LENS_API_UNAVAILABLE" if lens_api_service.is_configured else "LENS_UNCONFIGURED"
         api_stats = {"patents_retrieved": 0, "patents_searched": 0, "lens_api_status": fallback_lens_status}
 
 

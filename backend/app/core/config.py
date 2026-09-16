@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     MAX_EXTERNAL_API_RESULTS: int = 100
     LENS_API_TOKEN: str = ""
     LENS_API_URL: str = "https://api.lens.org/patent/search"
+    LENS_HTTP_TIMEOUT: float = 20.0
+    LENS_THREAD_TIMEOUT: float = 22.0
+    EXTERNAL_API_PIPELINE_TIMEOUT: float = 25.0
 
     # Configurable Similarity Thresholds (0-29% Low, 30-49% Moderate, 50-69% High, 70-100% Very High)
     SIMILARITY_THRESHOLD_LOW: float = 30.0

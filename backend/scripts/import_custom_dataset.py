@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import csv
+import time
 import logging
 from typing import List, Dict, Any
 
@@ -9,12 +10,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
-    from backend.app.core.database import SessionLocal, engine, Base
+    from backend.app.core.database import SessionLocal, engine, ensure_columns_exist
     from backend.app.models.models import Patent
     from backend.ml.embedding_service import embedding_service
     from backend.ml.preprocessing import prepare_combined_text
 except ImportError:
-    from app.core.database import SessionLocal, engine, Base
+    from app.core.database import SessionLocal, engine, ensure_columns_exist
     from app.models.models import Patent
     from ml.embedding_service import embedding_service
     from ml.preprocessing import prepare_combined_text
@@ -57,81 +58,222 @@ def load_records_from_file(file_path: str) -> List[Dict[str, Any]]:
         return []
 
 
+def execute_with_db_retry(operation_func, max_retries: int = 3):
+    """
+    Execute a database operation with automatic engine disposal and reconnection 
+    if Neon / PostgreSQL closes an idle connection unexpectedly.
+    """
+    for attempt in range(1, max_retries + 1):
+        db = SessionLocal()
+        try:
+            result = operation_func(db)
+            db.close()
+            return result
+        except Exception as e:
+            db.rollback()
+            db.close()
+            err_msg = str(e).lower()
+            is_conn_error = any(kw in err_msg for kw in [
+                "server closed the connection",
+                "operationalerror",
+                "connection refusal",
+                "ssl connection has been closed",
+                "socket",
+                "terminated unexpectedly"
+            ])
+            if is_conn_error and attempt < max_retries:
+                logger.warning(f"[NEON RECONNECT] Connection closed unexpectedly (Attempt {attempt}/{max_retries}): {e}. Disposing engine pool and reconnecting...")
+                engine.dispose()
+                time.sleep(2 * attempt)
+            else:
+                if attempt >= max_retries:
+                    logger.error(f"Database operation failed after {max_retries} attempts: {e}")
+                raise e
+
+
 def import_custom_dataset_to_postgres(file_path: str, default_domain: str = "Artificial Intelligence"):
     """
-    Import 1000+ patent dataset into PostgreSQL with batch SBERT vector embedding generation.
+    Import patent dataset (e.g., google_patents_10000_cleaned.csv) into PostgreSQL database.
+
+    SAFETY & CONNECTION STABILITY INTEGRITY:
+    1. Uses ensure_columns_exist(engine) instead of redundant Base.metadata.create_all().
+    2. Does NOT delete, truncate, overwrite, or reclassify existing Lens or existing database records.
+    3. Skips records whose publication_number/patent_number already exists in the database.
+    4. Preserves genuine missing values as NULL/empty string without inventing fake metadata.
+    5. Sets source_type = 'GOOGLE PATENTS', source_status = 'LIVE_DATASET', document_type = 'PATENT'.
+    6. Employs batch processing (size 50) and engine reconnection safety to handle Neon idle timeouts.
     """
     records = load_records_from_file(file_path)
     if not records:
-        logger.warning("No records to import.")
+        logger.warning("No records loaded to import.")
         return
 
-    db = SessionLocal()
+    # Schema column verification without heavy create_all metadata locks
     try:
-        Base.metadata.create_all(bind=engine)
-
-        if not embedding_service.is_loaded:
-            embedding_service.load_model()
-
-        logger.info(f"Starting bulk vector embedding & import of {len(records)} patents into PostgreSQL...")
-
-        imported_count = 0
-        batch_size = 50
-
-        for i in range(0, len(records), batch_size):
-            batch = records[i : i + batch_size]
-            
-            for index, item in enumerate(batch):
-                pat_num = item.get("publication_number") or item.get("patent_number") or item.get("patent_id") or item.get("id") or f"PAT-CUSTOM-{i + index + 1}"
-                
-                # Check for existing record in PostgreSQL
-                existing = db.query(Patent).filter(Patent.patent_number == pat_num).first()
-                if existing:
-                    continue
-
-                title = item.get("title") or item.get("patent_title") or "Custom Invention"
-                abstract = item.get("abstract") or item.get("patent_abstract") or title
-                description = item.get("patent_text") or item.get("description") or item.get("patent_description") or abstract
-                inventors = item.get("inventors") or item.get("inventor") or "Custom Inventor"
-                assignee = item.get("assignee") or item.get("organization") or "Custom Assignee"
-                pub_date = str(item.get("publication_date") or item.get("date") or "2024-01-01")
-                domain = item.get("domain") or default_domain
-                source_url = item.get("source_url") or item.get("url") or f"https://patents.google.com/patent/{pat_num}/en"
-
-                combined_text = prepare_combined_text(title=title, problem_statement="", description=abstract + " " + description[:300])
-                embedding_vec = embedding_service.generate_embedding(combined_text)
-
-                patent = Patent(
-                    patent_number=pat_num,
-                    title=title,
-                    abstract=abstract,
-                    description=description,
-                    inventors=inventors,
-                    assignee=assignee,
-                    publication_date=pub_date,
-                    domain=domain,
-                    source_url=source_url,
-                    embedding=embedding_vec
-                )
-                db.add(patent)
-                imported_count += 1
-
-            db.commit()
-            logger.info(f"Progress: Processed {min(i + batch_size, len(records))}/{len(records)} records...")
-
-        logger.info(f"Successfully imported {imported_count} dataset records into PostgreSQL database!")
-
+        ensure_columns_exist(engine)
     except Exception as e:
-        logger.error(f"Error importing custom dataset: {e}")
-        db.rollback()
-    finally:
-        db.close()
+        logger.warning(f"Schema column check note: {e}")
+
+    if not embedding_service.is_loaded:
+        logger.info("Initializing SBERT embedding model...")
+        embedding_service.load_model()
+
+    # Fetch all existing patent numbers with safe connection retry
+    def _fetch_existing(session):
+        existing_nums = set(row[0] for row in session.query(Patent.patent_number).all())
+        lens_cnt = session.query(Patent).filter(Patent.source_type == "THE LENS").count()
+        return existing_nums, lens_cnt
+
+    existing_numbers, existing_lens_count = execute_with_db_retry(_fetch_existing)
+    initial_db_count = len(existing_numbers)
+
+    logger.info(f"Existing database count: {initial_db_count} records (Protected Lens records: {existing_lens_count})")
+    logger.info(f"Starting resilient batch import of {len(records)} candidate records...")
+
+    loaded_count = len(records)
+    inserted_count = 0
+    skipped_count = 0
+    failed_count = 0
+    batch_size = 50
+
+    for i in range(0, loaded_count, batch_size):
+        batch_raw = records[i : i + batch_size]
+        batch_to_insert = []
+        texts_to_embed = []
+
+        for index, item in enumerate(batch_raw):
+            pat_num = (
+                item.get("publication_number")
+                or item.get("patent_number")
+                or item.get("patent_id")
+                or item.get("id")
+                or ""
+            ).strip()
+
+            if not pat_num:
+                failed_count += 1
+                continue
+
+            if pat_num in existing_numbers:
+                skipped_count += 1
+                continue
+
+            title = (item.get("title") or item.get("patent_title") or "").strip()
+            abstract = (item.get("abstract") or item.get("patent_abstract") or title).strip()
+            description = (
+                item.get("publication_description")
+                or item.get("patent_text")
+                or item.get("description")
+                or item.get("patent_description")
+                or abstract
+            ).strip()
+
+            if not title or not abstract:
+                failed_count += 1
+                continue
+
+            inventors = (item.get("inventors") or item.get("inventor") or "").strip()
+            assignee = (item.get("assignee") or item.get("organization") or item.get("applicant") or "").strip()
+            pub_date = str(item.get("publication_date") or item.get("date") or "").strip()
+            domain = (item.get("domain") or default_domain).strip()
+            
+            source_url = (item.get("source_url") or item.get("url") or f"https://patents.google.com/patent/{pat_num}/en").strip()
+            claims = item.get("claims") or None
+            if claims:
+                claims = str(claims).strip() or None
+
+            cpc_codes = item.get("cpc") or item.get("cpc_codes") or None
+            if cpc_codes:
+                cpc_codes = str(cpc_codes).strip() or None
+
+            ipc_codes = item.get("ipc") or item.get("ipc_codes") or None
+            if ipc_codes:
+                ipc_codes = str(ipc_codes).strip() or None
+
+            combined_text = prepare_combined_text(title=title, problem_statement="", description=abstract + " " + description[:300])
+
+            batch_to_insert.append({
+                "pat_num": pat_num,
+                "title": title,
+                "abstract": abstract,
+                "description": description,
+                "inventors": inventors,
+                "assignee": assignee,
+                "publication_date": pub_date,
+                "domain": domain,
+                "source_url": source_url,
+                "claims": claims,
+                "cpc_codes": cpc_codes,
+                "ipc_codes": ipc_codes,
+                "filing_date": item.get("filing_date") or None,
+                "earliest_priority_date": item.get("earliest_priority_date") or None,
+                "simple_family_id": item.get("simple_family_id") or None,
+            })
+            texts_to_embed.append(combined_text)
+
+        if batch_to_insert:
+            try:
+                embeddings = embedding_service.generate_embeddings(texts_to_embed)
+
+                def _insert_batch_op(session):
+                    for item_dict, emb_vec in zip(batch_to_insert, embeddings):
+                        patent = Patent(
+                            patent_number=item_dict["pat_num"],
+                            title=item_dict["title"],
+                            abstract=item_dict["abstract"],
+                            description=item_dict["description"],
+                            inventors=item_dict["inventors"],
+                            assignee=item_dict["assignee"],
+                            publication_date=item_dict["publication_date"],
+                            domain=item_dict["domain"],
+                            source_url=item_dict["source_url"],
+                            claims=item_dict["claims"],
+                            cpc_codes=item_dict["cpc_codes"],
+                            ipc_codes=item_dict["ipc_codes"],
+                            filing_date=item_dict["filing_date"],
+                            earliest_priority_date=item_dict["earliest_priority_date"],
+                            simple_family_id=item_dict["simple_family_id"],
+                            source_type="GOOGLE PATENTS",
+                            source_status="LIVE_DATASET",
+                            document_type="PATENT",
+                            embedding=emb_vec
+                        )
+                        session.add(patent)
+                    session.commit()
+
+                execute_with_db_retry(_insert_batch_op)
+                for item_dict in batch_to_insert:
+                    existing_numbers.add(item_dict["pat_num"])
+                inserted_count += len(batch_to_insert)
+
+            except Exception as batch_err:
+                logger.error(f"Failed to insert batch starting at index {i}: {batch_err}")
+                failed_count += len(batch_to_insert)
+
+        processed = min(i + batch_size, loaded_count)
+        logger.info(f"Progress: {processed}/{loaded_count} processed | Inserted: {inserted_count} | Skipped: {skipped_count} | Failed: {failed_count}")
+
+    def _fetch_final_counts(session):
+        final_lens = session.query(Patent).filter(Patent.source_type == "THE LENS").count()
+        total_db = session.query(Patent).count()
+        return final_lens, total_db
+
+    final_lens_count, total_db_count = execute_with_db_retry(_fetch_final_counts)
+
+    logger.info("================ IMPORT SUMMARY ================")
+    logger.info(f"Total Loaded Records:    {loaded_count}")
+    logger.info(f"Successfully Inserted:   {inserted_count}")
+    logger.info(f"Skipped (Already Exists):{skipped_count}")
+    logger.info(f"Failed Records:          {failed_count}")
+    logger.info(f"Protected Lens Records:  {final_lens_count} (Unchanged)")
+    logger.info(f"Total DB Records Now:    {total_db_count}")
+    logger.info("================================================")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python -m backend.scripts.import_custom_dataset <path_to_dataset_file> [default_domain]")
-        print("Example: python -m backend.scripts.import_custom_dataset backend/data/my_1000_patents.json \"Artificial Intelligence\"")
+        print("Example: python -m backend.scripts.import_custom_dataset google_patents_10000_cleaned.csv \"Artificial Intelligence\"")
         sys.exit(1)
 
     dataset_path = sys.argv[1]

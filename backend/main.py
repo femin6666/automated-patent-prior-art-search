@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing PatentLens AI Backend...")
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_columns_exist(engine)
     except Exception as e:
         logger.warning(f"Database table check note: {e}")
     

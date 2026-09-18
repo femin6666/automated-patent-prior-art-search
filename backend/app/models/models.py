@@ -4,15 +4,8 @@ from sqlalchemy import Column, String, Text, Float, Integer, DateTime, ForeignKe
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base, IS_POSTGRES, HAS_PGVECTOR
 
-# Optional pgvector Vector type import if available and running PostgreSQL with pgvector
-try:
-    if HAS_PGVECTOR:
-        from pgvector.sqlalchemy import Vector
-        VECTOR_TYPE = Vector(384)
-    else:
-        VECTOR_TYPE = JSON
-except ImportError:
-    VECTOR_TYPE = JSON
+# Use JSON type for 384-dimensional embedding storage across PostgreSQL and SQLite
+VECTOR_TYPE = JSON
 
 
 class User(Base):

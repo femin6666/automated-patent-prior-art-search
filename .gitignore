@@ -30,4 +30,6 @@ ENV/
 .DS_Store
 Thumbs.db
 scratch/
+*.dump
+*.sql
 

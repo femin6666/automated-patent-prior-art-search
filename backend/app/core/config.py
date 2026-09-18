@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    ENVIRONMENT: str = "development"
     PROJECT_NAME: str = "PatentLens AI"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"

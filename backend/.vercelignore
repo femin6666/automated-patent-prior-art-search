@@ -1,0 +1,22 @@
+# Exclude development caches, database files, datasets, dumps, and test suites from Vercel Python bundle
+*.db
+*.sqlite
+*.sqlite3
+*.csv
+*.dump
+*.sql
+*.log
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+node_modules
+.next
+venv
+.venv
+env
+tests/
+scratch/
+generated_reports/*
+!generated_reports/.gitkeep

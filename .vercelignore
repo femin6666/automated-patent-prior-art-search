@@ -1,0 +1,18 @@
+# Vercel Deployment Exclusion List
+# Prevent Vercel from bundling backend code, virtual environments, database files, or datasets
+
+backend
+backend/
+*.db
+*.sqlite
+*.sqlite3
+*.csv
+*.dump
+*.sql
+.pytest_cache
+scratch/
+venv
+.venv
+env
+__pycache__
+.git

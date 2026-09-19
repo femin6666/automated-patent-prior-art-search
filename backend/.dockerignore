@@ -1,0 +1,26 @@
+# Docker build context exclusion list
+.git
+.gitignore
+.env
+.env.*
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.sqlite3
+*.csv
+*.dump
+*.sql
+*.log
+node_modules
+.next
+venv
+.venv
+env
+generated_reports/*
+!generated_reports/.gitkeep
+tests/
+scratch/

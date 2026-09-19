@@ -15,7 +15,7 @@ class SentenceTransformerEmbeddingService:
         return cls._instance
 
     def load_model(self, model_name: str = "all-MiniLM-L6-v2", force: bool = False):
-        """Load SBERT model into memory ONCE during application startup with dynamic GPU/MPS/CPU hardware detection."""
+        """Load SBERT model via FastEmbed ONNX runtime into memory ONCE during startup."""
         if self._model is not None and not force:
             return
 
@@ -23,33 +23,35 @@ class SentenceTransformerEmbeddingService:
             return
 
         self._load_attempted = True
-        logger.info(f"Loading Sentence Transformer model '{model_name}'...")
+        logger.info(f"Loading FastEmbed ONNX embedding model '{model_name}'...")
         try:
-            import torch
-            from sentence_transformers import SentenceTransformer
+            # pyrefly: ignore [missing-import]
+            from fastembed import TextEmbedding
             
-            if torch.cuda.is_available():
-                device = "cuda"
-            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                device = "mps"
-            else:
-                device = "cpu"
+            # Map standard model names to FastEmbed model identifiers
+            model_id = f"sentence-transformers/{model_name}" if "all-MiniLM" in model_name and not model_name.startswith("sentence-transformers/") else model_name
             
-            logger.info(f"Initializing Sentence Transformer '{model_name}' on device: {device}")
-            self._model = SentenceTransformer(model_name, device=device)
-            logger.info(f"Successfully loaded Sentence Transformer model '{model_name}' on {device}.")
+            logger.info(f"Initializing FastEmbed TextEmbedding '{model_id}' on ONNX CPU runtime...")
+            self._model = TextEmbedding(model_name=model_id)
+            logger.info(f"Successfully loaded FastEmbed ONNX embedding model '{model_id}'.")
         except Exception as e:
-            logger.error(f"Failed to load sentence_transformers model '{model_name}': {e}")
+            logger.error(f"Failed to load FastEmbed model '{model_name}': {e}")
             self._model = None
-            raise RuntimeError(f"Could not initialize SBERT embedding model: {e}")
+            raise RuntimeError(f"Could not initialize FastEmbed ONNX embedding model: {e}")
 
     @property
     def is_loaded(self) -> bool:
         return self._model is not None
 
+    def _normalize(self, vec: np.ndarray) -> np.ndarray:
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            return vec / norm
+        return vec
+
     def generate_embedding(self, text: str) -> List[float]:
         """
-        Generate a normalized 384-dimensional vector embedding for the input text.
+        Generate a normalized 384-dimensional vector embedding for the input text using FastEmbed ONNX.
         """
         if not text:
             return [0.0] * 384
@@ -58,26 +60,21 @@ class SentenceTransformerEmbeddingService:
             try:
                 self.load_model()
             except Exception as le:
-                logger.warning(f"Could not load SBERT model: {le}")
+                logger.warning(f"Could not load FastEmbed model: {le}")
 
         if self._model is not None:
             try:
-                # show_progress_bar=False prevents Windows stdout/tqdm [Errno 22] Invalid argument in uvicorn
-                embedding = self._model.encode(
-                    text,
-                    normalize_embeddings=True,
-                    show_progress_bar=False,
-                    convert_to_numpy=True
-                )
-                return embedding.tolist()
+                embeddings = list(self._model.embed([text]))
+                vec = self._normalize(embeddings[0])
+                return vec.tolist()
             except Exception as e:
-                logger.error(f"Error generating model embedding: {e}")
+                logger.error(f"Error generating FastEmbed model embedding: {e}")
 
         return self._generate_fallback_vector(text)
 
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
-        Generate normalized 384-dimensional vector embeddings for a list of input texts in batch.
+        Generate normalized 384-dimensional vector embeddings for a list of input texts in batch using FastEmbed ONNX.
         """
         if not texts:
             return []
@@ -86,20 +83,14 @@ class SentenceTransformerEmbeddingService:
             try:
                 self.load_model()
             except Exception as le:
-                logger.warning(f"Could not load SBERT model: {le}")
+                logger.warning(f"Could not load FastEmbed model: {le}")
 
         if self._model is not None:
             try:
-                embeddings = self._model.encode(
-                    texts,
-                    batch_size=32,
-                    normalize_embeddings=True,
-                    show_progress_bar=False,
-                    convert_to_numpy=True
-                )
-                return embeddings.tolist()
+                embeddings = list(self._model.embed(texts, batch_size=32))
+                return [self._normalize(vec).tolist() for vec in embeddings]
             except Exception as e:
-                logger.error(f"Error generating model embeddings: {e}")
+                logger.error(f"Error generating FastEmbed model embeddings: {e}")
 
         return [self.generate_embedding(text) for text in texts]
 

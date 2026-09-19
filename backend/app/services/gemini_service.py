@@ -3,11 +3,7 @@ import json
 import re
 import httpx
 from typing import Dict, Any, List, Optional
-try:
-    from backend.app.core.config import settings
-except ImportError:
-    from app.core.config import settings
-
+from app.core.config import settings
 logger = logging.getLogger("patentlens.gemini")
 
 class GeminiService:
@@ -278,7 +274,7 @@ Return ONLY valid JSON matching this exact structure:
         domain: str
     ) -> Dict[str, Any]:
         try:
-            from backend.ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
+            from ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
         except ImportError:
             from ml.keyword_extractor import extract_structured_invention_features, extract_atomic_technical_features
         full_text = f"{title} {problem_statement} {description}"
@@ -521,7 +517,7 @@ Return ONLY valid JSON matching this exact structure:
     ) -> Dict[str, Any]:
         """Grounded NLP claim decomposition fallback when LLM API is unavailable."""
         try:
-            from backend.ml.keyword_extractor import extract_atomic_technical_features
+            from ml.keyword_extractor import extract_atomic_technical_features
         except ImportError:
             from ml.keyword_extractor import extract_atomic_technical_features
 

@@ -4,11 +4,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-try:
-    from backend.app.core.database import engine
-except ImportError:
-    from app.core.database import engine
-
+from app.core.database import engine
 from sqlalchemy import text
 
 def migrate():

@@ -1,14 +1,8 @@
 import logging
 from typing import Union
-try:
-    from backend.app.core.config import settings
-    from backend.app.services.gemini_service import GeminiService
-    from backend.app.services.groq_service import GroqService
-except ImportError:
-    from app.core.config import settings
-    from app.services.gemini_service import GeminiService
-    from app.services.groq_service import GroqService
-
+from app.core.config import settings
+from app.services.gemini_service import GeminiService
+from app.services.groq_service import GroqService
 logger = logging.getLogger("patentlens.llm_factory")
 
 def get_llm_service(provider_override: str = None) -> Union[GeminiService, GroqService]:

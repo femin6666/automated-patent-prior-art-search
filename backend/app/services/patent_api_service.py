@@ -5,19 +5,11 @@ import httpx
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
-try:
-    from backend.app.core.config import settings
-    from backend.app.models.models import Patent
-    from backend.ml.embedding_service import embedding_service
-    from backend.ml.preprocessing import prepare_combined_text
-    from backend.app.services.lens_api_service import lens_api_service
-except ImportError:
-    from app.core.config import settings
-    from app.models.models import Patent
-    from ml.embedding_service import embedding_service
-    from ml.preprocessing import prepare_combined_text
-    from app.services.lens_api_service import lens_api_service
-
+from app.core.config import settings
+from app.models.models import Patent
+from ml.embedding_service import embedding_service
+from ml.preprocessing import prepare_combined_text
+from app.services.lens_api_service import lens_api_service
 logger = logging.getLogger("patentlens.patent_api")
 
 
@@ -113,7 +105,7 @@ class PatentAPIService:
 
         # 4. Deduplicate, Generate Batch SBERT Embeddings, and Cache in DB
         try:
-            from backend.ml.preprocessing import prepare_weighted_patent_text
+            from ml.preprocessing import prepare_weighted_patent_text
         except ImportError:
             from ml.preprocessing import prepare_weighted_patent_text
         newly_cached_patents = []

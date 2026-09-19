@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app
-from backend.app.core.database import engine, Base
-from backend.scripts.seed_database import seed_patents_if_needed
+from main import app
+from app.core.database import engine, Base
+from scripts.seed_database import seed_patents_if_needed
 
 @pytest.fixture(autouse=True)
 def setup_db():

@@ -1,11 +1,7 @@
 import logging
 import json
-from typing import Dict, Any, List
-try:
-    from backend.app.core.config import settings
-except ImportError:
-    from app.core.config import settings
-
+from typing import Dict, Any, List, Optional
+from app.core.config import settings
 logger = logging.getLogger("patentlens.groq")
 
 class GroqService:
@@ -56,7 +52,7 @@ class GroqService:
         is_mocked = "mock" in type(self.client).__module__.lower() or "mock" in type(self.client).__name__.lower() if self.client else False
         if is_testing and not is_mocked:
             try:
-                from backend.app.services.gemini_service import gemini_service
+                from app.services.gemini_service import gemini_service
             except ImportError:
                 from app.services.gemini_service import gemini_service
             return gemini_service._heuristic_invention_analysis(title, problem_statement, description, keywords, domain)
@@ -122,7 +118,7 @@ Return ONLY valid JSON matching this exact structure:
                 text_content = res.choices[0].message.content
                 parsed = json.loads(text_content)
                 try:
-                    from backend.app.services.gemini_service import gemini_service
+                    from app.services.gemini_service import gemini_service
                 except ImportError:
                     from app.services.gemini_service import gemini_service
                 return gemini_service._clean_invention_analysis(parsed, title, keywords, domain)
@@ -130,7 +126,7 @@ Return ONLY valid JSON matching this exact structure:
                 logger.warning(f"Groq analyze_invention error/timeout ({e}). Falling back to Gemini / Heuristic.")
 
         try:
-            from backend.app.services.gemini_service import gemini_service
+            from app.services.gemini_service import gemini_service
         except ImportError:
             from app.services.gemini_service import gemini_service
         return gemini_service.analyze_invention(title, problem_statement, description, keywords, domain)
@@ -283,7 +279,7 @@ Return ONLY valid JSON matching this exact structure:
 
         # Fallback to Gemini Service or Heuristic NLP
         try:
-            from backend.app.services.gemini_service import gemini_service
+            from app.services.gemini_service import gemini_service
             return gemini_service.analyze_patent_pair(
                 target_title, target_problem, target_description,
                 patent_number, patent_title, patent_abstract, patent_description,
@@ -296,7 +292,7 @@ Return ONLY valid JSON matching this exact structure:
 
     def _generate_heuristic_pair_analysis(self, *args, **kwargs):
         try:
-            from backend.app.services.gemini_service import gemini_service
+            from app.services.gemini_service import gemini_service
         except ImportError:
             from app.services.gemini_service import gemini_service
         return gemini_service._generate_heuristic_pair_analysis(*args, **kwargs)
@@ -359,7 +355,7 @@ Return ONLY valid JSON.
                 logger.error(f"Error in Groq novelty analysis: {e}")
 
         try:
-            from backend.app.services.gemini_service import gemini_service
+            from app.services.gemini_service import gemini_service
         except ImportError:
             from app.services.gemini_service import gemini_service
         return gemini_service.generate_novelty_analysis(invention_title, problem_statement, description, matched_patents, risk_level)

@@ -2,21 +2,12 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-try:
-    from backend.app.core.database import get_db
-    from backend.app.core.security import get_current_user
-    from backend.app.models.models import User, Patent, SavedPatent
-    from backend.app.schemas.schemas import PatentOut, SavedPatentOut, SavePatentRequest, CreateCustomPatentRequest
-    from backend.ml.embedding_service import embedding_service
-    from backend.ml.preprocessing import prepare_combined_text
-except ImportError:
-    from app.core.database import get_db
-    from app.core.security import get_current_user
-    from app.models.models import User, Patent, SavedPatent
-    from app.schemas.schemas import PatentOut, SavedPatentOut, SavePatentRequest, CreateCustomPatentRequest
-    from ml.embedding_service import embedding_service
-    from ml.preprocessing import prepare_combined_text
-
+from app.core.database import get_db
+from app.core.security import get_current_user
+from app.models.models import User, Patent, SavedPatent
+from app.schemas.schemas import PatentOut, SavedPatentOut, SavePatentRequest, CreateCustomPatentRequest
+from ml.embedding_service import embedding_service
+from ml.preprocessing import prepare_combined_text
 router = APIRouter(prefix="/patents", tags=["Patents"])
 
 @router.get("/saved", response_model=List[SavedPatentOut])

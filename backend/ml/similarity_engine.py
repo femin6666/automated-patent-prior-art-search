@@ -3,7 +3,7 @@ import numpy as np
 import re
 
 try:
-    from backend.ml.keyword_extractor import (
+    from ml.keyword_extractor import (
         get_weighted_technical_concepts,
         extract_atomic_technical_features,
         GENERIC_DOMAIN_NOISE,
@@ -369,7 +369,7 @@ def compute_hybrid_score(
 
     # Precompute sentence embeddings if embedding_service is available
     try:
-        from backend.ml.embedding_service import embedding_service
+        from ml.embedding_service import embedding_service
     except ImportError:
         try:
             from ml.embedding_service import embedding_service

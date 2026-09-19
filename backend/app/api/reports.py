@@ -3,19 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-try:
-    from backend.app.core.database import get_db
-    from backend.app.core.security import get_current_user
-    from backend.app.models.models import User, Search, SearchResult, Report
-    from backend.app.schemas.schemas import ReportOut
-    from backend.app.services.report_service import generate_pdf_report
-except ImportError:
-    from app.core.database import get_db
-    from app.core.security import get_current_user
-    from app.models.models import User, Search, SearchResult, Report
-    from app.schemas.schemas import ReportOut
-    from app.services.report_service import generate_pdf_report
-
+from app.core.database import get_db
+from app.core.security import get_current_user
+from app.models.models import User, Search, SearchResult, Report
+from app.schemas.schemas import ReportOut
+from app.services.report_service import generate_pdf_report
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
 @router.post("/{search_id}", response_model=ReportOut, status_code=status.HTTP_201_CREATED)

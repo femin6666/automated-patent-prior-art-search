@@ -3,31 +3,17 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 
-try:
-    from backend.app.core.database import get_db
-    from backend.app.core.security import (
-        hash_password, verify_password, create_access_token, create_refresh_token,
-        get_current_user, decode_token
-    )
-    from backend.app.core.config import settings
-    from backend.app.models.models import User
-    from backend.app.schemas.schemas import (
-        UserRegisterRequest, UserLoginRequest, GoogleAuthRequest, TokenResponse, UserOut,
-        OTPVerifyRequest, OTPResendRequest
-    )
-except ImportError:
-    from app.core.database import get_db
-    from app.core.security import (
-        hash_password, verify_password, create_access_token, create_refresh_token,
-        get_current_user, decode_token
-    )
-    from app.core.config import settings
-    from app.models.models import User
-    from app.schemas.schemas import (
-        UserRegisterRequest, UserLoginRequest, GoogleAuthRequest, TokenResponse, UserOut,
-        OTPVerifyRequest, OTPResendRequest
-    )
-
+from app.core.database import get_db
+from app.core.security import (
+    hash_password, verify_password, create_access_token, create_refresh_token,
+    get_current_user, decode_token
+)
+from app.core.config import settings
+from app.models.models import User
+from app.schemas.schemas import (
+    UserRegisterRequest, UserLoginRequest, GoogleAuthRequest, TokenResponse, UserOut,
+    OTPVerifyRequest, OTPResendRequest
+)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 def generate_otp_code() -> str:

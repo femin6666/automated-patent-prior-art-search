@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.app.core.config import settings
+from app.core.config import settings
 
 # Enforce Explicit LIVE_BENCHMARK Opt-in
 is_live_enabled = settings.LIVE_BENCHMARK or os.getenv("LIVE_BENCHMARK", "").lower() == "true"
@@ -28,7 +28,7 @@ os.environ["TESTING"] = "false"
 settings.TESTING = False
 
 from fastapi.testclient import TestClient
-from backend.main import app
+from main import app
 
 client = TestClient(app)
 logger = logging.getLogger("patentlens.live_benchmark")

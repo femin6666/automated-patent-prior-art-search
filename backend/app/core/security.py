@@ -5,15 +5,9 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-try:
-    from backend.app.core.config import settings
-    from backend.app.core.database import get_db
-    from backend.app.models.models import User
-except ImportError:
-    from app.core.config import settings
-    from app.core.database import get_db
-    from app.models.models import User
-
+from app.core.config import settings
+from app.core.database import get_db
+from app.models.models import User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/login", auto_error=False)
 
 def hash_password(password: str) -> str:

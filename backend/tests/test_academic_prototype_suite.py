@@ -2,16 +2,16 @@ import pytest
 import os
 import json
 from datetime import datetime
-from backend.ml.similarity_engine import (
+from ml.similarity_engine import (
     compute_hybrid_score,
     calculate_deterministic_final_score,
     calculate_cosine_similarity
 )
-from backend.ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
-from backend.app.services.lens_api_service import lens_api_service
-from backend.app.services.gemini_service import gemini_service
-from backend.app.services.report_service import generate_pdf_report
-from backend.app.models.models import Search, SearchResult, Patent
+from ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
+from app.services.lens_api_service import lens_api_service
+from app.services.gemini_service import gemini_service
+from app.services.report_service import generate_pdf_report
+from app.models.models import Search, SearchResult, Patent
 
 
 INVENTION_TEST_CASES = [

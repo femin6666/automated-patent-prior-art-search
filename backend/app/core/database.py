@@ -2,11 +2,7 @@ import os
 import logging
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
-try:
-    from backend.app.core.config import settings
-except ImportError:
-    from app.core.config import settings
-
+from app.core.config import settings
 logger = logging.getLogger("patentlens.database")
 
 Base = declarative_base()

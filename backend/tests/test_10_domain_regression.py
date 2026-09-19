@@ -1,7 +1,7 @@
 import pytest
 import logging
 from fastapi.testclient import TestClient
-from backend.main import app
+from main import app
 
 client = TestClient(app)
 logger = logging.getLogger("patentlens.test_10_domain")
@@ -83,7 +83,7 @@ BENCHMARK_DOMAINS = [
 def test_10_domain_benchmark_suite():
     """Execute fast 10-domain regression test suite under TESTING=true mode."""
     import os
-    from backend.app.core.config import settings
+    from app.core.config import settings
     os.environ["TESTING"] = "true"
     settings.TESTING = True
 

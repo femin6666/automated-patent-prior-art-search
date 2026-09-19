@@ -10,15 +10,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-try:
-    from backend.app.core.database import SessionLocal, engine
-    from backend.app.models.models import Patent
-    from backend.ml.preprocessing import prepare_combined_text
-except ImportError:
-    from app.core.database import SessionLocal, engine
-    from app.models.models import Patent
-    from ml.preprocessing import prepare_combined_text
-
+from app.core.database import SessionLocal, engine
+from app.models.models import Patent
+from ml.preprocessing import prepare_combined_text
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("patentlens.train_ml")
 

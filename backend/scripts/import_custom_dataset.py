@@ -9,17 +9,10 @@ from typing import List, Dict, Any
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-try:
-    from backend.app.core.database import SessionLocal, engine, ensure_columns_exist
-    from backend.app.models.models import Patent
-    from backend.ml.embedding_service import embedding_service
-    from backend.ml.preprocessing import prepare_combined_text
-except ImportError:
-    from app.core.database import SessionLocal, engine, ensure_columns_exist
-    from app.models.models import Patent
-    from ml.embedding_service import embedding_service
-    from ml.preprocessing import prepare_combined_text
-
+from app.core.database import SessionLocal, engine, ensure_columns_exist
+from app.models.models import Patent
+from ml.embedding_service import embedding_service
+from ml.preprocessing import prepare_combined_text
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("patentlens.import_custom")
 

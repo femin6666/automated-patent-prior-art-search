@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from backend.app.services.lens_api_service import lens_api_service, LensAPIService
-from backend.app.services.patent_api_service import patent_api_service
-from backend.app.services.gemini_service import gemini_service
-from backend.ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
+from app.services.lens_api_service import lens_api_service, LensAPIService
+from app.services.patent_api_service import patent_api_service
+from app.services.gemini_service import gemini_service
+from ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
 
 def test_lens_api_token_security_and_masking():
     """
@@ -285,7 +285,7 @@ def test_lens_timeout_configuration_coordination():
     """
     Acceptance Test 8: Verify nested timeouts satisfy HTTP <= Thread < Pipeline hierarchy (20s <= 22s <= 25s).
     """
-    from backend.app.core.config import settings
+    from app.core.config import settings
     http_timeout = getattr(settings, "LENS_HTTP_TIMEOUT", 20.0)
     thread_timeout = getattr(settings, "LENS_THREAD_TIMEOUT", 22.0)
     pipeline_timeout = getattr(settings, "EXTERNAL_API_PIPELINE_TIMEOUT", 25.0)
@@ -303,7 +303,7 @@ def test_lens_http_200_delayed_9s_accepted():
     is accepted as successful LENS_OK with LIVE_API provenance.
     """
     import time
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
 
     service = LensAPIService()
     service.api_token = "valid_test_bearer_token"
@@ -339,7 +339,7 @@ def test_lens_http_200_delayed_15s_accepted():
     is accepted as successful LENS_OK with LIVE_API provenance.
     """
     import time
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
 
     service = LensAPIService()
     service.api_token = "valid_test_bearer_token"
@@ -374,7 +374,7 @@ def test_genuine_request_exceeding_configured_timeout():
     Acceptance Test 11 (Scenario C): Verify genuine request exceeding configured timeout
     is classified as LENS_API_UNAVAILABLE according to existing error taxonomy.
     """
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
     import httpx
 
     service = LensAPIService()
@@ -391,7 +391,7 @@ def test_http_429_remains_rate_limited():
     """
     Acceptance Test 12 (Scenario D): Verify HTTP 429 remains LENS_RATE_LIMITED.
     """
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
 
     service = LensAPIService()
     service.api_token = "valid_test_bearer_token"
@@ -410,7 +410,7 @@ def test_http_401_403_remains_auth_error():
     """
     Acceptance Test 13 (Scenario E): Verify HTTP 401/403 remains LENS_AUTH_ERROR.
     """
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
 
     service = LensAPIService()
     service.api_token = "invalid_token"
@@ -429,7 +429,7 @@ def test_http_200_zero_records_remains_no_results():
     """
     Acceptance Test 14 (Scenario F): Verify HTTP 200 with zero records remains LENS_NO_RESULTS, NOT API_UNAVAILABLE.
     """
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
 
     service = LensAPIService()
     service.api_token = "valid_test_bearer_token"
@@ -450,7 +450,7 @@ def test_provenance_distinction_live_api_vs_google():
     Acceptance Test 15 (Scenarios G & H): Verify successful Lens records have source_status='LIVE_API'
     and Google dataset records have source_status='LIVE_DATASET'.
     """
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
 
     service = LensAPIService()
     service.api_token = "valid_test_bearer_token"

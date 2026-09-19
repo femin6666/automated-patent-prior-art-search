@@ -8,17 +8,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from sqlalchemy.orm import Session
 
-try:
-    from backend.app.core.database import SessionLocal, engine, Base, ensure_columns_exist
-    from backend.app.models.models import Patent
-    from backend.ml.embedding_service import embedding_service
-    from backend.ml.preprocessing import prepare_combined_text
-except ImportError:
-    from app.core.database import SessionLocal, engine, Base, ensure_columns_exist
-    from app.models.models import Patent
-    from ml.embedding_service import embedding_service
-    from ml.preprocessing import prepare_combined_text
-
+from app.core.database import SessionLocal, engine, Base, ensure_columns_exist
+from app.models.models import Patent
+from ml.embedding_service import embedding_service
+from ml.preprocessing import prepare_combined_text
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("patentlens.seed")
 
@@ -35,8 +28,8 @@ def seed_patents_if_needed(db: Session = None, force_reseed: bool = False):
 
         # Seed Demo User if missing
         try:
-            from backend.app.models.models import User
-            from backend.app.core.security import hash_password
+            from app.models.models import User
+            from app.core.security import hash_password
         except ImportError:
             from app.models.models import User
             from app.core.security import hash_password

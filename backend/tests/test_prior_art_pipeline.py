@@ -1,8 +1,8 @@
 import pytest
 from typing import Dict, Any
-from backend.ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
-from backend.ml.risk_classifier import classify_prior_art_risk
-from backend.app.services.lens_api_service import lens_api_service
+from ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
+from ml.risk_classifier import classify_prior_art_risk
+from app.services.lens_api_service import lens_api_service
 
 def test_wireless_ev_fod_ranking():
     """

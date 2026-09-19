@@ -19,9 +19,9 @@ from typing import Dict, Any, List
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 def run_accuracy_metrics_eval() -> Dict[str, float]:
-    from backend.tests.test_academic_prototype_suite import INVENTION_TEST_CASES
-    from backend.ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
-    from backend.app.services.lens_api_service import lens_api_service
+    from tests.test_academic_prototype_suite import INVENTION_TEST_CASES
+    from ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
+    from app.services.lens_api_service import lens_api_service
 
     total_cases = len(INVENTION_TEST_CASES)
     dedup_counts = []

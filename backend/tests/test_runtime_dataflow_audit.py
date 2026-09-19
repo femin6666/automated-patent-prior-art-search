@@ -1,15 +1,15 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from backend.main import app
-from backend.ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
+from main import app
+from ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
 
 client = TestClient(app)
 
 
 def test_lens_http_200_zero_records():
     """Test HTTP 200 with 0 records produces status LENS_NO_RESULTS."""
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
     service = LensAPIService()
 
     mock_res = MagicMock()
@@ -24,7 +24,7 @@ def test_lens_http_200_zero_records():
 
 def test_lens_http_429_rate_limited():
     """Test HTTP 429 produces status LENS_RATE_LIMITED."""
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
     service = LensAPIService()
 
     mock_res = MagicMock()
@@ -39,7 +39,7 @@ def test_lens_http_429_rate_limited():
 
 def test_lens_http_401_403_auth_error():
     """Test HTTP 401/403 produces status LENS_AUTH_ERROR."""
-    from backend.app.services.lens_api_service import LensAPIService
+    from app.services.lens_api_service import LensAPIService
     service = LensAPIService()
 
     mock_res = MagicMock()
@@ -61,7 +61,7 @@ def test_database_fallback_provenance():
         "description": "Deep neural network traffic monitoring",
         "keywords": ["cybersecurity"]
     }
-    from backend.app.services.lens_api_service import lens_api_service
+    from app.services.lens_api_service import lens_api_service
     with patch.object(lens_api_service, "search_patents") as mock_lens:
         mock_lens.return_value = {"results": [], "status": "LENS_RATE_LIMITED", "retrieved_count": 0}
         res = client.post("/api/search", json=payload)

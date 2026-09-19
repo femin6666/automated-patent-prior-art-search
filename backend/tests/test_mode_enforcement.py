@@ -3,12 +3,12 @@ import sys
 import subprocess
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app
-from backend.app.core.config import settings, BASE_DIR
-from backend.app.services.groq_service import groq_service
-from backend.app.services.gemini_service import gemini_service
-from backend.app.services.lens_api_service import lens_api_service
-from backend.app.services.patent_api_service import patent_api_service
+from main import app
+from app.core.config import settings, BASE_DIR
+from app.services.groq_service import groq_service
+from app.services.gemini_service import gemini_service
+from app.services.lens_api_service import lens_api_service
+from app.services.patent_api_service import patent_api_service
 
 client = TestClient(app)
 

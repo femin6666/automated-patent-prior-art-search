@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app
+from main import app
 
 def test_cybersecurity_e2e_api_runtime_output():
     """

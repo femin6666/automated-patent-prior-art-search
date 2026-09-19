@@ -12,28 +12,16 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-try:
-    from backend.app.core.config import settings
-    from backend.app.core.database import engine, Base, ensure_columns_exist
-    from backend.ml.embedding_service import embedding_service
-    from backend.scripts.seed_database import seed_patents_if_needed
+from app.core.config import settings
+from app.core.database import engine, Base, ensure_columns_exist
+from ml.embedding_service import embedding_service
+from scripts.seed_database import seed_patents_if_needed
 
-    from backend.app.api.auth import router as auth_router
-    from backend.app.api.search import router as search_router
-    from backend.app.api.patents import router as patents_router
-    from backend.app.api.reports import router as reports_router
-    from backend.app.api.users import router as users_router
-except ImportError:
-    from app.core.config import settings
-    from app.core.database import engine, Base, ensure_columns_exist
-    from ml.embedding_service import embedding_service
-    from scripts.seed_database import seed_patents_if_needed
-
-    from app.api.auth import router as auth_router
-    from app.api.search import router as search_router
-    from app.api.patents import router as patents_router
-    from app.api.reports import router as reports_router
-    from app.api.users import router as users_router
+from app.api.auth import router as auth_router
+from app.api.search import router as search_router
+from app.api.patents import router as patents_router
+from app.api.reports import router as reports_router
+from app.api.users import router as users_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("patentlens.main")

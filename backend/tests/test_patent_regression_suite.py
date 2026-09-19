@@ -1,17 +1,17 @@
 import pytest
-from backend.ml.keyword_extractor import (
+from ml.keyword_extractor import (
     extract_structured_invention_features,
     extract_atomic_technical_features,
     get_synonyms_for_term,
     GENERIC_DOMAIN_NOISE
 )
-from backend.ml.similarity_engine import (
+from ml.similarity_engine import (
     compute_hybrid_score,
     calculate_deterministic_final_score,
     calculate_cosine_similarity
 )
-from backend.app.services.gemini_service import gemini_service
-from backend.app.services.lens_api_service import lens_api_service
+from app.services.gemini_service import gemini_service
+from app.services.lens_api_service import lens_api_service
 
 
 def test_feature_extraction_and_quadruplets():

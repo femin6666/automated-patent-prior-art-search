@@ -1,17 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-try:
-    from backend.app.core.database import get_db
-    from backend.app.core.security import get_current_user, hash_password, verify_password
-    from backend.app.models.models import User
-    from backend.app.schemas.schemas import UserOut, UserUpdateRequest, ChangePasswordRequest
-except ImportError:
-    from app.core.database import get_db
-    from app.core.security import get_current_user, hash_password, verify_password
-    from app.models.models import User
-    from app.schemas.schemas import UserOut, UserUpdateRequest, ChangePasswordRequest
-
+from app.core.database import get_db
+from app.core.security import get_current_user, hash_password, verify_password
+from app.models.models import User
+from app.schemas.schemas import UserOut, UserUpdateRequest, ChangePasswordRequest
 router = APIRouter(prefix="/users", tags=["Users Profile"])
 
 @router.get("/profile", response_model=UserOut)

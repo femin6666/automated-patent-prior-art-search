@@ -1,19 +1,19 @@
 import pytest
 import re
 from typing import Dict, Any, List
-from backend.ml.similarity_engine import (
+from ml.similarity_engine import (
     compute_hybrid_score,
     calculate_deterministic_final_score,
     calculate_domain_similarity,
     infer_patent_domain
 )
-from backend.ml.keyword_extractor import (
+from ml.keyword_extractor import (
     extract_structured_invention_features,
     extract_atomic_technical_features,
     extract_technical_concepts
 )
-from backend.ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
-from backend.app.services.gemini_service import gemini_service
+from ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
+from app.services.gemini_service import gemini_service
 
 # 15 Random Invention Test Cases spanning diverse technical fields & unknown domains
 RANDOM_INVENTIONS_15_DOMAINS = [

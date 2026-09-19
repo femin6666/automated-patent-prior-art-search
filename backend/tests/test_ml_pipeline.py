@@ -1,8 +1,8 @@
 import pytest
-from backend.ml.preprocessing import clean_text, validate_invention_input, prepare_combined_text
-from backend.ml.keyword_extractor import extract_technical_concepts
-from backend.ml.risk_classifier import classify_prior_art_risk
-from backend.ml.similarity_engine import (
+from ml.preprocessing import clean_text, validate_invention_input, prepare_combined_text
+from ml.keyword_extractor import extract_technical_concepts
+from ml.risk_classifier import classify_prior_art_risk
+from ml.similarity_engine import (
     calculate_cosine_similarity, calculate_domain_similarity, compute_hybrid_score
 )
 
@@ -47,7 +47,7 @@ def test_similarity_engine():
     assert dom_sim == 1.0
 
 def test_keyword_regex_boundary_matching():
-    from backend.ml.similarity_engine import calculate_keyword_similarity
+    from ml.similarity_engine import calculate_keyword_similarity
     # "cellular" should NOT match keyword "cell" via exact word boundaries
     score_no_match, _ = calculate_keyword_similarity(
         user_keywords=["cell"],
@@ -70,7 +70,7 @@ def test_keyword_regex_boundary_matching():
     assert "Cell" in matched
 
 def test_adaptive_hybrid_scoring():
-    from backend.ml.similarity_engine import compute_hybrid_score
+    from ml.similarity_engine import compute_hybrid_score
     # When no keywords are supplied (user_keywords=[]), weight automatically shifts to 70% semantic SBERT similarity
     result = compute_hybrid_score(
         user_embedding=[1.0, 0.0, 0.0],
@@ -92,7 +92,7 @@ def test_adaptive_hybrid_scoring():
 
 def test_sbert_batching_numerical_equivalence():
     import numpy as np
-    from backend.ml.embedding_service import embedding_service
+    from ml.embedding_service import embedding_service
 
     sample_sentences = [
         "A wireless power transfer system employing adaptive resonance for charging.",

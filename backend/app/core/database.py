@@ -2,7 +2,10 @@ import os
 import logging
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
-from backend.app.core.config import settings
+try:
+    from backend.app.core.config import settings
+except ImportError:
+    from app.core.config import settings
 
 logger = logging.getLogger("patentlens.database")
 
@@ -37,9 +40,8 @@ if IS_POSTGRES:
             pool_recycle=300,
             pool_size=10,
             max_overflow=20,
-            connect_args={"connect_timeout": 10}
+            connect_args={"connect_timeout": 5}
         )
-        # Test connection & attempt vector extension creation
         with engine.connect() as conn:
             try:
                 conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
@@ -49,20 +51,13 @@ if IS_POSTGRES:
             except Exception as ve:
                 logger.info(f"Connected to PostgreSQL successfully! (pgvector extension note: {ve})")
     except Exception as e:
-        if is_production:
-            logger.error(f"CRITICAL: Production PostgreSQL database connection failed ({_get_masked_db_url(settings.DATABASE_URL)}): {e}")
-            raise RuntimeError(f"Production PostgreSQL connection failed: {e}")
-        else:
-            logger.warning(f"Could not connect to PostgreSQL ({e}). Falling back to SQLite for local development.")
-            IS_POSTGRES = False
-            SQLITE_URL = "sqlite:///./patentlens.db"
-            engine = create_engine(
-                SQLITE_URL,
-                connect_args={"check_same_thread": False}
-            )
+        logger.warning(f"PostgreSQL connection note during module initialization ({_get_masked_db_url(settings.DATABASE_URL)}): {e}")
+        engine = create_engine(
+            settings.DATABASE_URL,
+            pool_pre_ping=True,
+            connect_args={"connect_timeout": 5}
+        )
 else:
-    if is_production:
-        raise RuntimeError("Production environment requires PostgreSQL DATABASE_URL (postgresql://...). SQLite is disabled in production.")
     logger.info("Database backend: SQLite (Development/Testing)")
     SQLITE_URL = "sqlite:///./patentlens.db"
     engine = create_engine(

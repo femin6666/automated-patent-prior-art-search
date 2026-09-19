@@ -16,14 +16,14 @@ try:
         OTPVerifyRequest, OTPResendRequest
     )
 except ImportError:
-    from ..core.database import get_db
-    from ..core.security import (
+    from app.core.database import get_db
+    from app.core.security import (
         hash_password, verify_password, create_access_token, create_refresh_token,
         get_current_user, decode_token
     )
-    from ..core.config import settings
-    from ..models.models import User
-    from ..schemas.schemas import (
+    from app.core.config import settings
+    from app.models.models import User
+    from app.schemas.schemas import (
         UserRegisterRequest, UserLoginRequest, GoogleAuthRequest, TokenResponse, UserOut,
         OTPVerifyRequest, OTPResendRequest
     )

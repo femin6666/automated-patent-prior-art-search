@@ -2,7 +2,7 @@ from typing import Dict, Any
 try:
     from backend.app.core.config import settings
 except ImportError:
-    from ..app.core.config import settings
+    from app.core.config import settings
 
 RISK_DISCLAIMER = (
     "PatentLens AI provides AI-assisted preliminary prior-art search and comparison results "

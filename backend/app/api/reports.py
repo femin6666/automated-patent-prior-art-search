@@ -10,11 +10,11 @@ try:
     from backend.app.schemas.schemas import ReportOut
     from backend.app.services.report_service import generate_pdf_report
 except ImportError:
-    from ..core.database import get_db
-    from ..core.security import get_current_user
-    from ..models.models import User, Search, SearchResult, Report
-    from ..schemas.schemas import ReportOut
-    from ..services.report_service import generate_pdf_report
+    from app.core.database import get_db
+    from app.core.security import get_current_user
+    from app.models.models import User, Search, SearchResult, Report
+    from app.schemas.schemas import ReportOut
+    from app.services.report_service import generate_pdf_report
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 

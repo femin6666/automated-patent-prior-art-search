@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 try:
     from backend.app.core.config import settings
 except ImportError:
-    from ..core.config import settings
+    from app.core.config import settings
 
 logger = logging.getLogger("patentlens.gemini")
 

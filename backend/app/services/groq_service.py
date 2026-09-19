@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 try:
     from backend.app.core.config import settings
 except ImportError:
-    from ..core.config import settings
+    from app.core.config import settings
 
 logger = logging.getLogger("patentlens.groq")
 
@@ -55,7 +55,10 @@ class GroqService:
         is_testing = (getattr(settings, "TESTING", False) or os.getenv("TESTING", "").lower() == "true") and not (getattr(settings, "LIVE_BENCHMARK", False) or os.getenv("LIVE_BENCHMARK", "").lower() == "true")
         is_mocked = "mock" in type(self.client).__module__.lower() or "mock" in type(self.client).__name__.lower() if self.client else False
         if is_testing and not is_mocked:
-            from backend.app.services.gemini_service import gemini_service
+            try:
+                from backend.app.services.gemini_service import gemini_service
+            except ImportError:
+                from app.services.gemini_service import gemini_service
             return gemini_service._heuristic_invention_analysis(title, problem_statement, description, keywords, domain)
 
         if self.is_configured and self.client is not None:
@@ -118,12 +121,18 @@ Return ONLY valid JSON matching this exact structure:
                     res = fut.result(timeout=2.0)
                 text_content = res.choices[0].message.content
                 parsed = json.loads(text_content)
-                from backend.app.services.gemini_service import gemini_service
+                try:
+                    from backend.app.services.gemini_service import gemini_service
+                except ImportError:
+                    from app.services.gemini_service import gemini_service
                 return gemini_service._clean_invention_analysis(parsed, title, keywords, domain)
             except Exception as e:
                 logger.warning(f"Groq analyze_invention error/timeout ({e}). Falling back to Gemini / Heuristic.")
 
-        from backend.app.services.gemini_service import gemini_service
+        try:
+            from backend.app.services.gemini_service import gemini_service
+        except ImportError:
+            from app.services.gemini_service import gemini_service
         return gemini_service.analyze_invention(title, problem_statement, description, keywords, domain)
 
     def analyze_patent_pair(
@@ -289,7 +298,7 @@ Return ONLY valid JSON matching this exact structure:
         try:
             from backend.app.services.gemini_service import gemini_service
         except ImportError:
-            from .gemini_service import gemini_service
+            from app.services.gemini_service import gemini_service
         return gemini_service._generate_heuristic_pair_analysis(*args, **kwargs)
 
     def generate_novelty_analysis(
@@ -349,7 +358,10 @@ Return ONLY valid JSON.
             except Exception as e:
                 logger.error(f"Error in Groq novelty analysis: {e}")
 
-        from backend.app.services.gemini_service import gemini_service
+        try:
+            from backend.app.services.gemini_service import gemini_service
+        except ImportError:
+            from app.services.gemini_service import gemini_service
         return gemini_service.generate_novelty_analysis(invention_title, problem_statement, description, matched_patents, risk_level)
 
     def _normalize_parsed_response(self, parsed: Dict[str, Any]) -> Dict[str, Any]:

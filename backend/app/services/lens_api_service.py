@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional, Tuple
 try:
     from backend.app.core.config import settings
 except ImportError:
-    from ..core.config import settings
+    from app.core.config import settings
 
 logger = logging.getLogger("patentlens.lens_api")
 

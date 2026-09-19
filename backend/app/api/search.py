@@ -20,22 +20,22 @@ try:
     from backend.app.services.patent_api_service import patent_api_service
     from backend.app.services.lens_api_service import lens_api_service
 except ImportError:
-    from ..core.config import settings
-    from ..core.database import get_db, IS_POSTGRES
-    from ..core.security import get_current_user
-    from ..models.models import User, Patent, Search, SearchResult
-    from ..schemas.schemas import (
+    from app.core.config import settings
+    from app.core.database import get_db, IS_POSTGRES
+    from app.core.security import get_current_user
+    from app.models.models import User, Patent, Search, SearchResult
+    from app.schemas.schemas import (
         PriorArtSearchRequest, PriorArtSearchResponse, SearchResultItem,
         SearchSummary, SearchHistoryItem, PatentOut
     )
-    from ...ml.preprocessing import validate_invention_input, prepare_combined_text
-    from ...ml.keyword_extractor import extract_technical_concepts
-    from ...ml.embedding_service import embedding_service
-    from ...ml.similarity_engine import compute_hybrid_score, calculate_cosine_similarity
-    from ...ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
-    from ..services.llm_factory import get_llm_service
-    from ..services.patent_api_service import patent_api_service
-    from ..services.lens_api_service import lens_api_service
+    from ml.preprocessing import validate_invention_input, prepare_combined_text
+    from ml.keyword_extractor import extract_technical_concepts
+    from ml.embedding_service import embedding_service
+    from ml.similarity_engine import compute_hybrid_score, calculate_cosine_similarity
+    from ml.risk_classifier import classify_prior_art_risk, get_similarity_level_label
+    from app.services.llm_factory import get_llm_service
+    from app.services.patent_api_service import patent_api_service
+    from app.services.lens_api_service import lens_api_service
 
 router = APIRouter(prefix="/search", tags=["Prior-Art Search"])
 
@@ -83,7 +83,10 @@ def perform_prior_art_search(
             invention_analysis = inv_fut.result(timeout=2.5)
     except Exception as e_inv:
         logger.warning(f"[SEARCH ROUTE] Invention analysis timeout/note ({e_inv}). Falling back to instant heuristic NLP analysis.")
-        from backend.app.services.gemini_service import gemini_service
+        try:
+            from backend.app.services.gemini_service import gemini_service
+        except ImportError:
+            from app.services.gemini_service import gemini_service
         invention_analysis = gemini_service._heuristic_invention_analysis(
             request.title, request.problem_statement, request.description, request.keywords, request.domain
         )
@@ -134,7 +137,10 @@ def perform_prior_art_search(
         api_stats = {"patents_retrieved": 0, "patents_searched": 0, "lens_api_status": fallback_lens_status}
 
 
-    from backend.app.core.database import IS_POSTGRES, HAS_PGVECTOR
+    try:
+        from backend.app.core.database import IS_POSTGRES, HAS_PGVECTOR
+    except ImportError:
+        from app.core.database import IS_POSTGRES, HAS_PGVECTOR
     import numpy as np
 
     if IS_POSTGRES and HAS_PGVECTOR and user_embedding:
@@ -185,7 +191,10 @@ def perform_prior_art_search(
             logger.warning(f"Vector pre-filtering fallback: {e_pref}")
             candidate_patents = all_patents[:100]
 
-    from backend.ml.similarity_engine import is_technical_mismatch
+    try:
+        from backend.ml.similarity_engine import is_technical_mismatch
+    except ImportError:
+        from ml.similarity_engine import is_technical_mismatch
 
     scored_items = []
     for patent in candidate_patents:
@@ -357,7 +366,10 @@ def perform_prior_art_search(
         if any(e.get("verified") for e in item["scores"].get("evidence_items", []))
     )
 
-    from backend.app.schemas.schemas import ScoreBreakdown, PipelineMetrics, PatentFamilyMember
+    try:
+        from backend.app.schemas.schemas import ScoreBreakdown, PipelineMetrics, PatentFamilyMember
+    except ImportError:
+        from app.schemas.schemas import ScoreBreakdown, PipelineMetrics, PatentFamilyMember
 
     pipeline_metrics = PipelineMetrics(
         patents_searched=pat_searched,
@@ -781,7 +793,10 @@ def get_search_details(
         else:
             low_count += 1
 
-        from backend.app.services.gemini_service import gemini_service
+        try:
+            from backend.app.services.gemini_service import gemini_service
+        except ImportError:
+            from app.services.gemini_service import gemini_service
         pair_analysis = gemini_service._normalize_parsed_response(
             gemini_service._generate_heuristic_pair_analysis(
                 target_title=search.invention_title,

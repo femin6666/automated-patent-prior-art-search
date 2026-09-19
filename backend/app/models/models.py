@@ -2,7 +2,10 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, Float, Integer, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
-from backend.app.core.database import Base, IS_POSTGRES, HAS_PGVECTOR
+try:
+    from backend.app.core.database import Base, IS_POSTGRES, HAS_PGVECTOR
+except ImportError:
+    from app.core.database import Base, IS_POSTGRES, HAS_PGVECTOR
 
 # Use JSON type for 384-dimensional embedding storage across PostgreSQL and SQLite
 VECTOR_TYPE = JSON

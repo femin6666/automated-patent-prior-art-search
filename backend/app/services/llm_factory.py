@@ -5,9 +5,9 @@ try:
     from backend.app.services.gemini_service import GeminiService
     from backend.app.services.groq_service import GroqService
 except ImportError:
-    from ..core.config import settings
-    from .gemini_service import GeminiService
-    from .groq_service import GroqService
+    from app.core.config import settings
+    from app.services.gemini_service import GeminiService
+    from app.services.groq_service import GroqService
 
 logger = logging.getLogger("patentlens.llm_factory")
 

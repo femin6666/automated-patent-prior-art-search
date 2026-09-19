@@ -12,11 +12,11 @@ try:
     from backend.ml.preprocessing import prepare_combined_text
     from backend.app.services.lens_api_service import lens_api_service
 except ImportError:
-    from ..core.config import settings
-    from ..models.models import Patent
-    from ...ml.embedding_service import embedding_service
-    from ...ml.preprocessing import prepare_combined_text
-    from .lens_api_service import lens_api_service
+    from app.core.config import settings
+    from app.models.models import Patent
+    from ml.embedding_service import embedding_service
+    from ml.preprocessing import prepare_combined_text
+    from app.services.lens_api_service import lens_api_service
 
 logger = logging.getLogger("patentlens.patent_api")
 
@@ -112,7 +112,10 @@ class PatentAPIService:
         logger.info(f"[PATENT API] Total combined candidate records retrieved: {len(raw_candidates)}")
 
         # 4. Deduplicate, Generate Batch SBERT Embeddings, and Cache in DB
-        from backend.ml.preprocessing import prepare_weighted_patent_text
+        try:
+            from backend.ml.preprocessing import prepare_weighted_patent_text
+        except ImportError:
+            from ml.preprocessing import prepare_weighted_patent_text
         newly_cached_patents = []
         skipped_count = 0
 

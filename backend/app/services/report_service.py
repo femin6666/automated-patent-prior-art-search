@@ -5,7 +5,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
-from backend.app.models.models import Search, SearchResult, Patent
+try:
+    from backend.app.models.models import Search, SearchResult, Patent
+except ImportError:
+    from app.models.models import Search, SearchResult, Patent
 
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "generated_reports")
 os.makedirs(REPORTS_DIR, exist_ok=True)

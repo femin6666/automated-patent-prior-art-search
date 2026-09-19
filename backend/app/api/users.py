@@ -7,10 +7,10 @@ try:
     from backend.app.models.models import User
     from backend.app.schemas.schemas import UserOut, UserUpdateRequest, ChangePasswordRequest
 except ImportError:
-    from ..core.database import get_db
-    from ..core.security import get_current_user, hash_password, verify_password
-    from ..models.models import User
-    from ..schemas.schemas import UserOut, UserUpdateRequest, ChangePasswordRequest
+    from app.core.database import get_db
+    from app.core.security import get_current_user, hash_password, verify_password
+    from app.models.models import User
+    from app.schemas.schemas import UserOut, UserUpdateRequest, ChangePasswordRequest
 
 router = APIRouter(prefix="/users", tags=["Users Profile"])
 

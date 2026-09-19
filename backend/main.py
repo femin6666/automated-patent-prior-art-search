@@ -40,34 +40,13 @@ logger = logging.getLogger("patentlens.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan event handler to load ML model & seed database once at startup."""
-    print("\n[PATENTLENS AI] Initializing backend services...", flush=True)
+    """Lifespan event handler for PatentLens AI Backend."""
     logger.info("Initializing PatentLens AI Backend...")
-    try:
-        Base.metadata.create_all(bind=engine)
-        ensure_columns_exist(engine)
-    except Exception as e:
-        logger.warning(f"Database table check note: {e}")
-    
-    try:
-        embedding_service.load_model(settings.MODEL_NAME)
-        print(f"[PATENTLENS AI] SBERT embedding model '{settings.MODEL_NAME}' ready.", flush=True)
-        logger.info(f"SBERT model '{settings.MODEL_NAME}' successfully loaded into memory.")
-    except Exception as e:
-        logger.warning(f"Could not preload SBERT model: {e}")
-
-    try:
-        seed_patents_if_needed()
-    except Exception as e:
-        logger.error(f"Error during startup seed: {e}")
-
-    print("[PATENTLENS AI] Backend ready! Listening on http://localhost:8000\n", flush=True)
     logger.info("================ AI MODEL CONFIGURATION DIAGNOSTICS ================")
     logger.info(f"Gemini Model:    {settings.GEMINI_MODEL}")
     logger.info(f"Groq Model:      {settings.GROQ_MODEL}")
     logger.info(f"Embedding Model: {settings.MODEL_NAME}")
     logger.info("====================================================================")
-
     yield
     logger.info("Shutting down PatentLens AI Backend...")
 
@@ -124,10 +103,8 @@ app.include_router(users_router, prefix=settings.API_PREFIX)
 @app.get("/")
 def health_check():
     return {
-        "status": "online",
-        "service": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "model_loaded": embedding_service.is_loaded
+        "status": "OK",
+        "service": "PatentLens AI Backend"
     }
 
 if __name__ == "__main__":

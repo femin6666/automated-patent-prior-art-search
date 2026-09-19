@@ -1,5 +1,4 @@
---index-url https://pypi.org/simple
---extra-index-url https://download.pytorch.org/whl/cpu
+--find-links https://download.pytorch.org/whl/cpu/torch_stable.html
 
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0

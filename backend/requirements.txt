@@ -1,3 +1,4 @@
+--index-url https://pypi.org/simple
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 fastapi>=0.110.0
@@ -8,7 +9,7 @@ pydantic-settings>=2.2.0
 sqlalchemy>=2.0.28
 psycopg2-binary>=2.9.9
 pgvector>=0.2.5
-torch==2.2.2+cpu
+packaging>=24.2.0
 sentence-transformers>=2.5.0
 scikit-learn>=1.4.0
 numpy>=1.26.0
@@ -21,3 +22,4 @@ httpx>=0.27.0
 groq>=1.7.0
 google-genai>=2.22.0
 google-cloud-bigquery>=3.45.0
+torch==2.2.2+cpu

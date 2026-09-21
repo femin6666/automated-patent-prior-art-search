@@ -21,7 +21,7 @@ except ModuleNotFoundError:
     backend_module.__path__ = [backend_dir]
     sys.modules["backend"] = backend_module
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 

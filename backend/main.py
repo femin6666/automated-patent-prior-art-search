@@ -104,11 +104,19 @@ app.include_router(reports_router, prefix=settings.API_PREFIX)
 app.include_router(users_router, prefix=settings.API_PREFIX)
 
 @app.get("/")
+@app.get("/api")
+@app.get("/api/")
 def health_check():
     return {
         "status": "OK",
-        "service": "PatentLens AI Backend"
+        "service": "PatentLens AI Backend",
+        "version": settings.VERSION,
+        "docs": "/docs"
     }
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 if __name__ == "__main__":
     import uvicorn

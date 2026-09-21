@@ -1,21 +1,36 @@
 import os
 import uuid
+import tempfile
 from datetime import datetime, timezone
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from app.models.models import Search, SearchResult, Patent
-REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "generated_reports")
-os.makedirs(REPORTS_DIR, exist_ok=True)
+
+def get_reports_dir() -> str:
+    """Safely obtain writable reports directory, falling back to tempdir if filesystem is read-only (e.g. Vercel)."""
+    primary_dir = os.path.join(os.path.dirname(__file__), "..", "..", "generated_reports")
+    try:
+        os.makedirs(primary_dir, exist_ok=True)
+        test_file = os.path.join(primary_dir, f".write_test_{uuid.uuid4().hex[:6]}")
+        with open(test_file, "w") as f:
+            f.write("ok")
+        os.remove(test_file)
+        return primary_dir
+    except (OSError, PermissionError):
+        tmp_dir = os.path.join(tempfile.gettempdir(), "generated_reports")
+        os.makedirs(tmp_dir, exist_ok=True)
+        return tmp_dir
 
 def generate_pdf_report(search: Search, results: list) -> str:
     """
     Generate a clean PDF prior-art search report using ReportLab.
     Returns absolute path of generated PDF file.
     """
+    reports_dir = get_reports_dir()
     filename = f"patentlens_report_{search.id[:8]}_{int(datetime.now(timezone.utc).timestamp())}.pdf"
-    filepath = os.path.join(REPORTS_DIR, filename)
+    filepath = os.path.join(reports_dir, filename)
 
     doc = SimpleDocTemplate(
         filepath,

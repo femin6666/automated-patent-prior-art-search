@@ -1,12 +1,25 @@
 import sys
 import os
+import types
 import logging
 from contextlib import asynccontextmanager
 
-# Add parent directory to sys.path so imports work regardless of execution CWD
-# Server reloaded with instant rate-limit circuit breaker and fast GET search details
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Add parent directory and backend directory to sys.path so imports work regardless of execution CWD
+backend_dir = os.path.abspath(os.path.dirname(__file__))
+parent_dir = os.path.abspath(os.path.join(backend_dir, ".."))
+
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+# Ensure 'backend' module is registered so imports like 'from backend.app...' resolve in Vercel
+try:
+    import backend
+except ModuleNotFoundError:
+    backend_module = types.ModuleType("backend")
+    backend_module.__path__ = [backend_dir]
+    sys.modules["backend"] = backend_module
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -43,11 +56,13 @@ app = FastAPI(
     version=settings.VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False
 )
 
 origins = [
     settings.FRONTEND_URL,
+    "https://automated-patent-prior-art-search.vercel.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:3001",

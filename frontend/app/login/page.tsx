@@ -223,6 +223,9 @@ export default function LoginPage() {
       console.warn("Google OAuth error:", err);
       if (err.code === "auth/popup-closed-by-user") {
         setError("Google sign-in popup was closed before completion.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        const domain = typeof window !== "undefined" ? window.location.hostname : "your Vercel domain";
+        setError(`This domain (${domain}) is not authorized in Firebase Console for Google OAuth. Please add '${domain}' to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
       } else if (
         err.code === "auth/configuration-not-found" ||
         err.code === "auth/api-key-not-valid" ||

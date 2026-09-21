@@ -78,6 +78,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+class VercelPathRewriteMiddleware:
+    """
+    ASGI Middleware to restore the original client URL path on Vercel.
+    When Vercel rewrites requests to '/main.py', this middleware reads the original
+    requested URI from 'x-forwarded-uri' or 'x-matched-path' headers so FastAPI router
+    matches routes (/api/auth/login, /api/search, /docs, /) correctly.
+    """
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http":
+            path = scope.get("path", "")
+            if path in ["/main.py", "/main", "/index.py", "/index"] or path.startswith("/main.py/"):
+                headers = dict(scope.get("headers", []))
+                forwarded_uri = headers.get(b"x-forwarded-uri", b"").decode("utf-8")
+                if not forwarded_uri:
+                    forwarded_uri = headers.get(b"x-matched-path", b"").decode("utf-8")
+                if not forwarded_uri:
+                    forwarded_uri = headers.get(b"x-invoke-path", b"").decode("utf-8")
+                
+                if forwarded_uri:
+                    clean_path = forwarded_uri.split("?")[0]
+                    scope["path"] = clean_path if clean_path else "/"
+                else:
+                    scope["path"] = "/"
+        await self.app(scope, receive, send)
+
+app.add_middleware(VercelPathRewriteMiddleware)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

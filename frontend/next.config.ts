@@ -2,8 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "https://automated-patent-prior-art-search-vb4c-l24fdcigj.vercel.app/api";
-    const targetUrl = backendUrl.endsWith("/api") ? backendUrl : `${backendUrl.replace(/\/$/, "")}/api`;
+    let rawUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "").trim();
+    if (!rawUrl) {
+      rawUrl = "https://automated-patent-prior-art-search-vb4c-l24fdcigj.vercel.app/api";
+    } else if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
+      rawUrl = `https://${rawUrl}`;
+    }
+
+    const targetUrl = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl.replace(/\/$/, "")}/api`;
+
     return [
       {
         source: "/api/:path*",

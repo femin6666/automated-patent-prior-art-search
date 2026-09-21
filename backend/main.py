@@ -91,7 +91,7 @@ class VercelPathRewriteMiddleware:
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
             path = scope.get("path", "")
-            if path in ["/main.py", "/main", "/index.py", "/index"] or path.startswith("/main.py/"):
+            if path in ["/main.py", "/main", "/api/index.py", "/api/index", "/index.py", "/index"] or path.startswith("/main.py/") or path.startswith("/api/index.py/"):
                 headers = dict(scope.get("headers", []))
                 forwarded_uri = headers.get(b"x-forwarded-uri", b"").decode("utf-8")
                 if not forwarded_uri:

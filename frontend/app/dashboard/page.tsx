@@ -32,8 +32,10 @@ import {
   CartesianGrid,
   Cell
 } from "recharts";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
   const [saved, setSaved] = useState<SavedPatent[]>([]);
@@ -55,12 +57,13 @@ export default function DashboardPage() {
         setReports(r);
       } catch (err) {
         console.error("Dashboard error:", err);
+        router.push("/login");
       } finally {
         setLoading(false);
       }
     }
     loadDashboardData();
-  }, []);
+  }, [router]);
 
   const totalSearches = history.length;
   const savedCount = saved.length;

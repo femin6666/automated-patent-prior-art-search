@@ -41,13 +41,14 @@ export default function ProfilePage() {
         setName(u.name);
         setEmail(u.email);
       } catch (err) {
-        console.error(err);
+        console.error("Profile load error:", err);
+        router.push("/login");
       } finally {
         setLoading(false);
       }
     }
     loadProfile();
-  }, []);
+  }, [router]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

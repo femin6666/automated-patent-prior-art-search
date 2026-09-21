@@ -8,7 +8,10 @@ import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
 import { FileText, Download, Loader2, Sparkles, ExternalLink } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+
 export default function ReportsPage() {
+  const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -20,12 +23,13 @@ export default function ReportsPage() {
         setReports(data);
       } catch (err) {
         console.error(err);
+        router.push("/login");
       } finally {
         setLoading(false);
       }
     }
     loadReports();
-  }, []);
+  }, [router]);
 
   const handleDownload = async (report: Report) => {
     setDownloadingId(report.id);

@@ -77,18 +77,9 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
         except Exception:
             pass
 
-    # Fallback to demo user for unauthenticated / guest searches
-    demo_user = db.query(User).filter(User.email == "inventor@startup.com").first()
-    if not demo_user:
-        demo_user = db.query(User).first()
-    if not demo_user:
-        demo_user = User(
-            name="Demo Inventor",
-            email="inventor@startup.com",
-            password_hash=hash_password("password123"),
-            is_verified=True
-        )
-        db.add(demo_user)
-        db.commit()
-        db.refresh(demo_user)
-    return demo_user
+    # Require explicit authentication credentials (Email/Password or Google login)
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication credentials required. Please sign in with your email & password or Google.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

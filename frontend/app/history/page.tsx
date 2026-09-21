@@ -17,7 +17,10 @@ import {
   Sparkles
 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+
 export default function SearchHistoryPage() {
+  const router = useRouter();
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,6 +32,7 @@ export default function SearchHistoryPage() {
       setHistory(data);
     } catch (err) {
       console.error("Failed to load search history:", err);
+      router.push("/login");
     } finally {
       setLoading(false);
     }

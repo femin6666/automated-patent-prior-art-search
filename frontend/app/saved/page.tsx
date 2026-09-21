@@ -17,7 +17,10 @@ import {
   Check
 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+
 export default function SavedPatentsPage() {
+  const router = useRouter();
   const [savedList, setSavedList] = useState<SavedPatent[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,6 +32,7 @@ export default function SavedPatentsPage() {
       setSavedList(data);
     } catch (err) {
       console.error(err);
+      router.push("/login");
     } finally {
       setLoading(false);
     }

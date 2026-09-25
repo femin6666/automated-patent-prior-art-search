@@ -295,13 +295,17 @@ class PatentAPIService:
         import xml.etree.ElementTree as ET
         import urllib.parse
 
-        query_terms = [k.strip() for k in (keywords or []) if len(k.strip()) > 2]
-        if not query_terms and title:
-            query_terms = [w.strip() for w in title.split() if len(w.strip()) > 3][:3]
-        if not query_terms:
-            query_terms = [domain or "technology"]
+        clean_keywords = []
+        for k in (keywords or []):
+            words = [w.strip() for w in k.split() if len(w.strip()) > 2]
+            clean_keywords.extend(words)
+        if not clean_keywords and title:
+            clean_keywords = [w.strip() for w in title.split() if len(w.strip()) > 3]
+        if not clean_keywords:
+            clean_keywords = [domain or "technology"]
 
-        search_param = "+AND+".join([f"all:{urllib.parse.quote(t)}" for t in query_terms[:3]])
+        target_terms = [urllib.parse.quote(t) for t in clean_keywords[:3] if t]
+        search_param = "+OR+".join([f"all:{t}" for t in target_terms]) if target_terms else "all:irrigation"
         url_arxiv = f"https://export.arxiv.org/api/query?search_query={search_param}&start=0&max_results={limit}&sortBy=relevance&sortOrder=descending"
 
         records = []

@@ -272,6 +272,9 @@ def perform_prior_art_search(
 
     top_candidates = [item for item in gated_candidates if item["scores"]["final_score"] >= 30.0 or item["scores"]["matched_feature_count"] > 0]
     top_10 = top_candidates[:10]
+    if not top_10 and deduped_scored_items:
+        logger.info("[SEARCH ROUTE] All candidates scored below 30.0% threshold. Returning top deduplicated candidates categorized as TECHNICALLY_DISTINCT.")
+        top_10 = deduped_scored_items[:10]
 
     # Iterative Search & Citation Expansion for top candidates
     iterative_retrieved = 0

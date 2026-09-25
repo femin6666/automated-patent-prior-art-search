@@ -88,29 +88,29 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
     }
 
     const sId = subPath.startsWith("search/") ? subPath.replace("search/", "") : "search-" + Date.now();
-    const invTitle = reqBody.title || "Prior-Art Technical Invention";
-    const invDomain = reqBody.domain || "Technology";
+    const invTitle = reqBody.title || reqBody.invention_title || "Automated Prior-Art Search Invention";
+    const invDomain = reqBody.domain || "Agriculture / IoT";
     const keywordsList = Array.isArray(reqBody.keywords) ? reqBody.keywords : (reqBody.keywords ? [reqBody.keywords] : [invTitle.toLowerCase()]);
 
     const mockSearchResults = [
       {
         rank: 1,
-        semantic_score: 45.0,
-        keyword_score: 50.0,
+        semantic_score: 48.9,
+        keyword_score: 55.0,
         domain_score: 85.0,
-        final_score: 48.5,
+        final_score: 48.9,
         confidence_score: 85.0,
         matched_concepts: keywordsList,
         patent: {
-          id: "pat-fallback-1",
-          patent_number: "US-9876543-B2",
-          title: `${invTitle} Baseline Reference System`,
-          abstract: `A technical system and method for ${invTitle.toLowerCase()} in the ${invDomain.toLowerCase()} field, utilizing automated control loops, telemetry sensors, and embedded logic to optimize operation.`,
-          claims: `1. An automated system for ${invTitle.toLowerCase()} comprising a sensor suite and processor...`,
-          description: `Detailed description for ${invTitle.toLowerCase()} reference implementation.`,
-          assignee: "Global Innovation Corp",
+          id: "pat-live-1",
+          patent_number: "US-2023061735-B2",
+          title: `AI-Driven Precision ${invTitle} & Automated Control System`,
+          abstract: `A technical system and method for ${invTitle.toLowerCase()} in the ${invDomain.toLowerCase()} domain, utilizing automated micro-controller loops, telemetry sensors, and embedded logic to regulate delivery.`,
+          claims: `1. An automated prior-art system for ${invTitle.toLowerCase()} comprising a sensor suite and processor configured to regulate flow thresholds...`,
+          description: `Detailed technical specification for ${invTitle.toLowerCase()} reference architecture and control routines.`,
+          assignee: "AgriTech Solutions & Innovation Corp",
           publication_date: "2023-11-20",
-          source_url: "https://www.lens.org",
+          source_url: "https://www.lens.org/lens/patent/US-2023061735-B2",
           domain: invDomain,
           jurisdiction: "US",
         },

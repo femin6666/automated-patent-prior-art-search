@@ -30,13 +30,10 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
         body,
       });
 
-      // If backend returned any status other than 404, return backend response
-      if (res.status !== 404) {
-        const data = await res.json().catch(() => ({}));
-        return NextResponse.json(data, { status: res.status });
-      }
+      const data = await res.json().catch(() => ({}));
+      return NextResponse.json(data, { status: res.status });
     } catch (proxyErr) {
-      console.warn("[API Catch-all] External backend unreachable, falling back to local handler:", proxyErr);
+      console.warn("[API Catch-all] External backend unreachable:", proxyErr);
     }
   }
 

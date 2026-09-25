@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const EXTERNAL_BACKEND = process.env.BACKEND_URL || process.env.PYTHON_BACKEND_URL || "";
+const EXTERNAL_BACKEND = process.env.BACKEND_URL || process.env.PYTHON_BACKEND_URL || "http://localhost:8000";
 
 async function handleRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const resolvedParams = await params;
@@ -22,8 +22,10 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
         body,
       });
 
-      const data = await res.json().catch(() => ({}));
-      return NextResponse.json(data, { status: res.status });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return NextResponse.json(data, { status: res.status });
+      }
     } catch (proxyErr) {
       console.warn("[API Catch-all] External backend unreachable, falling back to local handler:", proxyErr);
     }
@@ -83,7 +85,7 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
     if (method === "POST") {
       try {
         reqBody = await req.json();
-      } catch {}
+      } catch { }
     }
 
     const sId = subPath.startsWith("search/") ? subPath.replace("search/", "") : "search-" + Date.now();

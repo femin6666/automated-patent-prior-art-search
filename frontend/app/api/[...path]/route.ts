@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const EXTERNAL_BACKEND = process.env.BACKEND_URL || process.env.PYTHON_BACKEND_URL || "http://localhost:8000";
+const EXTERNAL_BACKEND = process.env.BACKEND_URL || process.env.PYTHON_BACKEND_URL || "http://127.0.0.1:8000";
 
 async function handleRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const resolvedParams = await params;

@@ -79,6 +79,7 @@ export interface PipelineMetrics {
   patents_searched: number;
   patents_retrieved: number;
   vector_shortlisted: number;
+  final_shortlisted?: number;
   unique_families: number;
   semantic_candidates?: number;
   technical_candidates?: number;

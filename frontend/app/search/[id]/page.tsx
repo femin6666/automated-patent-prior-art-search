@@ -111,7 +111,8 @@ export default function SearchResultsPage() {
     );
   }
 
-  let filteredResults = [...data.results];
+  const safeResults = Array.isArray(data.results) ? data.results : [];
+  let filteredResults = [...safeResults];
 
   if (riskFilter !== "ALL") {
     filteredResults = filteredResults.filter((r) => {
@@ -127,9 +128,9 @@ export default function SearchResultsPage() {
   if (sortBy === "similarity") {
     filteredResults.sort((a, b) => b.final_score - a.final_score);
   } else if (sortBy === "newest") {
-    filteredResults.sort((a, b) => new Date(b.patent.publication_date).getTime() - new Date(a.patent.publication_date).getTime());
+    filteredResults.sort((a, b) => new Date(b.patent?.publication_date || 0).getTime() - new Date(a.patent?.publication_date || 0).getTime());
   } else if (sortBy === "oldest") {
-    filteredResults.sort((a, b) => new Date(a.patent.publication_date).getTime() - new Date(b.patent.publication_date).getTime());
+    filteredResults.sort((a, b) => new Date(a.patent?.publication_date || 0).getTime() - new Date(b.patent?.publication_date || 0).getTime());
   }
 
   return (
@@ -173,23 +174,23 @@ export default function SearchResultsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="p-4 rounded-xl tech-card text-center">
               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Total Matches</div>
-              <div className="text-2xl font-mono font-bold text-zinc-100 mt-1">{data.summary.total_results}</div>
+              <div className="text-2xl font-mono font-bold text-zinc-100 mt-1">{data.summary?.total_results || safeResults.length}</div>
             </div>
             <div className="p-4 rounded-xl tech-card text-center">
               <div className="text-[10px] text-emerald-400 font-mono uppercase tracking-wider">Low Risk</div>
-              <div className="text-2xl font-mono font-bold text-emerald-400 mt-1">{data.summary.low_similarity}</div>
+              <div className="text-2xl font-mono font-bold text-emerald-400 mt-1">{data.summary?.low_similarity || 0}</div>
             </div>
             <div className="p-4 rounded-xl tech-card text-center">
               <div className="text-[10px] text-amber-400 font-mono uppercase tracking-wider">Moderate Risk</div>
-              <div className="text-2xl font-mono font-bold text-amber-400 mt-1">{data.summary.moderate_similarity}</div>
+              <div className="text-2xl font-mono font-bold text-amber-400 mt-1">{data.summary?.moderate_similarity || 0}</div>
             </div>
             <div className="p-4 rounded-xl tech-card text-center">
               <div className="text-[10px] text-orange-400 font-mono uppercase tracking-wider">High Risk</div>
-              <div className="text-2xl font-mono font-bold text-orange-400 mt-1">{data.summary.high_similarity}</div>
+              <div className="text-2xl font-mono font-bold text-orange-400 mt-1">{data.summary?.high_similarity || 0}</div>
             </div>
             <div className="p-4 rounded-xl tech-card text-center col-span-2 sm:col-span-1">
               <div className="text-[10px] text-rose-400 font-mono uppercase tracking-wider">Very High Risk</div>
-              <div className="text-2xl font-mono font-bold text-rose-400 mt-1">{data.summary.very_high_similarity}</div>
+              <div className="text-2xl font-mono font-bold text-rose-400 mt-1">{data.summary?.very_high_similarity || 0}</div>
             </div>
           </div>
 
@@ -198,57 +199,57 @@ export default function SearchResultsPage() {
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300">Searched</div>
               <div className="text-xl font-mono font-bold text-indigo-200 mt-0.5">
-                {data.summary.pipeline_metrics?.patents_searched || data.summary.patents_searched || 100}
+                {data.summary?.pipeline_metrics?.patents_searched || data.summary?.patents_searched || 100}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-sky-300">API Retrieved</div>
               <div className="text-xl font-mono font-bold text-sky-200 mt-0.5">
-                {data.summary.pipeline_metrics?.patents_retrieved || data.summary.patents_retrieved || 0}
+                {data.summary?.pipeline_metrics?.patents_retrieved || data.summary?.patents_retrieved || 0}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300">Shortlisted</div>
               <div className="text-xl font-mono font-bold text-purple-200 mt-0.5">
-                {data.summary.pipeline_metrics?.vector_shortlisted || data.summary.patents_shortlisted || data.results.length}
+                {data.summary?.pipeline_metrics?.vector_shortlisted || data.summary?.patents_shortlisted || safeResults.length}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300">Unique Families</div>
               <div className="text-xl font-mono font-bold text-emerald-200 mt-0.5">
-                {data.summary.pipeline_metrics?.unique_families || data.summary.unique_families_count || data.results.length}
+                {data.summary?.pipeline_metrics?.unique_families || data.summary?.unique_families_count || safeResults.length}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">With Claims</div>
               <div className="text-xl font-mono font-bold text-cyan-200 mt-0.5">
-                {data.summary.pipeline_metrics?.patents_with_claims || 0}
+                {data.summary?.pipeline_metrics?.patents_with_claims || 0}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300">Full Text</div>
               <div className="text-xl font-mono font-bold text-amber-200 mt-0.5">
-                {data.summary.pipeline_metrics?.patents_with_full_text || 0}
+                {data.summary?.pipeline_metrics?.patents_with_full_text || 0}
               </div>
             </div>
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-rose-300">Evidence Verified</div>
               <div className="text-xl font-mono font-bold text-rose-200 mt-0.5">
-                {data.summary.pipeline_metrics?.evidence_verified_matches || 0}
+                {data.summary?.pipeline_metrics?.evidence_verified_matches || 0}
               </div>
             </div>
           </div>
 
           {/* Prior-Art Relevance Indicator Card */}
           {(() => {
-            const topMatchScore = data.results && data.results.length > 0 ? Math.round(data.results[0].final_score) : Math.round(data.highest_similarity);
-            const topVectorSim = data.results && data.results.length > 0 ? Math.round(data.results[0].semantic_score) : Math.round(data.highest_semantic_similarity || data.highest_similarity);
-            const topScoreBreakdown = data.results[0]?.score_breakdown || {
+            const topMatchScore = safeResults.length > 0 ? Math.round(safeResults[0].final_score) : Math.round(data.highest_similarity || 0);
+            const topVectorSim = safeResults.length > 0 ? Math.round(safeResults[0].semantic_score) : Math.round(data.highest_semantic_similarity || data.highest_similarity || 0);
+            const topScoreBreakdown = safeResults[0]?.score_breakdown || {
               semantic_similarity: topVectorSim,
-              technical_features: data.results[0]?.keyword_score || 0,
-              evidence_strength: data.results[0]?.evidence_confidence || 0,
-              distinctive_concepts: data.results[0]?.keyword_score || 0,
-              domain_cpc_alignment: data.results[0]?.domain_score || 50,
+              technical_features: safeResults[0]?.keyword_score || 0,
+              evidence_strength: safeResults[0]?.evidence_confidence || 0,
+              distinctive_concepts: safeResults[0]?.keyword_score || 0,
+              domain_cpc_alignment: safeResults[0]?.domain_score || 50,
               final_score: topMatchScore,
               is_gated: false,
               formula_explanation: "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"

@@ -56,10 +56,11 @@ interface Top5ChartProps {
   results: SearchResultItem[];
 }
 
-export function Top5SimilarityChart({ results }: Top5ChartProps) {
-  const top5Data = results.slice(0, 5).map((r) => ({
-    name: r.patent.title.length > 25 ? r.patent.title.substring(0, 25) + "..." : r.patent.title,
-    score: r.final_score,
+export function Top5SimilarityChart({ results = [] }: Top5ChartProps) {
+  const safeResults = Array.isArray(results) ? results : [];
+  const top5Data = safeResults.slice(0, 5).map((r) => ({
+    name: r.patent?.title ? (r.patent.title.length > 25 ? r.patent.title.substring(0, 25) + "..." : r.patent.title) : "Patent",
+    score: r.final_score || 0,
   }));
 
   return (

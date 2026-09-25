@@ -65,7 +65,7 @@ def decode_token(token: str, secret: str) -> dict:
         )
 
 def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
-    """Dependency to retrieve current authenticated user from JWT bearer token, falling back to default active user."""
+    """Dependency to retrieve current authenticated user from JWT bearer token."""
     if token and token.strip() and token.strip().lower() not in ["null", "undefined", "none", "bearer"]:
         try:
             payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.ALGORITHM])
@@ -77,17 +77,8 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
         except Exception:
             pass
 
-    # Fallback to active default/demo user in database so searches always run live prior-art pipeline without 401 blocking
-    user = db.query(User).first()
-    if not user:
-        user = User(
-            email="inventor@startup.com",
-            hashed_password=hash_password("DemoPassword123!"),
-            full_name="Inventor User",
-            is_active=True,
-            is_verified=True
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    return user
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication credentials required. Please sign in with your email & password or Google.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

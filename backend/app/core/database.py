@@ -26,12 +26,17 @@ HAS_PGVECTOR = False
 
 is_production = (getattr(settings, "ENVIRONMENT", "development").lower() == "production" or os.getenv("ENVIRONMENT", "").lower() == "production")
 
+db_url = settings.DATABASE_URL
+if db_url and (db_url.startswith("postgresql://") or db_url.startswith("postgres://")):
+    if not any(x in db_url for x in ["+psycopg2", "+psycopg", "+asyncpg", "+pg8000"]):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1).replace("postgres://", "postgresql+psycopg2://", 1)
+
 if IS_POSTGRES:
     logger.info("Database backend: PostgreSQL")
-    logger.info(f"Database host: {_get_masked_db_url(settings.DATABASE_URL)}")
+    logger.info(f"Database host: {_get_masked_db_url(db_url)}")
     try:
         engine = create_engine(
-            settings.DATABASE_URL,
+            db_url,
             pool_pre_ping=True,
             pool_recycle=300,
             pool_size=10,
@@ -47,12 +52,18 @@ if IS_POSTGRES:
             except Exception as ve:
                 logger.info(f"Connected to PostgreSQL successfully! (pgvector extension note: {ve})")
     except Exception as e:
-        logger.warning(f"PostgreSQL connection note during module initialization ({_get_masked_db_url(settings.DATABASE_URL)}): {e}")
-        engine = create_engine(
-            settings.DATABASE_URL,
-            pool_pre_ping=True,
-            connect_args={"connect_timeout": 5}
-        )
+        logger.warning(f"PostgreSQL connection note during module initialization ({_get_masked_db_url(db_url)}): {e}")
+        try:
+            engine = create_engine(
+                db_url,
+                pool_pre_ping=True,
+                connect_args={"connect_timeout": 5}
+            )
+        except Exception as e2:
+            logger.warning(f"PostgreSQL fallback failed ({e2}). Using SQLite fallback.")
+            IS_POSTGRES = False
+            SQLITE_URL = "sqlite:///./patentlens.db"
+            engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
 else:
     logger.info("Database backend: SQLite (Development/Testing)")
     SQLITE_URL = "sqlite:///./patentlens.db"

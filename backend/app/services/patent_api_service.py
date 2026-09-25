@@ -60,6 +60,10 @@ class PatentAPIService:
         is_testing = (getattr(settings, "TESTING", False) or os.getenv("TESTING", "").lower() == "true") and not (getattr(settings, "LIVE_BENCHMARK", False) or os.getenv("LIVE_BENCHMARK", "").lower() == "true")
         is_mocked = "mock" in str(lens_api_service.search_patents).lower()
 
+        lens_total_searched = 0
+        lens_retrieved_count = 0
+        lens_api_status = "LENS_UNCONFIGURED"
+
         if lens_api_service.is_configured:
             if is_testing and not is_mocked:
                 logger.info("[PATENT API] TESTING mode active. Skipping live Lens API requests.")
@@ -74,6 +78,7 @@ class PatentAPIService:
                 lens_patents = lens_resp.get("results", [])
                 lens_api_status = lens_resp.get("status", "LENS_OK")
                 lens_retrieved_count = lens_resp.get("retrieved_count", len(lens_patents))
+                lens_total_searched = lens_resp.get("total_searched", 0)
 
                 # Independent CPC/IPC Classification Retrieval Path
                 if cpc_candidates:
@@ -83,7 +88,7 @@ class PatentAPIService:
                 # Apply Patent Family Deduplication
                 dedup_lens_patents = lens_api_service.group_by_patent_family(lens_patents)
                 raw_candidates.extend(dedup_lens_patents)
-                logger.info(f"[PATENT API] Retained {len(dedup_lens_patents)} distinct patent families from The Lens.")
+                logger.info(f"[PATENT API] Retained {len(dedup_lens_patents)} distinct patent families from The Lens (Open World Matched: {lens_total_searched}).")
 
         # 2. SUPPLEMENTARY SEARCH: PatentsView API if Lens returned < 10 records
         if not is_testing and len(raw_candidates) < 10:
@@ -192,12 +197,14 @@ class PatentAPIService:
             logger.info(f"[PATENT API] Successfully cached {len(newly_cached_patents)} new records into database.")
 
         total_db_patents = db.query(Patent).count()
+        final_patents_searched = lens_total_searched if (lens_total_searched and lens_total_searched > 0) else (total_db_patents + len(raw_candidates))
 
         return {
             "patents_retrieved": lens_retrieved_count if lens_api_service.is_configured else len(raw_candidates),
             "patents_newly_cached": len(newly_cached_patents),
             "patents_skipped_duplicates": skipped_count,
-            "patents_searched": total_db_patents + len(raw_candidates),
+            "patents_searched": final_patents_searched,
+            "lens_total_searched": lens_total_searched,
             "lens_api_status": lens_api_status
         }
 

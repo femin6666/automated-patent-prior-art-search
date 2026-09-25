@@ -199,7 +199,7 @@ export default function SearchResultsPage() {
             <div className="text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300">Searched</div>
               <div className="text-xl font-mono font-bold text-indigo-200 mt-0.5">
-                {data.summary?.pipeline_metrics?.patents_searched || data.summary?.patents_searched || 100}
+                {(data.summary?.pipeline_metrics?.patents_searched ?? data.summary?.patents_searched ?? 0).toLocaleString()}
               </div>
             </div>
             <div className="text-center">

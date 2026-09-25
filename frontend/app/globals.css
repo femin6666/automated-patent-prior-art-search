@@ -63,3 +63,155 @@
 .glow-violet {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
 }
+
+/* From Uiverse.io by Mike11jr */ 
+.btn {
+ padding: 1.1em 2em;
+ background: none;
+ border: 2px solid #fff;
+ font-size: 15px;
+ color: #131313;
+ cursor: pointer;
+ position: relative;
+ overflow: hidden;
+ transition: all 0.3s;
+ border-radius: 12px;
+ background-color: #ecd448;
+ font-weight: bolder;
+ box-shadow: 0 2px 0 2px #000;
+}
+
+.btn * {
+ position: relative;
+ z-index: 10;
+}
+
+.btn:before {
+ content: "";
+ position: absolute;
+ width: 100px;
+ height: 120%;
+ background-color: #ff6700;
+ top: 50%;
+ transform: skewX(30deg) translate(-150%, -50%);
+ transition: all 0.5s;
+ z-index: 1;
+}
+
+.btn:hover {
+ background-color: #4cc9f0;
+ color: #fff;
+ box-shadow: 0 2px 0 2px #0d3b66;
+}
+
+.btn:hover::before {
+ transform: skewX(30deg) translate(150%, -50%);
+ transition-delay: 0.1s;
+}
+
+.btn:active {
+ transform: scale(0.9);
+}
+
+/* From Uiverse.io by preet_7613 - Integrated Animation Rules */ 
+.my-custom-face-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 260px;
+  background: transparent;
+  color: #a5b4fc;
+}
+
+.my-custom-face-container .face {
+  width: 200px;
+  height: 200px;
+}
+
+.my-custom-face-container .face__eyes,
+.my-custom-face-container .face__eye-lid,
+.my-custom-face-container .face__mouth-smiley,
+.my-custom-face-container .face__pupil {
+  animation: eyes 1s 0.3s forwards;
+}
+
+.my-custom-face-container .face__eye-lid {
+  animation: eyes 1s 0.3s forwards, eye-lid 4s 1.3s infinite;
+  transition: transform 0.35s ease-in-out;
+}
+
+.my-custom-face-container .face__mouth-smiley {
+  stroke-dasharray: 120;
+  animation: mouth-left 1.5s 0.3s forwards;
+  transition: stroke 0.3s ease;
+}
+
+.my-custom-face-container .face__pupil {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), fill 0.25s ease;
+}
+
+/* Idle state: Uiverse.io natural pupil movement */
+.my-custom-face-container.idle .face__pupil {
+  animation: eyes 1s 0.3s forwards, pupil 4s 1.3s infinite;
+}
+
+/* Focused interactive state: override keyframe for input tracking */
+.my-custom-face-container.focused .face__pupil {
+  animation: none !important;
+}
+
+@keyframes eye-lid {
+  0%,
+  40%,
+  45%,
+  100% {
+    transform: translateY(0);
+  }
+  42.5% {
+    transform: translateY(17.5px);
+  }
+}
+
+@keyframes eyes {
+  from {
+    transform: translateY(80px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+}
+
+@keyframes pupil {
+  0%,
+  37.5%,
+  40%,
+  45%,
+  87.5%,
+  100% {
+    transform: translate(0, 0);
+  }
+  12.5%,
+  25%,
+  62.5%,
+  75% {
+    transform: translate(-10px, 0);
+  }
+  42.5% {
+    transform: translate(0, 8px);
+  }
+}
+
+@keyframes mouth-left {
+  from,
+  50% {
+    stroke-dashoffset: -120;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+

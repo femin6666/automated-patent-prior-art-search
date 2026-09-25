@@ -26,6 +26,20 @@ PatentLens AI is an end-to-end, AI-powered patent prior-art search platform desi
 
 ---
 
+## 🔍 Search Engine Dataflow (Live Lens API vs. Local DB)
+
+When a user searches for patent prior art, the backend operates in a **Hybrid Live API + Vector Database Pipeline**:
+
+1. **Live Patent Lens API Key Execution**: 
+   - If `LENS_API_TOKEN` is configured in `backend/.env`, the backend executes live `POST` requests to **The Lens Patent API** (`https://api.lens.org/patent/search`) across 8 query strategies.
+   - It also fetches supplementary non-patent literature live from the **arXiv API**.
+2. **Dynamic DB Caching & Vector Embedding**:
+   - Newly retrieved live patents are automatically normalized, deduplicated by patent family, vector-embedded using Sentence Transformers (`all-MiniLM-L6-v2`), and cached in the local PostgreSQL database (`pgvector`).
+3. **Local Database Fallback Mode**:
+   - If `LENS_API_TOKEN` is empty or unconfigured, the search engine gracefully falls back to querying pre-indexed records directly from the local database.
+
+---
+
 ## 🛠️ Technology Stack
 
 ### Frontend

@@ -197,7 +197,7 @@ class PatentAPIService:
             logger.info(f"[PATENT API] Successfully cached {len(newly_cached_patents)} new records into database.")
 
         total_db_patents = db.query(Patent).count()
-        final_patents_searched = lens_total_searched if (lens_total_searched and lens_total_searched > 0) else (total_db_patents + len(raw_candidates))
+        final_patents_searched = lens_retrieved_count if (lens_retrieved_count and lens_retrieved_count > 0) else len(raw_candidates)
 
         return {
             "patents_retrieved": lens_retrieved_count if lens_api_service.is_configured else len(raw_candidates),

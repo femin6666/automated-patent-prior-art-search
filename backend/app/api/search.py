@@ -312,8 +312,8 @@ def perform_prior_art_search(
 
     total_matches_count = len(top_10)
 
-    pat_searched = api_stats.get("patents_searched") or (len(all_patents) + api_stats.get("patents_retrieved", 0))
-    pat_retrieved = api_stats.get("patents_retrieved", 0)
+    pat_searched = api_stats.get("patents_searched") or api_stats.get("patents_retrieved") or len(candidate_patents)
+    pat_retrieved = api_stats.get("patents_retrieved") or len(candidate_patents)
     pat_shortlisted = len(top_10)
     pat_deeply_analyzed = len(top_10)
 

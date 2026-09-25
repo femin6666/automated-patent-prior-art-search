@@ -35,6 +35,21 @@ class LensAPIService:
             return "****"
         return f"{token[:4]}...{token[-4:]}"
 
+    @staticmethod
+    def _sanitize_query_for_lens(raw_q: str) -> str:
+        import re
+        if not raw_q or not str(raw_q).strip():
+            return "technology"
+        q = re.sub(r'claims:\(|\)|classifications_cpc\.symbol:|[&|/]', ' ', str(raw_q))
+        words = [w for w in re.findall(r'[a-zA-Z0-9]+', q) if len(w) > 2 and w.lower() not in {'for', 'and', 'the', 'with', 'msme', 'system', 'device', 'method', 'apparatus'}]
+        if len(words) >= 3:
+            return f"{words[0]} AND {words[1]} AND {words[2]}"
+        elif len(words) >= 2:
+            return f"{words[0]} AND {words[1]}"
+        elif words:
+            return words[0]
+        return "technology"
+
     def search_patents(
         self,
         queries: List[str],
@@ -42,18 +57,7 @@ class LensAPIService:
         limit: int = 50
     ) -> Dict[str, Any]:
         """
-        Execute 8 multi-strategy search queries against The Lens Patent API.
-        
-        Args:
-            queries: List of technical search query strings generated from user invention.
-            cpc_candidates: List of CPC classification codes to focus search.
-            limit: Maximum records to retrieve.
-            
-        Returns:
-            Dict containing:
-                - 'results': List of normalized patent records retrieved from The Lens.
-                - 'status': Lens API status string (LENS_OK, LENS_NO_RESULTS, LENS_AUTH_ERROR, LENS_RATE_LIMITED, LENS_API_UNAVAILABLE, LENS_QUERY_ERROR, LENS_PARTIAL_RESULTS)
-                - 'retrieved_count': Number of unique records retrieved live.
+        Execute multi-strategy search queries against The Lens Patent API.
         """
         if not self.is_configured:
             logger.warning("[LENS API AUDIT] API token not configured or placeholder used. Skipping live request.")
@@ -92,8 +96,9 @@ class LensAPIService:
         http_statuses = []
 
         def _fetch_single_lens_query(q_str: str) -> Tuple[List[Dict[str, Any]], str, int]:
+            clean_q = self._sanitize_query_for_lens(q_str)
             p_payload = {
-                "query": q_str,
+                "query": clean_q,
                 "size": min(25, limit),
                 "from": 0,
                 "include": [

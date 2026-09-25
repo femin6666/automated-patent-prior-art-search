@@ -40,9 +40,9 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "groq"
     MODEL_NAME: str = "all-MiniLM-L6-v2"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
 
     # External Patent APIs Configuration
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     LENS_API_URL: str = "https://api.lens.org/patent/search"
     LENS_HTTP_TIMEOUT: float = 20.0
     LENS_THREAD_TIMEOUT: float = 22.0
-    EXTERNAL_API_PIPELINE_TIMEOUT: float = 25.0
+    EXTERNAL_API_PIPELINE_TIMEOUT: float = 35.0
 
     # Configurable Similarity Thresholds (0-29% Low, 30-49% Moderate, 50-69% High, 70-100% Very High)
     SIMILARITY_THRESHOLD_LOW: float = 30.0

@@ -310,8 +310,12 @@ class PatentAPIService:
 
         records = []
         try:
-            with httpx.Client(timeout=3.0, follow_redirects=True) as http_client:
-                res = http_client.get(url_arxiv)
+            arxiv_headers = {
+                "User-Agent": "PatentLens-AI/1.0 (mailto:inventor@startup.com)",
+                "Accept": "application/atom+xml, application/xml, text/xml, */*"
+            }
+            with httpx.Client(timeout=4.0, follow_redirects=True) as http_client:
+                res = http_client.get(url_arxiv, headers=arxiv_headers)
                 if res.status_code == 200:
                     root = ET.fromstring(res.text)
                     namespace = {'atom': 'http://www.w3.org/2005/Atom'}

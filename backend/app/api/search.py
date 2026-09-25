@@ -124,14 +124,12 @@ def perform_prior_art_search(
         from app.core.database import IS_POSTGRES, HAS_PGVECTOR
     import numpy as np
 
-    if IS_POSTGRES and HAS_PGVECTOR and user_embedding:
-        try:
-            all_patents = db.query(Patent).order_by(Patent.embedding.l2_distance(user_embedding)).limit(150).all()
-        except Exception:
-            all_patents = db.query(Patent).limit(200).all()
-    else:
-        all_patents = db.query(Patent).limit(200).all()
+    live_patents = db.query(Patent).filter(Patent.source_status == "LIVE_API").order_by(Patent.id.desc()).limit(150).all()
+    recent_patents = db.query(Patent).order_by(Patent.id.desc()).limit(150).all()
+    seed_patents = db.query(Patent).limit(100).all()
 
+    patent_map = {p.patent_number: p for p in (live_patents + recent_patents + seed_patents) if p and p.patent_number}
+    all_patents = list(patent_map.values())
 
     if not all_patents:
         raise HTTPException(

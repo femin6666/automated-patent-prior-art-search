@@ -5,7 +5,6 @@ from app.core.database import engine, Base
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    app.dependency_overrides.clear()
     Base.metadata.create_all(bind=engine)
 
 def test_health_check():

@@ -114,7 +114,7 @@ Return ONLY valid JSON matching this exact structure:
                     )
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     fut = pool.submit(_call_groq_inv)
-                    res = fut.result(timeout=2.0)
+                    res = fut.result(timeout=12.0)
                 text_content = res.choices[0].message.content
                 parsed = json.loads(text_content)
                 try:
@@ -266,7 +266,7 @@ Return ONLY valid JSON matching this exact structure:
                     )
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     fut = pool.submit(_call_groq_pair)
-                    response = fut.result(timeout=3.0)
+                    response = fut.result(timeout=12.0)
                 text_content = response.choices[0].message.content
                 parsed = json.loads(text_content)
                 parsed["ai_powered"] = True
@@ -344,7 +344,7 @@ Return ONLY valid JSON.
                     )
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     fut = pool.submit(_call_groq_nov)
-                    response = fut.result(timeout=3.0)
+                    response = fut.result(timeout=12.0)
                 parsed = json.loads(response.choices[0].message.content)
                 parsed["ai_powered"] = True
                 parsed["model_used"] = self.model_name

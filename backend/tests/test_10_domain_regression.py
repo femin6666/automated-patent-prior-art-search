@@ -105,6 +105,18 @@ def test_10_domain_benchmark_suite():
     )
     print("-" * 195)
 
+    import uuid
+    email = f"test.10dom.{uuid.uuid4().hex[:6]}@patentlens.ai"
+    password = "SecurePassword123!"
+    reg_payload = {"name": "10Dom Test", "email": email, "password": password, "confirm_password": password}
+    res_reg = client.post("/api/auth/register", json=reg_payload)
+    assert res_reg.status_code == 201
+    demo_otp = res_reg.json()["demo_otp"]
+    res_verify = client.post("/api/auth/verify-otp", json={"email": email, "otp": demo_otp})
+    assert res_verify.status_code == 200
+    token = res_verify.json()["access_token"]
+    headers_auth = {"Authorization": f"Bearer {token}"}
+
     for item in BENCHMARK_DOMAINS:
         payload = {
             "title": item["title"],
@@ -114,7 +126,7 @@ def test_10_domain_benchmark_suite():
             "keywords": [item["domain"].split("/")[0].strip()]
         }
 
-        res = client.post("/api/search", json=payload)
+        res = client.post("/api/search", json=payload, headers=headers_auth)
         assert res.status_code == 201, f"Search failed for {item['title']}: {res.text}"
 
         data = res.json()

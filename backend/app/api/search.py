@@ -62,7 +62,7 @@ def perform_prior_art_search(
             )
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as inv_pool:
             inv_fut = inv_pool.submit(_do_inv_analysis)
-            invention_analysis = inv_fut.result(timeout=2.5)
+            invention_analysis = inv_fut.result(timeout=12.0)
     except Exception as e_inv:
         logger.warning(f"[SEARCH ROUTE] Invention analysis timeout/note ({e_inv}). Falling back to instant heuristic NLP analysis.")
         try:

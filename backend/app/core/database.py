@@ -52,18 +52,10 @@ if IS_POSTGRES:
             except Exception as ve:
                 logger.info(f"Connected to PostgreSQL successfully! (pgvector extension note: {ve})")
     except Exception as e:
-        logger.warning(f"PostgreSQL connection note during module initialization ({_get_masked_db_url(db_url)}): {e}")
-        try:
-            engine = create_engine(
-                db_url,
-                pool_pre_ping=True,
-                connect_args={"connect_timeout": 5}
-            )
-        except Exception as e2:
-            logger.warning(f"PostgreSQL fallback failed ({e2}). Using SQLite fallback.")
-            IS_POSTGRES = False
-            SQLITE_URL = "sqlite:///./patentlens.db"
-            engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
+        logger.warning(f"PostgreSQL connection failed ({_get_masked_db_url(db_url)}: {e}). Switching to SQLite fallback.")
+        IS_POSTGRES = False
+        SQLITE_URL = "sqlite:///./patentlens.db"
+        engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
 else:
     logger.info("Database backend: SQLite (Development/Testing)")
     SQLITE_URL = "sqlite:///./patentlens.db"

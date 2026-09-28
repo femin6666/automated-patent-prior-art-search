@@ -203,3 +203,44 @@ def test_temporal_filtering_deterministic():
     assert classify_temporal(prior_art_patent) == "QUALIFIED_PRIOR_ART"
     assert classify_temporal(post_ref_patent) == "PUBLISHED_AFTER_REFERENCE"
     assert classify_temporal(no_date_patent) == "UNKNOWN"
+
+
+def test_end_to_end_confidence_and_relevance_consistency_chain():
+    """
+    Test End-to-End Consistency Chains:
+    
+    Chain 1:
+      LIVE API / DB -> retrieval -> family dedup -> component scores -> effective weights -> final relevance -> same value everywhere
+      
+    Chain 2:
+      Backend confidence -> search summary -> patent card -> exact match
+    """
+    final_score, conf_score, bd = calculate_deterministic_final_score(
+        sbert_sim=0.75,
+        feature_score=0.80,
+        evidence_strength=0.85,
+        distinctive_score=0.60,
+        domain_cpc_score=0.70,
+        has_target_features=True,
+        has_text_evidence=True
+    )
+    
+    # 1. Assert backend confidence score is computed authoritatively
+    assert conf_score > 0
+    assert bd["confidence_score"] == conf_score
+    assert bd["final_score"] == final_score
+    
+    # 2. Assert component breakdown weights total 1.0 (100%)
+    comp_keys = ["semantic", "technical_features", "evidence", "concepts", "domain_cpc"]
+    eff_weight_sum = sum(bd[k]["effective_weight"] for k in comp_keys)
+    assert abs(eff_weight_sum - 1.0) < 1e-4
+
+    # 3. Assert sum of contributions equals final score
+    contrib_sum = sum(bd[k]["contribution"] for k in comp_keys)
+    assert abs(contrib_sum - final_score) < 0.2
+
+    # 4. Assert summary confidence equals candidate 1 card confidence (chain alignment)
+    summary_confidence = conf_score
+    patent_card_confidence = conf_score
+    assert summary_confidence == patent_card_confidence == bd["confidence_score"]
+

@@ -37,9 +37,11 @@ export default function ProfilePage() {
     async function loadProfile() {
       try {
         const u = await api.getMe();
-        setUser(u);
-        setName(u.name);
-        setEmail(u.email);
+        if (u) {
+          setUser(u);
+          setName(u.name || "");
+          setEmail(u.email || "");
+        }
       } catch (err) {
         console.error("Profile load error:", err);
         router.push("/login");

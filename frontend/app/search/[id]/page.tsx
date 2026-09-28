@@ -8,7 +8,8 @@ import PatentCard from "@/components/PatentCard";
 import { SimilarityDistributionChart, Top5SimilarityChart } from "@/components/Charts";
 import {
   PriorArtSearchResponse,
-  SearchResultItem
+  SearchResultItem,
+  ScoreBreakdown
 } from "@/types";
 import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
@@ -226,12 +227,17 @@ export default function SearchResultsPage() {
           {(() => {
             const topMatchScore = safeResults.length > 0 ? Math.round(safeResults[0].final_score) : Math.round(data.highest_similarity || 0);
             const topVectorSim = safeResults.length > 0 ? Math.round(safeResults[0].semantic_score) : Math.round(data.highest_semantic_similarity || data.highest_similarity || 0);
-            const topScoreBreakdown = safeResults[0]?.score_breakdown || {
+            const topScoreBreakdown: ScoreBreakdown = safeResults[0]?.score_breakdown || {
+              semantic: { value: topVectorSim, weight: 0.25, effective_weight: 0.25, contribution: topVectorSim * 0.25, status: 'AVAILABLE' },
+              technical_features: { value: safeResults[0]?.keyword_score ?? 0, weight: 0.35, effective_weight: 0.35, contribution: (safeResults[0]?.keyword_score ?? 0) * 0.35, status: 'AVAILABLE' },
+              evidence: { value: safeResults[0]?.evidence_confidence ?? 0, weight: 0.20, effective_weight: 0.20, contribution: (safeResults[0]?.evidence_confidence ?? 0) * 0.20, status: 'AVAILABLE' },
+              concepts: { value: safeResults[0]?.keyword_score ?? 0, weight: 0.10, effective_weight: 0.10, contribution: (safeResults[0]?.keyword_score ?? 0) * 0.10, status: 'AVAILABLE' },
+              domain_cpc: { value: safeResults[0]?.domain_score ?? 50, weight: 0.10, effective_weight: 0.10, contribution: (safeResults[0]?.domain_score ?? 50) * 0.10, status: 'AVAILABLE' },
               semantic_similarity: topVectorSim,
-              technical_features: safeResults[0]?.keyword_score || 0,
-              evidence_strength: safeResults[0]?.evidence_confidence || 0,
-              distinctive_concepts: safeResults[0]?.keyword_score || 0,
-              domain_cpc_alignment: safeResults[0]?.domain_score || 50,
+              technical_features_score: safeResults[0]?.keyword_score ?? 0,
+              evidence_strength: safeResults[0]?.evidence_confidence ?? 0,
+              distinctive_concepts: safeResults[0]?.keyword_score ?? 0,
+              domain_cpc_alignment: safeResults[0]?.domain_score ?? 50,
               final_score: topMatchScore,
               is_gated: false,
               formula_explanation: "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
@@ -317,24 +323,32 @@ export default function SearchResultsPage() {
 
                         <div className="p-4 rounded-xl bg-[#070919] border border-indigo-500/20 font-mono text-[11px] space-y-2.5">
                           <div className="flex justify-between items-center text-indigo-300">
-                            <span>1. SBERT Semantic Similarity (25% Weight):</span>
-                            <span className="font-bold text-white">{topScoreBreakdown.semantic_similarity}%</span>
+                            <span>1. SBERT Semantic Similarity ({topScoreBreakdown.semantic?.effective_weight ? Math.round(topScoreBreakdown.semantic.effective_weight * 100) : 25}% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.semantic?.value ?? topScoreBreakdown.semantic_similarity}%</span>
                           </div>
                           <div className="flex justify-between items-center text-sky-300">
-                            <span>2. Technical Feature Score (35% Weight):</span>
-                            <span className="font-bold text-white">{topScoreBreakdown.technical_features}%</span>
+                            <span>2. Technical Feature Score ({topScoreBreakdown.technical_features?.effective_weight ? Math.round(topScoreBreakdown.technical_features.effective_weight * 100) : 35}% Weight):</span>
+                            <span className="font-bold text-white">
+                              {topScoreBreakdown.technical_features?.status === "UNAVAILABLE" || topScoreBreakdown.technical_features?.value === null
+                                ? "UNAVAILABLE (0.0%)"
+                                : `${topScoreBreakdown.technical_features?.value ?? topScoreBreakdown.technical_features_score ?? 0}%`}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-emerald-300">
-                            <span>3. Evidence Text Strength (20% Weight):</span>
-                            <span className="font-bold text-white">{topScoreBreakdown.evidence_strength}%</span>
+                            <span>3. Evidence Text Strength ({topScoreBreakdown.evidence?.effective_weight ? Math.round(topScoreBreakdown.evidence.effective_weight * 100) : 20}% Weight):</span>
+                            <span className="font-bold text-white">
+                              {topScoreBreakdown.evidence?.status === "UNAVAILABLE" || topScoreBreakdown.evidence?.value === null
+                                ? "UNAVAILABLE (0.0%)"
+                                : `${topScoreBreakdown.evidence?.value ?? topScoreBreakdown.evidence_strength}%`}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-amber-300">
-                            <span>4. Distinctive Concept Match (10% Weight):</span>
-                            <span className="font-bold text-white">{topScoreBreakdown.distinctive_concepts}%</span>
+                            <span>4. Distinctive Concept Match ({topScoreBreakdown.concepts?.effective_weight ? Math.round(topScoreBreakdown.concepts.effective_weight * 100) : 10}% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.concepts?.value ?? topScoreBreakdown.distinctive_concepts}%</span>
                           </div>
                           <div className="flex justify-between items-center text-purple-300">
-                            <span>5. Domain & CPC/IPC Alignment (10% Weight):</span>
-                            <span className="font-bold text-white">{topScoreBreakdown.domain_cpc_alignment}%</span>
+                            <span>5. Domain & CPC/IPC Alignment ({topScoreBreakdown.domain_cpc?.effective_weight ? Math.round(topScoreBreakdown.domain_cpc.effective_weight * 100) : 10}% Weight):</span>
+                            <span className="font-bold text-white">{topScoreBreakdown.domain_cpc?.value ?? topScoreBreakdown.domain_cpc_alignment}%</span>
                           </div>
                           <div className="pt-2 border-t border-zinc-800 flex justify-between items-center text-white text-xs font-bold">
                             <span>Overall Relevance Score:</span>

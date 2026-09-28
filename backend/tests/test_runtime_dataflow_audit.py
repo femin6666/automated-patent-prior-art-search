@@ -4,6 +4,35 @@ from fastapi.testclient import TestClient
 from main import app
 from ml.similarity_engine import compute_hybrid_score, calculate_deterministic_final_score
 
+from app.core.security import get_current_user
+from app.models.models import User
+
+def mock_user():
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        user = db.query(User).first()
+        if not user:
+            user = User(
+                id="test-user-id-1",
+                name="Audit User",
+                email="audit@patentlens.ai",
+                password_hash="hashed_test_password",
+                is_verified=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        return user
+    finally:
+        db.close()
+
+@pytest.fixture(autouse=True)
+def override_user_dep():
+    app.dependency_overrides[get_current_user] = mock_user
+    yield
+    app.dependency_overrides.clear()
+
 client = TestClient(app)
 
 
@@ -122,7 +151,7 @@ def test_abstract_title_only_partial_match_status():
         technical_features=["network intrusion detection", "threat response"]
     )
     assert sc["feature_match_status"] == "PARTIAL"
-    assert sc["feature_match_source"] == "ABSTRACT/TITLE"
+    assert sc["feature_match_source"] == "ABSTRACT"
 
 
 def test_claims_description_verified_source():

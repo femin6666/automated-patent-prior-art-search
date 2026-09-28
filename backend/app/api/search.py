@@ -1,3 +1,4 @@
+from app.schemas.schemas import ComponentBreakdownItem
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -221,12 +222,27 @@ def perform_prior_art_search(
             "scores": scores
         })
 
-    # Robust patent family deduplication & metric tracking
+    # Robust generalized patent family deduplication & metric tracking
     import re
+    def _normalize_title_stem(title_str: str) -> str:
+        if not title_str:
+            return ""
+        t = re.sub(r'\s*-\s*Variant\s*\d+', '', title_str, flags=re.IGNORECASE)
+        t = re.sub(r'\s*-\s*Part\s*\d+', '', t, flags=re.IGNORECASE)
+        t = re.sub(r'\s*\((Continuation|Divisional|Reissue|Variant)\s*\d*\)', '', t, flags=re.IGNORECASE)
+        t = re.sub(r'[^a-zA-Z0-9\s]', ' ', t).lower()
+        words = [w for w in t.split() if len(w) > 3]
+        return " ".join(words[:6])
+
     def _get_fam_key(pat_obj: Any) -> str:
         fam_id = getattr(pat_obj, "simple_family_id", None) or getattr(pat_obj, "family_id", None)
         if fam_id and str(fam_id).strip() and str(fam_id).strip() != "None":
-            return str(fam_id).strip().upper()
+            return f"FAM_{str(fam_id).strip().upper()}"
+        
+        t_stem = _normalize_title_stem(getattr(pat_obj, "title", ""))
+        if t_stem and len(t_stem) > 10:
+            return f"TITLE_{t_stem}"
+            
         p_num = (pat_obj.patent_number or "").strip().upper()
         clean = p_num.split("-")[-1] if "-" in p_num else p_num
         clean = re.sub(r'[A-Z]\d?$', '', clean)
@@ -312,8 +328,8 @@ def perform_prior_art_search(
 
     total_matches_count = len(top_10)
 
-    pat_searched = api_stats.get("patents_searched") or api_stats.get("patents_retrieved") or len(candidate_patents)
-    pat_retrieved = api_stats.get("patents_retrieved") or len(candidate_patents)
+    pat_searched = api_stats.get("patents_searched") if api_stats.get("patents_searched") is not None else len(candidate_patents)
+    pat_retrieved = api_stats.get("patents_retrieved") if api_stats.get("patents_retrieved") is not None else 0
     pat_shortlisted = len(top_10)
     pat_deeply_analyzed = len(top_10)
 
@@ -479,15 +495,44 @@ def perform_prior_art_search(
 
         sb_dict = sc.get("score_breakdown", {})
         conf_score = sc.get("confidence_score") if sc.get("confidence_score") is not None else 45.0
+
+        def _get_comp_item(key, fallback_val, fallback_weight, fallback_status="AVAILABLE"):
+            c_data = sb_dict.get(key, {})
+            if isinstance(c_data, dict):
+                return ComponentBreakdownItem(
+                    value=c_data.get("value"),
+                    weight=c_data.get("weight", fallback_weight),
+                    effective_weight=c_data.get("effective_weight", fallback_weight),
+                    contribution=c_data.get("contribution", 0.0),
+                    status=c_data.get("status", fallback_status)
+                )
+            return ComponentBreakdownItem(
+                value=fallback_val,
+                weight=fallback_weight,
+                effective_weight=fallback_weight,
+                contribution=round((fallback_val or 0.0) * fallback_weight, 1),
+                status=fallback_status
+            )
+
         score_bd_obj = ScoreBreakdown(
+            semantic=_get_comp_item("semantic", sc["semantic_score"], 0.25),
+            technical_features=_get_comp_item("technical_features", sc["keyword_score"], 0.35, "AVAILABLE" if sc.get("has_target_features", True) else "UNAVAILABLE"),
+            evidence=_get_comp_item("evidence", sc.get("evidence_score", 0.0), 0.20, "AVAILABLE" if sc.get("claims_status") == "AVAILABLE" or sc.get("full_text_status") == "AVAILABLE" else "UNAVAILABLE"),
+            concepts=_get_comp_item("concepts", sc.get("distinctive_score", 0.0), 0.10),
+            domain_cpc=_get_comp_item("domain_cpc", sc["domain_score"], 0.10),
             semantic_similarity=sb_dict.get("semantic_similarity", sc["semantic_score"]),
-            technical_features=sb_dict.get("technical_features", sc["keyword_score"]),
+            technical_features_score=sb_dict.get("technical_features_score", sc["keyword_score"]),
             evidence_strength=sb_dict.get("evidence_strength", sc.get("evidence_score", 0.0)),
             distinctive_concepts=sb_dict.get("distinctive_concepts", sc.get("distinctive_score", 0.0)),
             domain_cpc_alignment=sb_dict.get("domain_cpc_alignment", sc["domain_score"]),
+            technology_domain_score=sb_dict.get("technology_domain_score", sc["domain_score"]),
+            cpc_match_score=sb_dict.get("cpc_match_score", 0.0),
             final_score=sc["final_score"],
             confidence_score=conf_score,
+            calculation_method=sb_dict.get("calculation_method", "STANDARD_FULL_WEIGHTS"),
             is_gated=sb_dict.get("is_gated", False),
+            score_cap=sb_dict.get("score_cap"),
+            score_cap_reason=sb_dict.get("score_cap_reason"),
             formula_explanation=sb_dict.get("formula_explanation", "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)")
         )
 

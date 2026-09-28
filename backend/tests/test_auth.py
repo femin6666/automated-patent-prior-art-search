@@ -5,6 +5,7 @@ from app.core.database import engine, Base
 
 @pytest.fixture(autouse=True)
 def setup_db():
+    app.dependency_overrides.clear()
     Base.metadata.create_all(bind=engine)
 
 def test_health_check():
@@ -12,8 +13,8 @@ def test_health_check():
         response = client.get("/")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "online"
-        assert data["service"] == "PatentLens AI"
+        assert data["status"] == "OK"
+        assert "PatentLens AI" in data["service"]
 
 def test_user_registration_and_login():
     import uuid

@@ -52,16 +52,33 @@ export interface ClaimElementItem {
   explanation: string;
 }
 
+export interface ComponentBreakdownItem {
+  value?: number | null;
+  weight: number;
+  effective_weight: number;
+  contribution: number;
+  status: 'AVAILABLE' | 'UNAVAILABLE';
+}
+
 export interface ScoreBreakdown {
+  semantic?: ComponentBreakdownItem;
+  technical_features?: ComponentBreakdownItem;
+  evidence?: ComponentBreakdownItem;
+  concepts?: ComponentBreakdownItem;
+  domain_cpc?: ComponentBreakdownItem;
   semantic_similarity: number;
-  technical_features: number;
+  technical_features_score?: number;
   evidence_strength: number;
   distinctive_concepts: number;
   domain_cpc_alignment: number;
   technology_domain_score?: number;
   cpc_match_score?: number;
   final_score: number;
+  confidence_score?: number;
+  calculation_method?: string;
   is_gated: boolean;
+  score_cap?: number | null;
+  score_cap_reason?: string | null;
   formula_explanation: string;
 }
 

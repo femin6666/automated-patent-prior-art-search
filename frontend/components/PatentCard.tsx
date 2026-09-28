@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { SearchResultItem } from "@/types";
+import { SearchResultItem, ScoreBreakdown } from "@/types";
 import { Bookmark, ExternalLink, ArrowUpRight, Building2, Calendar, Check, Info, Layers, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { api } from "@/services/api";
 import { getOfficialPatentUrl, formatDate } from "@/lib/utils";
@@ -43,9 +43,14 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
     }
   };
 
-  const bd = score_breakdown || {
+  const bd: ScoreBreakdown = score_breakdown || {
+    semantic: { value: semantic_score, weight: 0.25, effective_weight: 0.25, contribution: semantic_score * 0.25, status: "AVAILABLE" },
+    technical_features: { value: item.keyword_score || item.technical_feature_coverage || 0, weight: 0.35, effective_weight: 0.35, contribution: (item.keyword_score || 0) * 0.35, status: "AVAILABLE" },
+    evidence: { value: item.evidence_confidence || 0, weight: 0.20, effective_weight: 0.20, contribution: (item.evidence_confidence || 0) * 0.20, status: "AVAILABLE" },
+    concepts: { value: item.keyword_score || 0, weight: 0.10, effective_weight: 0.10, contribution: (item.keyword_score || 0) * 0.10, status: "AVAILABLE" },
+    domain_cpc: { value: item.domain_score || 50, weight: 0.10, effective_weight: 0.10, contribution: (item.domain_score || 50) * 0.10, status: "AVAILABLE" },
     semantic_similarity: semantic_score,
-    technical_features: item.keyword_score || item.technical_feature_coverage || 0,
+    technical_features_score: item.keyword_score || item.technical_feature_coverage || 0,
     evidence_strength: item.evidence_confidence || 0,
     distinctive_concepts: item.keyword_score || 0,
     domain_cpc_alignment: item.domain_score || 50,
@@ -145,7 +150,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
                 Confidence
               </div>
               <div className="text-xl font-bold font-mono text-emerald-400 flex items-center justify-end gap-1">
-                {Math.round(item.confidence_score || item.evidence_confidence || 85)}%
+                {Math.round(item.confidence_score ?? item.evidence_confidence ?? 0)}%
               </div>
             </div>
           </div>
@@ -173,7 +178,7 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
           {/* Temporal Status Badge */}
           {(() => {
             const tempStatus = item.temporal_status || "DATE_UNKNOWN";
-            if (tempStatus === "AFTER_REFERENCE_DATE") {
+            if (tempStatus === "AFTER_REFERENCE_DATE" || tempStatus === "PUBLISHED_AFTER_REFERENCE" || tempStatus === "EARLIER_PRIORITY_BUT_PUBLISHED_AFTER") {
               return (
                 <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   Published Later (Post-Date)
@@ -213,57 +218,63 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
           </span>
         </div>
 
-        {/* 5 Component Progress Bars (25 / 35 / 20 / 10 / 10 = 100%) */}
+        {/* 5 Component Progress Bars (Semantic 25%, Technical Features 35%, Evidence 20%, Concepts 10%, Domain/CPC 10%) */}
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 font-mono text-xs pt-1">
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
-              <span>Semantic (25%)</span>
-              <span className="text-indigo-400 font-bold">{Math.round(bd.semantic_similarity)}%</span>
+              <span>Semantic ({bd.semantic?.effective_weight ? Math.round(bd.semantic.effective_weight * 100) : 25}%)</span>
+              <span className="text-indigo-400 font-bold">{bd.semantic?.value !== undefined && bd.semantic?.value !== null ? `${Math.round(bd.semantic.value)}%` : `${Math.round(bd.semantic_similarity)}%`}</span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, bd.semantic_similarity)}%` }} />
+              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, bd.semantic?.value ?? bd.semantic_similarity)}%` }} />
             </div>
           </div>
 
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
-              <span>Feature Match (35%)</span>
+              <span>Feature Match ({bd.technical_features?.effective_weight ? Math.round(bd.technical_features.effective_weight * 100) : 35}%)</span>
               <span className="text-sky-400 font-bold">
-                {totalCount > 0 ? `${Math.round(bd.technical_features)}% (${matchedCount}/${totalCount})` : "Not Available"}
+                {bd.technical_features?.status === "UNAVAILABLE" || bd.technical_features?.value === null
+                  ? "Not Available"
+                  : `${Math.round(bd.technical_features?.value ?? bd.technical_features_score ?? 0)}% (${matchedCount}/${totalCount})`}
               </span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-              <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, bd.technical_features)}%` }} />
+              <div className="h-full bg-sky-500 rounded-full" style={{ width: `${bd.technical_features?.status === "UNAVAILABLE" ? 0 : Math.min(100, bd.technical_features?.value ?? bd.technical_features_score ?? 0)}%` }} />
             </div>
           </div>
 
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
-              <span>Evidence (20%)</span>
-              <span className="text-emerald-400 font-bold">{Math.round(bd.evidence_strength)}%</span>
+              <span>Evidence ({bd.evidence?.effective_weight ? Math.round(bd.evidence.effective_weight * 100) : 20}%)</span>
+              <span className="text-emerald-400 font-bold">
+                {bd.evidence?.status === "UNAVAILABLE" || bd.evidence?.value === null
+                  ? "Not Available"
+                  : `${Math.round(bd.evidence?.value ?? bd.evidence_strength)}%`}
+              </span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, bd.evidence_strength)}%` }} />
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${bd.evidence?.status === "UNAVAILABLE" ? 0 : Math.min(100, bd.evidence?.value ?? bd.evidence_strength)}%` }} />
             </div>
           </div>
 
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
-              <span>Concepts (10%)</span>
-              <span className="text-amber-400 font-bold">{Math.round(bd.distinctive_concepts)}%</span>
+              <span>Concepts ({bd.concepts?.effective_weight ? Math.round(bd.concepts.effective_weight * 100) : 10}%)</span>
+              <span className="text-amber-400 font-bold">{Math.round(bd.concepts?.value ?? bd.distinctive_concepts)}%</span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, bd.distinctive_concepts)}%` }} />
+              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, bd.concepts?.value ?? bd.distinctive_concepts)}%` }} />
             </div>
           </div>
 
           <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400 font-semibold uppercase">
-              <span>Domain / CPC (10%)</span>
-              <span className="text-purple-400 font-bold">{Math.round(bd.domain_cpc_alignment)}%</span>
+              <span>Domain / CPC ({bd.domain_cpc?.effective_weight ? Math.round(bd.domain_cpc.effective_weight * 100) : 10}%)</span>
+              <span className="text-purple-400 font-bold">{Math.round(bd.domain_cpc?.value ?? bd.domain_cpc_alignment)}%</span>
             </div>
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, bd.domain_cpc_alignment)}%` }} />
+              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, bd.domain_cpc?.value ?? bd.domain_cpc_alignment)}%` }} />
             </div>
           </div>
         </div>
@@ -400,46 +411,55 @@ export default function PatentCard({ item, onSavedToggle, isInitialSaved = false
 
             <div className="space-y-2.5 text-xs font-mono bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
               <div className="flex justify-between text-zinc-300">
-                <span>Semantic Similarity (25%):</span>
-                <span className="text-indigo-400 font-bold">{bd.semantic_similarity}% × 0.25 = {(bd.semantic_similarity * 0.25).toFixed(1)}%</span>
+                <span>Semantic Similarity ({bd.semantic?.effective_weight ? (bd.semantic.effective_weight * 100).toFixed(1) : "25"}%):</span>
+                <span className="text-indigo-400 font-bold">
+                  {bd.semantic?.value !== undefined && bd.semantic?.value !== null ? `${bd.semantic.value}%` : `${bd.semantic_similarity}%`}
+                  {" × "}
+                  {bd.semantic?.effective_weight ?? 0.25} = {(bd.semantic?.contribution ?? (bd.semantic_similarity * 0.25)).toFixed(1)}%
+                </span>
               </div>
+
               <div className="flex justify-between text-zinc-300">
-                <span>Technical Feature Match (35%):</span>
-                <span className="text-sky-400 font-bold">{bd.technical_features}% × 0.35 = {(bd.technical_features * 0.35).toFixed(1)}% ({matchedCount}/{totalCount} matched)</span>
+                <span>Technical Feature Match ({bd.technical_features?.effective_weight ? (bd.technical_features.effective_weight * 100).toFixed(1) : "35"}%):</span>
+                <span className="text-sky-400 font-bold">
+                  {bd.technical_features?.status === "UNAVAILABLE" || bd.technical_features?.value === null
+                    ? "UNAVAILABLE (0.0%)"
+                    : `${bd.technical_features?.value ?? bd.technical_features_score ?? 0}% × ${bd.technical_features?.effective_weight ?? 0.35} = ${(bd.technical_features?.contribution ?? 0).toFixed(1)}%`}
+                </span>
               </div>
+
               <div className="flex justify-between text-zinc-300">
-                <span>Evidence Strength (20%):</span>
-                <span className="text-emerald-400 font-bold">{bd.evidence_strength}% × 0.20 = {(bd.evidence_strength * 0.20).toFixed(1)}%</span>
+                <span>Evidence Strength ({bd.evidence?.effective_weight ? (bd.evidence.effective_weight * 100).toFixed(1) : "20"}%):</span>
+                <span className="text-emerald-400 font-bold">
+                  {bd.evidence?.status === "UNAVAILABLE" || bd.evidence?.value === null
+                    ? "UNAVAILABLE (0.0%)"
+                    : `${bd.evidence?.value ?? bd.evidence_strength}% × ${bd.evidence?.effective_weight ?? 0.20} = ${(bd.evidence?.contribution ?? (bd.evidence_strength * 0.20)).toFixed(1)}%`}
+                </span>
               </div>
+
               <div className="flex justify-between text-zinc-300">
-                <span>Distinctive Concepts (10%):</span>
-                <span className="text-amber-400 font-bold">{bd.distinctive_concepts}% × 0.10 = {(bd.distinctive_concepts * 0.10).toFixed(1)}%</span>
+                <span>Distinctive Concepts ({bd.concepts?.effective_weight ? (bd.concepts.effective_weight * 100).toFixed(1) : "10"}%):</span>
+                <span className="text-amber-400 font-bold">
+                  {bd.concepts?.value ?? bd.distinctive_concepts}% × {bd.concepts?.effective_weight ?? 0.10} = {(bd.concepts?.contribution ?? (bd.distinctive_concepts * 0.10)).toFixed(1)}%
+                </span>
               </div>
+
               <div className="flex justify-between text-zinc-300">
-                <span>Domain/CPC Alignment (10%):</span>
-                <span className="text-purple-400 font-bold">{bd.domain_cpc_alignment}% × 0.10 = {(bd.domain_cpc_alignment * 0.10).toFixed(1)}%</span>
+                <span>Domain/CPC Alignment ({bd.domain_cpc?.effective_weight ? (bd.domain_cpc.effective_weight * 100).toFixed(1) : "10"}%):</span>
+                <span className="text-purple-400 font-bold">
+                  {bd.domain_cpc?.value ?? bd.domain_cpc_alignment}% × {bd.domain_cpc?.effective_weight ?? 0.10} = {(bd.domain_cpc?.contribution ?? (bd.domain_cpc_alignment * 0.10)).toFixed(1)}%
+                </span>
               </div>
-              {bd.technology_domain_score !== undefined && bd.cpc_match_score !== undefined && (
-                <div className="pl-4 pt-1 space-y-1 text-[11px] text-zinc-400 font-mono border-t border-zinc-800/60">
-                  <div className="flex justify-between">
-                    <span>├─ Technology Domain Match:</span>
-                    <span className="text-purple-300">{Math.round(bd.technology_domain_score)}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>└─ CPC Classification Match:</span>
-                    <span className="text-purple-300">{Math.round(bd.cpc_match_score)}%</span>
-                  </div>
-                </div>
-              )}
+
               <div className="pt-2 border-t border-zinc-800 flex justify-between font-bold text-indigo-300 text-sm">
-                <span>Overall Relevance:</span>
+                <span>Calculated Relevance:</span>
                 <span>{computedScore}%</span>
               </div>
             </div>
 
             {bd.is_gated && (
               <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px]">
-                ⚠️ <strong>Technical Relevance Gate Applied:</strong> Capped due to feature coverage constraint.
+                ⚠️ <strong>Technical Relevance Gate Applied:</strong> {bd.score_cap_reason || "Capped due to feature coverage constraint."}
               </div>
             )}
 

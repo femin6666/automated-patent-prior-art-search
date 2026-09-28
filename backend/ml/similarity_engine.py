@@ -176,7 +176,8 @@ def calculate_deterministic_final_score(
     cpc_match_score: float = 0.5,
     has_target_features: bool = True,
     essential_feature_coverage: float = 1.0,
-    has_text_evidence: bool = True
+    has_text_evidence: bool = True,
+    has_cpc_data: bool = True
 ) -> Tuple[float, float, Dict[str, Any]]:
     """
     Authoritative single-source deterministic scoring engine:
@@ -186,94 +187,154 @@ def calculate_deterministic_final_score(
     + 10% Distinctive Concept Overlap
     + 10% Domain & CPC/IPC Alignment
     
-    Technical Relevance Gate Enforcement:
-    Prevents documents with low technical overlap or missing essential features from receiving
-    a high final score based on SBERT semantic similarity alone.
+    Unavailable Component Strategy:
+    If a component (such as evidence or feature matching) is genuinely unavailable (e.g. text missing from record),
+    its weight is re-allocated proportionally across AVAILABLE components so the sum of effective weights equals 1.0 (100%).
+    All component values, weights, effective weights, and contributions are exposed transparently.
     """
     # Enforce bounds [0.0, 1.0]
     sbert_sim = max(0.0, min(1.0, sbert_sim))
     feature_score = max(0.0, min(1.0, feature_score))
-    evidence_strength = max(0.0, min(1.0, evidence_strength))
+    evidence_strength = max(0.0, min(1.0, evidence_strength)) if evidence_strength is not None else 0.0
     distinctive_score = max(0.0, min(1.0, distinctive_score))
     domain_cpc_score = max(0.0, min(1.0, domain_cpc_score))
     technology_domain_score = max(0.0, min(1.0, technology_domain_score))
     cpc_match_score = max(0.0, min(1.0, cpc_match_score))
     essential_feature_coverage = max(0.0, min(1.0, essential_feature_coverage))
 
-    # Calculate weighted component contributions according to 25/35/20/10/10 formula
-    c_semantic = sbert_sim * 25.0
-    c_features = feature_score * 35.0
-    c_evidence = evidence_strength * 20.0
-    c_distinctive = distinctive_score * 10.0
-    c_domain = domain_cpc_score * 10.0
+    # Determine availability status for each component
+    sem_status = "AVAILABLE"
+    feat_status = "AVAILABLE" if has_target_features else "UNAVAILABLE"
+    ev_status = "AVAILABLE" if has_text_evidence else "UNAVAILABLE"
+    conc_status = "AVAILABLE"
+    dom_status = "AVAILABLE"
 
-    raw_weighted = c_semantic + c_features + c_evidence + c_distinctive + c_domain
+    base_weights = {
+        "semantic": 0.25,
+        "technical_features": 0.35,
+        "evidence": 0.20,
+        "concepts": 0.10,
+        "domain_cpc": 0.10
+    }
+
+    status_map = {
+        "semantic": sem_status,
+        "technical_features": feat_status,
+        "evidence": ev_status,
+        "concepts": conc_status,
+        "domain_cpc": dom_status
+    }
+
+    raw_values = {
+        "semantic": sbert_sim * 100.0,
+        "technical_features": feature_score * 100.0 if has_target_features else None,
+        "evidence": evidence_strength * 100.0 if has_text_evidence else None,
+        "concepts": distinctive_score * 100.0,
+        "domain_cpc": domain_cpc_score * 100.0
+    }
+
+    # Sum of available weights
+    sum_avail_weight = sum(base_weights[k] for k in base_weights if status_map[k] == "AVAILABLE")
+    if sum_avail_weight <= 0:
+        sum_avail_weight = 1.0
+
+    calc_method = "STANDARD_FULL_WEIGHTS" if sum_avail_weight >= 0.999 else "NORMALIZED_AVAILABLE_WEIGHTS"
+
+    comp_items = {}
+    raw_weighted_sum = 0.0
+
+    for k in base_weights:
+        b_w = base_weights[k]
+        st = status_map[k]
+        val = raw_values[k]
+
+        if st == "AVAILABLE" and val is not None:
+            eff_w = b_w / sum_avail_weight
+            contrib = val * eff_w
+            raw_weighted_sum += contrib
+            comp_items[k] = {
+                "value": round(val, 1),
+                "weight": b_w,
+                "effective_weight": round(eff_w, 4),
+                "contribution": round(contrib, 1),
+                "status": "AVAILABLE"
+            }
+        else:
+            comp_items[k] = {
+                "value": None,
+                "weight": b_w,
+                "effective_weight": 0.0,
+                "contribution": 0.0,
+                "status": "UNAVAILABLE"
+            }
 
     is_gated = False
     gate_reason = ""
     score_cap = None
     score_cap_reason = None
     
-    # Phase 18: Score Availability Rules & Transparent Caps
+    # Technical Relevance Gate Enforcement
     if not has_text_evidence:
         score_cap = 45.0
         score_cap_reason = "Score limited because claims, description, and full text are unavailable (Max 45%)."
         is_gated = True
         gate_reason = score_cap_reason
-        final_pct = round(min(raw_weighted, 45.0) + 1e-9, 1)
-    # Gate 1: Zero distinctive feature combination cap
+        final_pct = round(min(raw_weighted_sum, 45.0) + 1e-9, 1)
     elif has_target_features and distinctive_score == 0.0:
         score_cap = 40.0
         score_cap_reason = "Cap applied due to zero overlap with the invention's distinctive technical feature combinations (Max 40%)."
         is_gated = True
         gate_reason = score_cap_reason
-        final_pct = round(min(raw_weighted, 40.0) + 1e-9, 1)
-    # Gate 2: Essential feature overlap cap
+        final_pct = round(min(raw_weighted_sum, 40.0) + 1e-9, 1)
     elif has_target_features and (feature_score < 0.25 or essential_feature_coverage < 0.30):
         score_cap = 45.0
         score_cap_reason = "Cap applied due to low technical feature / essential feature overlap (Max 45%)."
         is_gated = True
         gate_reason = score_cap_reason
-        final_pct = round(min(raw_weighted, 45.0) + 1e-9, 1)
-    # Gate 3: Missing evidence & partial feature match cap
+        final_pct = round(min(raw_weighted_sum, 45.0) + 1e-9, 1)
     elif evidence_strength == 0.0 and feature_score < 0.50:
         score_cap = 58.0
         score_cap_reason = "Cap applied due to unverified specification evidence and partial feature match (Max 58%)."
         is_gated = True
         gate_reason = score_cap_reason
-        final_pct = round(min(raw_weighted, 58.0) + 1e-9, 1)
+        final_pct = round(min(raw_weighted_sum, 58.0) + 1e-9, 1)
     else:
-        final_pct = round(min(100.0, raw_weighted) + 1e-9, 1)
+        final_pct = round(min(100.0, raw_weighted_sum) + 1e-9, 1)
 
-    # Calculate Evidence Confidence Score (0.0 to 100.0) with hard ceiling when evidence is unavailable
+    # Calculate Data Completeness & Verification Confidence Score (0.0 to 100.0)
     if not has_text_evidence or evidence_strength == 0.0:
-        # Hard ceiling: Confidence cannot exceed 25% (LOW / UNVERIFIED) when specification evidence is unavailable or 0%
-        # Clamp between 10.0 and 25.0 so a non-zero float is sent to the frontend, preventing JS '0 || 85' falsy fallback
         confidence_score = round(max(10.0, min(25.0, (sbert_sim * 15.0) + (feature_score * 10.0))) + 1e-9, 1)
     else:
         confidence_score = round(min(95.0, (evidence_strength * 45.0) + (feature_score * 35.0) + (sbert_sim * 20.0)) + 1e-9, 1)
 
-
     breakdown = {
+        "semantic": comp_items["semantic"],
+        "technical_features": comp_items["technical_features"],
+        "evidence": comp_items["evidence"],
+        "concepts": comp_items["concepts"],
+        "domain_cpc": comp_items["domain_cpc"],
         "semantic_similarity": round(sbert_sim * 100.0, 1),
-        "technical_features": round(feature_score * 100.0, 1),
-        "evidence_strength": round(evidence_strength * 100.0, 1),
+        "technical_features_score": round(feature_score * 100.0, 1) if has_target_features else 0.0,
+        "evidence_strength": round(evidence_strength * 100.0, 1) if has_text_evidence else 0.0,
         "distinctive_concepts": round(distinctive_score * 100.0, 1),
         "domain_cpc_alignment": round(domain_cpc_score * 100.0, 1),
         "technology_domain_score": round(technology_domain_score * 100.0, 1),
-        "cpc_match_score": round(cpc_match_score * 100.0, 1),
+        "cpc_match_score": round(cpc_match_score * 100.0, 1) if has_cpc_data else 0.0,
         "final_score": final_pct,
         "confidence_score": confidence_score,
+        "calculation_method": calc_method,
         "is_gated": is_gated,
         "score_cap": score_cap,
         "score_cap_reason": score_cap_reason,
         "formula_explanation": (
             "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
+            + (f" [Weights normalized across AVAILABLE components (Total Available Weight: {round(sum_avail_weight*100)}%)]" if calc_method == "NORMALIZED_AVAILABLE_WEIGHTS" else "")
             + (f" [Technical Gate Applied: {gate_reason}]" if is_gated else "")
         )
     }
 
     return final_pct, confidence_score, breakdown
+
 
 
 def compute_hybrid_score(
@@ -328,10 +389,9 @@ def compute_hybrid_score(
     claims_text = patent_claims.lower() if has_claims else ""
     abstract_text = patent_abstract.lower() if patent_abstract else ""
     desc_text = patent_desc.lower() if has_desc else ""
-    title_text = patent_title.lower() if patent_title else ""
 
-    # Pre-extract specification sentences for sentence-level semantic & evidence matching
-    full_patent_text = f"{claims_text} {abstract_text} {desc_text} {title_text}".strip()
+    # Pre-extract specification sentences from substantive patent text only (claims, abstract, description)
+    full_patent_text = f"{claims_text} {abstract_text} {desc_text}".strip()
     sentences = [s.strip() for s in re.split(r'[\.\;\n]', full_patent_text) if len(s.strip()) > 15]
 
     false_positive_penalty = 1.0
@@ -610,10 +670,10 @@ def compute_hybrid_score(
     # Essential Feature Coverage
     essential_coverage = (essential_matched_count / len(clean_essential)) if clean_essential else 1.0
 
-    # Evidence Strength Score: Average evidence quote similarity across all features
+    # Evidence Strength Score: Average evidence quote similarity across all features with specification quotes
     if total_feats_count > 0:
-        verified_sim_sum = sum(item.get("similarity", 0.0) for item in evidence_items if item.get("verified"))
-        evidence_strength = (verified_sim_sum / (total_feats_count * 100.0))
+        sim_sum = sum(item.get("similarity", 0.0) for item in evidence_items if item.get("evidence") or item.get("verified"))
+        evidence_strength = (sim_sum / (total_feats_count * 100.0))
     else:
         evidence_strength = 0.0
 
@@ -641,7 +701,7 @@ def compute_hybrid_score(
 
     # Final Score & Confidence Score via Authoritative Engine (25/35/20/10/10) with False-Positive Penalty
     has_full_spec_text = bool(has_claims or has_desc)
-    has_any_spec_text = bool(has_claims or has_desc or (abstract_text and len(abstract_text) > 10) or (title_text and len(title_text) > 5))
+    has_any_spec_text = bool(has_claims or has_desc or (abstract_text and len(abstract_text) > 10) or (patent_title and len(patent_title) > 5))
 
     final_score, confidence_score, breakdown = calculate_deterministic_final_score(
         sbert_sim=effective_semantic_sim,
@@ -666,8 +726,8 @@ def compute_hybrid_score(
     if has_claims or has_desc:
         feature_match_source = "CLAIMS/DESCRIPTION"
         feature_match_status = "VERIFIED" if has_verified_item else "PARTIAL"
-    elif abstract_text or title_text:
-        feature_match_source = "ABSTRACT/TITLE"
+    elif abstract_text:
+        feature_match_source = "ABSTRACT"
         feature_match_status = "PARTIAL"
     else:
         feature_match_source = "NOT_AVAILABLE"
@@ -685,13 +745,9 @@ def compute_hybrid_score(
         evidence_status_label = "Abstract evidence verified"
         evidence_status = "VERIFIED"
         evidence_availability_level = "ABSTRACT_ONLY"
-    elif title_text and has_verified_item:
-        evidence_status_label = "Title evidence verified"
-        evidence_status = "VERIFIED"
-        evidence_availability_level = "TITLE_ONLY"
     else:
-        evidence_status_label = "Limited evidence (0% verified)"
-        evidence_status = "NOT_AVAILABLE" if not has_any_spec_text else "PARTIAL"
+        evidence_status_label = "No specification evidence"
+        evidence_status = "UNAVAILABLE" if not (has_claims or has_desc or (abstract_text and len(abstract_text) > 10)) else "PARTIAL"
         evidence_availability_level = "NOT_VERIFIABLE"
 
     return {

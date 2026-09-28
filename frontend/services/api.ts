@@ -50,7 +50,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     response = await fetch(`${API_BASE_URL}${endpoint}`, config);
   } catch (networkErr: any) {
     throw new Error(
-      `Failed to connect to API server (${API_BASE_URL}). Please ensure the backend server is running on http://localhost:8000.`
+      `Failed to connect to API server (${API_BASE_URL}). Please ensure the backend service is running.`
     );
   }
 
@@ -123,21 +123,24 @@ export const api = {
     setStoredToken(null);
   },
 
-  getMe: async (): Promise<User> => {
+  getMe: async (): Promise<User | null> => {
+    const token = getStoredToken();
+    if (!token) {
+      return null;
+    }
+    if (token.startsWith("demo_token_")) {
+      return {
+        id: "demo-user-1",
+        email: "inventor@startup.com",
+        name: "Inventor User",
+        created_at: new Date().toISOString(),
+        search_count: 3,
+      } as User;
+    }
     try {
       return await request<User>("/auth/me");
     } catch (err) {
-      const token = getStoredToken();
-      if (token) {
-        return {
-          id: "demo-user-1",
-          email: "inventor@startup.com",
-          name: "Inventor User",
-          created_at: new Date().toISOString(),
-          search_count: 3,
-        } as User;
-      }
-      throw err;
+      return null;
     }
   },
 

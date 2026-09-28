@@ -139,7 +139,10 @@ def health_check():
     return {
         "status": "OK",
         "service": "PatentLens AI Backend",
-        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
+        "backend_version": settings.VERSION,
+        "scoring_engine_version": "2.0.0-deterministic-weighted",
+        "deployment_revision": "2026-09-28-v2",
         "docs": "/docs"
     }
 

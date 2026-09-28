@@ -153,9 +153,22 @@ class ClaimElementItem(BaseModel):
     explanation: str
 
 
+class ComponentBreakdownItem(BaseModel):
+    value: Optional[float] = None
+    weight: float
+    effective_weight: float
+    contribution: float
+    status: str = "AVAILABLE"  # "AVAILABLE" or "UNAVAILABLE"
+
+
 class ScoreBreakdown(BaseModel):
+    semantic: ComponentBreakdownItem
+    technical_features: ComponentBreakdownItem
+    evidence: ComponentBreakdownItem
+    concepts: ComponentBreakdownItem
+    domain_cpc: ComponentBreakdownItem
     semantic_similarity: float = 0.0  # 25% weight
-    technical_features: float = 0.0   # 35% weight
+    technical_features_score: float = 0.0   # 35% weight
     evidence_strength: float = 0.0    # 20% weight
     distinctive_concepts: float = 0.0 # 10% weight
     domain_cpc_alignment: float = 0.0 # 10% weight
@@ -163,7 +176,10 @@ class ScoreBreakdown(BaseModel):
     cpc_match_score: Optional[float] = 0.0
     final_score: float = 0.0
     confidence_score: float = 0.0
+    calculation_method: str = "STANDARD_FULL_WEIGHTS"
     is_gated: bool = False
+    score_cap: Optional[float] = None
+    score_cap_reason: Optional[str] = None
     formula_explanation: str = "Final Score = (25% Semantic) + (35% Technical Features) + (20% Evidence) + (10% Distinctive Concepts) + (10% Domain/CPC)"
 
 

@@ -172,7 +172,7 @@ def test_deterministic_score_reproducibility():
     assert final_score == 70.5
     assert bd["final_score"] == 70.5
     assert bd["semantic_similarity"] == 80.0
-    assert bd["technical_features"] == 70.0
+    assert bd["technical_features"]["value"] == 70.0
     assert bd["evidence_strength"] == 60.0
 
 def test_evidence_confidence_ceiling_when_no_text():

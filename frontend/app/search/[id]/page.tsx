@@ -257,7 +257,7 @@ export default function SearchResultsPage() {
                       <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                         <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Evidence Confidence</div>
                         <div className="text-2xl font-black text-emerald-400 mt-0.5">
-                          {Math.round(data.results[0]?.confidence_score || data.results[0]?.evidence_confidence || 45)}%
+                          {Math.round(data.results[0]?.confidence_score ?? data.results[0]?.evidence_confidence ?? 0)}%
                         </div>
                         <div className="text-[10px] text-zinc-400 mt-0.5 font-sans">
                           {(data.results[0]?.confidence_score || 45) <= 50 ? "Low (Limited text evidence)" : "High (Verified in specification)"}

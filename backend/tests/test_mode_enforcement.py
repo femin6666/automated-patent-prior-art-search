@@ -10,6 +10,35 @@ from app.services.gemini_service import gemini_service
 from app.services.lens_api_service import lens_api_service
 from app.services.patent_api_service import patent_api_service
 
+from app.core.security import get_current_user
+from app.models.models import User
+
+def mock_user():
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        user = db.query(User).first()
+        if not user:
+            user = User(
+                id="test-user-id-1",
+                name="Test User",
+                email="test@patentlens.ai",
+                password_hash="hashed_test_password",
+                is_verified=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        return user
+    finally:
+        db.close()
+
+@pytest.fixture(autouse=True)
+def override_user_dep():
+    app.dependency_overrides[get_current_user] = mock_user
+    yield
+    app.dependency_overrides.clear()
+
 client = TestClient(app)
 
 def test_testing_mode_prevents_external_calls():
